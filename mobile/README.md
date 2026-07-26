@@ -34,8 +34,10 @@ flutter run --dart-define=MEDTRACK_API_BASE_URL=http://localhost:3000/v1
 
 Point `MEDTRACK_API_BASE_URL` at a running instance of `../backend`.
 
-## Note on this scaffold
+For Android, an emulator or device must be connected (`flutter devices`) before `flutter run`.
 
-This code was written without a Flutter SDK available in the environment that generated
-it, so it has **not** been run through `flutter pub get`, `flutter analyze`, or
-`flutter test`. Review it — and run those commands — before relying on it.
+## Verified
+
+`flutter pub get`, `flutter analyze`, and `flutter test` all pass. `android/app/build.gradle.kts`
+enables core library desugaring, which `flutter_local_notifications` requires — without it,
+`flutter run` fails at the `checkDebugAarMetadata` Gradle task.
