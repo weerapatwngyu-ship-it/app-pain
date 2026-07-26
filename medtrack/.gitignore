@@ -1,0 +1,25 @@
+# Flutter/Dart
+.dart_tool/
+.packages
+.pub-cache/
+.pub/
+build/
+*.iml
+*.ipr
+*.iws
+
+# Generated platform folders (create locally with `flutter create .`)
+/android/
+/ios/
+/macos/
+/linux/
+/windows/
+/web/
+
+# IDE
+.idea/
+.vscode/
+
+# Local secrets
+.env
+*.g.dart
