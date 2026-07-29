@@ -29,7 +29,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
     ref.listen(authControllerProvider, (previous, next) {
       if (next.isAuthenticated) {
-        context.go('/schedule');
+        context.go('/home');
       }
     });
 

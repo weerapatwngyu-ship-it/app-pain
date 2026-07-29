@@ -21,6 +21,19 @@ flutter run
 
 Requires Flutter 3.19+ / Dart 3.3+.
 
+## Demo / mock mode
+
+No backend is deployed yet, so `Env.useMockBackend` (`lib/app/di/env.dart`)
+defaults to `true`: login accepts any email/password and every feature
+screen is backed by in-memory sample data (see the `Mock*Repository`
+classes under each feature's `data/repositories/`), so the app is fully
+explorable via the bottom-nav shown after login. Once a real API is
+deployed, run with:
+
+```bash
+flutter run --dart-define=USE_MOCK_BACKEND=false --dart-define=API_BASE_URL=https://your-api.example.com
+```
+
 ## Structure
 
 ```

@@ -5,6 +5,7 @@ import '../features/auth/presentation/screens/login_screen.dart';
 import '../features/dashboard/presentation/screens/caregiver_dashboard_screen.dart';
 import '../features/medication/presentation/screens/today_schedule_screen.dart';
 import '../features/symptom_tracking/presentation/screens/log_symptom_screen.dart';
+import 'home_shell.dart';
 
 /// Route paths carry `patientId` explicitly rather than reading it from
 /// a global session, so a caregiver can open any linked patient's
@@ -13,6 +14,12 @@ final GoRouter appRouter = GoRouter(
   initialLocation: '/login',
   routes: [
     GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
+    GoRoute(
+      path: '/home',
+      builder: (context, state) => HomeShell(
+        patientId: state.uri.queryParameters['patientId'] ?? 'me',
+      ),
+    ),
     GoRoute(
       path: '/schedule',
       builder: (context, state) => TodayScheduleScreen(
