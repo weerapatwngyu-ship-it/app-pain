@@ -4,12 +4,14 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { Test } from '@nestjs/testing';
 import * as bcrypt from 'bcrypt';
 import { Repository } from 'typeorm';
+import { Patient } from '../patients/entities/patient.entity';
 import { AuthService } from './auth.service';
 import { User, UserRole } from './entities/user.entity';
 
 describe('AuthService', () => {
   let service: AuthService;
   let users: jest.Mocked<Repository<User>>;
+  let patients: jest.Mocked<Repository<Patient>>;
   let jwt: jest.Mocked<JwtService>;
 
   const baseUser: User = {
@@ -18,6 +20,14 @@ describe('AuthService', () => {
     passwordHash: '',
     name: 'Somchai',
     role: UserRole.PATIENT,
+    createdAt: new Date(),
+  };
+
+  const basePatient: Patient = {
+    id: 'patient-1',
+    ownerUserId: baseUser.id,
+    name: baseUser.name,
+    birthDate: '2000-01-01',
     createdAt: new Date(),
   };
 
@@ -34,6 +44,14 @@ describe('AuthService', () => {
           },
         },
         {
+          provide: getRepositoryToken(Patient),
+          useValue: {
+            findOne: jest.fn().mockResolvedValue(basePatient),
+            create: jest.fn((data) => data),
+            save: jest.fn().mockResolvedValue(basePatient),
+          },
+        },
+        {
           provide: JwtService,
           useValue: { sign: jest.fn().mockReturnValue('signed-jwt') },
         },
@@ -42,11 +60,12 @@ describe('AuthService', () => {
 
     service = moduleRef.get(AuthService);
     users = moduleRef.get(getRepositoryToken(User));
+    patients = moduleRef.get(getRepositoryToken(Patient));
     jwt = moduleRef.get(JwtService);
   });
 
   describe('register', () => {
-    it('hashes the password and issues a token for a new user', async () => {
+    it('hashes the password, creates a patient profile, and issues a token', async () => {
       users.findOne.mockResolvedValue(null);
       users.save.mockImplementation(async (data) => ({ ...baseUser, ...data }) as User);
 
@@ -62,6 +81,10 @@ describe('AuthService', () => {
       expect(savedArg.passwordHash).not.toBe('super-secret');
       expect(await bcrypt.compare('super-secret', savedArg.passwordHash)).toBe(true);
 
+      expect(patients.save).toHaveBeenCalledWith(
+        expect.objectContaining({ ownerUserId: baseUser.id, name: baseUser.name }),
+      );
+
       expect(jwt.sign).toHaveBeenCalledWith({
         sub: baseUser.id,
         email: baseUser.email,
@@ -69,8 +92,30 @@ describe('AuthService', () => {
       });
       expect(result).toEqual({
         accessToken: 'signed-jwt',
-        user: { id: baseUser.id, email: baseUser.email, name: baseUser.name, role: UserRole.PATIENT },
+        user: {
+          id: baseUser.id,
+          email: baseUser.email,
+          name: baseUser.name,
+          role: UserRole.PATIENT,
+          patientId: basePatient.id,
+        },
       });
+    });
+
+    it('does not create a patient profile for non-patient roles', async () => {
+      const providerUser = { ...baseUser, role: UserRole.PROVIDER };
+      users.findOne.mockResolvedValue(null);
+      users.save.mockImplementation(async (data) => ({ ...providerUser, ...data }) as User);
+
+      const result = await service.register({
+        email: providerUser.email,
+        password: 'super-secret',
+        name: providerUser.name,
+        role: UserRole.PROVIDER,
+      });
+
+      expect(patients.save).not.toHaveBeenCalled();
+      expect(result.user.patientId).toBeNull();
     });
 
     it('rejects registering an email that already exists', async () => {
@@ -89,7 +134,7 @@ describe('AuthService', () => {
   });
 
   describe('login', () => {
-    it('issues a token when the password matches', async () => {
+    it('issues a token with the owned patientId when the password matches', async () => {
       const passwordHash = await bcrypt.hash('correct-password', 4);
       users.findOne.mockResolvedValue({ ...baseUser, passwordHash });
 
@@ -97,6 +142,7 @@ describe('AuthService', () => {
 
       expect(result.accessToken).toBe('signed-jwt');
       expect(result.user.email).toBe(baseUser.email);
+      expect(result.user.patientId).toBe(basePatient.id);
     });
 
     it('rejects an unknown email', async () => {

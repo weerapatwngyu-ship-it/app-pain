@@ -15,7 +15,7 @@ class RegisterScreen extends StatefulWidget {
   });
 
   final AuthRepository authRepository;
-  final VoidCallback onRegistered;
+  final ValueChanged<AppUser> onRegistered;
 
   @override
   State<RegisterScreen> createState() => _RegisterScreenState();
@@ -52,13 +52,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
       _error = null;
     });
     try {
-      await widget.authRepository.register(
+      final session = await widget.authRepository.register(
         email: _emailController.text.trim(),
         password: _passwordController.text,
         name: _nameController.text.trim(),
         role: _role,
       );
-      widget.onRegistered();
+      widget.onRegistered(session.user);
     } on ApiException catch (e) {
       setState(() => _error = e.statusCode == 409
           ? 'อีเมลนี้ถูกใช้สมัครสมาชิกแล้ว'

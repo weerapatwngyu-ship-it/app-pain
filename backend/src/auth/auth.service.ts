@@ -3,9 +3,10 @@ import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import * as bcrypt from 'bcrypt';
 import { Repository } from 'typeorm';
+import { Patient } from '../patients/entities/patient.entity';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
-import { User } from './entities/user.entity';
+import { User, UserRole } from './entities/user.entity';
 
 const SALT_ROUNDS = 12;
 
@@ -13,6 +14,7 @@ const SALT_ROUNDS = 12;
 export class AuthService {
   constructor(
     @InjectRepository(User) private readonly users: Repository<User>,
+    @InjectRepository(Patient) private readonly patients: Repository<Patient>,
     private readonly jwt: JwtService,
   ) {}
 
@@ -24,6 +26,24 @@ export class AuthService {
     const user = await this.users.save(
       this.users.create({ email: dto.email, passwordHash, name: dto.name, role: dto.role }),
     );
+
+    // A `patient` account is the patient — auto-create their Patient
+    // profile so the mobile app has a real patientId to call
+    // /patients/:id/schedule/today etc with, instead of a placeholder
+    // that doesn't exist in the database. Caregiver/provider/admin
+    // accounts don't own a patient profile themselves.
+    if (user.role === UserRole.PATIENT) {
+      await this.patients.save(
+        this.patients.create({
+          ownerUserId: user.id,
+          name: user.name,
+          // Not collected at registration yet (Phase 2: proper onboarding
+          // form) — placeholder so the NOT NULL column is satisfiable.
+          birthDate: '2000-01-01',
+        }),
+      );
+    }
+
     return this.issueTokens(user);
   }
 
@@ -35,11 +55,18 @@ export class AuthService {
     return this.issueTokens(user);
   }
 
-  private issueTokens(user: User) {
+  private async issueTokens(user: User) {
     const payload = { sub: user.id, email: user.email, role: user.role };
+    const patientId = await this.findOwnPatientId(user);
     return {
       accessToken: this.jwt.sign(payload),
-      user: { id: user.id, email: user.email, name: user.name, role: user.role },
+      user: { id: user.id, email: user.email, name: user.name, role: user.role, patientId },
     };
+  }
+
+  private async findOwnPatientId(user: User): Promise<string | null> {
+    if (user.role !== UserRole.PATIENT) return null;
+    const patient = await this.patients.findOne({ where: { ownerUserId: user.id } });
+    return patient?.id ?? null;
   }
 }

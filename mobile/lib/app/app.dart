@@ -5,6 +5,7 @@ import '../core/storage/local_database.dart';
 import '../features/alerts/data/alerts_repository.dart';
 import '../features/alerts/presentation/alerts_screen.dart';
 import '../features/auth/data/auth_repository_impl.dart';
+import '../features/auth/domain/entities/user.dart';
 import '../features/auth/presentation/login_screen.dart';
 import '../features/medication/data/medication_repository_impl.dart';
 import '../features/medication/domain/usecases/log_dose_usecase.dart';
@@ -31,32 +32,54 @@ class _MedTrackAppState extends State<MedTrackApp> {
   late final SymptomRepositoryImpl _symptomRepository = SymptomRepositoryImpl(_apiClient);
   late final AlertsRepository _alertsRepository = AlertsRepository(_apiClient);
 
-  bool _loggedIn = false;
-  // Placeholder until the auth session carries a real linked patient id.
-  static const _demoPatientId = 'demo-patient';
+  AppUser? _currentUser;
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'MedTrack',
       theme: AppTheme.light(),
-      home: _loggedIn ? _buildHome() : _buildLogin(),
+      home: _currentUser != null ? _buildHome(_currentUser!) : _buildLogin(),
     );
   }
 
   Widget _buildLogin() {
     return LoginScreen(
       authRepository: _authRepository,
-      onLoggedIn: () => setState(() => _loggedIn = true),
+      onLoggedIn: (user) => setState(() => _currentUser = user),
     );
   }
 
   void _logout() {
     _apiClient.setAccessToken(null);
-    setState(() => _loggedIn = false);
+    setState(() => _currentUser = null);
   }
 
-  Widget _buildHome() {
+  Widget _buildHome(AppUser user) {
+    // Phase 1 MVP is patient-only (see docs/architecture.md §11) — a
+    // caregiver/provider account has no owned patient profile yet, so
+    // there's nothing meaningful to show them here.
+    if (user.patientId == null) {
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text('MedTrack'),
+          actions: [
+            IconButton(onPressed: _logout, icon: const Icon(Icons.logout), tooltip: 'ออกจากระบบ'),
+          ],
+        ),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Text(
+              'บัญชี "${user.role.name}" ยังไม่รองรับในเวอร์ชันนี้ — Phase 1 รองรับเฉพาะบัญชีผู้ป่วย',
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ),
+      );
+    }
+
+    final patientId = user.patientId!;
     return DefaultTabController(
       length: 3,
       child: Scaffold(
@@ -80,12 +103,12 @@ class _MedTrackAppState extends State<MedTrackApp> {
         body: TabBarView(
           children: [
             TodayScheduleScreen(
-              patientId: _demoPatientId,
+              patientId: patientId,
               medicationRepository: _medicationRepository,
               logDoseUseCase: LogDoseUseCase(_medicationRepository),
             ),
             SymptomLogScreen(
-              patientId: _demoPatientId,
+              patientId: patientId,
               recordSymptomUseCase: RecordSymptomUseCase(_symptomRepository),
             ),
             AlertsScreen(alertsRepository: _alertsRepository),

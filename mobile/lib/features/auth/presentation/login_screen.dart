@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../../core/network/api_client.dart';
 import '../domain/auth_repository.dart';
+import '../domain/entities/user.dart';
 import 'register_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -14,7 +15,7 @@ class LoginScreen extends StatefulWidget {
   });
 
   final AuthRepository authRepository;
-  final VoidCallback onLoggedIn;
+  final ValueChanged<AppUser> onLoggedIn;
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -41,11 +42,11 @@ class _LoginScreenState extends State<LoginScreen> {
       _error = null;
     });
     try {
-      await widget.authRepository.login(
+      final session = await widget.authRepository.login(
         email: _emailController.text.trim(),
         password: _passwordController.text,
       );
-      widget.onLoggedIn();
+      widget.onLoggedIn(session.user);
     } on ApiException catch (e) {
       setState(() => _error = e.statusCode == 401
           ? 'อีเมลหรือรหัสผ่านไม่ถูกต้อง'
@@ -65,9 +66,9 @@ class _LoginScreenState extends State<LoginScreen> {
       MaterialPageRoute(
         builder: (_) => RegisterScreen(
           authRepository: widget.authRepository,
-          onRegistered: () {
+          onRegistered: (user) {
             Navigator.of(context).pop();
-            widget.onLoggedIn();
+            widget.onLoggedIn(user);
           },
         ),
       ),
