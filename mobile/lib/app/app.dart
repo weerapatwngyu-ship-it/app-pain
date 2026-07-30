@@ -51,12 +51,24 @@ class _MedTrackAppState extends State<MedTrackApp> {
     );
   }
 
+  void _logout() {
+    _apiClient.setAccessToken(null);
+    setState(() => _loggedIn = false);
+  }
+
   Widget _buildHome() {
     return DefaultTabController(
       length: 3,
       child: Scaffold(
         appBar: AppBar(
           title: const Text('MedTrack'),
+          actions: [
+            IconButton(
+              onPressed: _logout,
+              icon: const Icon(Icons.logout),
+              tooltip: 'ออกจากระบบ',
+            ),
+          ],
           bottom: const TabBar(
             tabs: [
               Tab(icon: Icon(Icons.medication_outlined), text: 'ยาวันนี้'),
