@@ -1,5 +1,9 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 
+import '../../../core/network/api_client.dart';
 import '../domain/auth_repository.dart';
 import '../domain/entities/user.dart';
 
@@ -55,11 +59,34 @@ class _RegisterScreenState extends State<RegisterScreen> {
         role: _role,
       );
       widget.onRegistered();
+    } on ApiException catch (e) {
+      setState(() => _error = e.statusCode == 409
+          ? 'อีเมลนี้ถูกใช้สมัครสมาชิกแล้ว'
+          : 'สมัครสมาชิกไม่สำเร็จ: ${_readableApiMessage(e)}');
+    } on SocketException catch (_) {
+      setState(() => _error =
+          'เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ — ตรวจสอบว่า backend กำลังรันอยู่ และตั้งค่า MEDTRACK_API_BASE_URL ถูกต้อง');
     } catch (e) {
-      setState(() => _error = 'สมัครสมาชิกไม่สำเร็จ อีเมลนี้อาจถูกใช้แล้ว');
+      setState(() => _error = 'สมัครสมาชิกไม่สำเร็จ: $e');
     } finally {
       if (mounted) setState(() => _loading = false);
     }
+  }
+
+  /// The backend returns a JSON body like `{"message": "...", ...}` on
+  /// error (see NestJS's default exception filter) — fall back to the
+  /// raw body if it isn't JSON so nothing is silently swallowed.
+  static String _readableApiMessage(ApiException e) {
+    try {
+      final decoded = jsonDecode(e.message);
+      if (decoded is Map && decoded['message'] != null) {
+        final message = decoded['message'];
+        return message is List ? message.join(', ') : message.toString();
+      }
+    } catch (_) {
+      // Not JSON — fall through to the raw body below.
+    }
+    return e.message.isEmpty ? 'HTTP ${e.statusCode}' : e.message;
   }
 
   @override

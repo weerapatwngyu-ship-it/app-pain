@@ -1,5 +1,8 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 
+import '../../../core/network/api_client.dart';
 import '../domain/auth_repository.dart';
 import 'register_screen.dart';
 
@@ -43,8 +46,15 @@ class _LoginScreenState extends State<LoginScreen> {
         password: _passwordController.text,
       );
       widget.onLoggedIn();
+    } on ApiException catch (e) {
+      setState(() => _error = e.statusCode == 401
+          ? 'อีเมลหรือรหัสผ่านไม่ถูกต้อง'
+          : 'เข้าสู่ระบบไม่สำเร็จ (HTTP ${e.statusCode})');
+    } on SocketException catch (_) {
+      setState(() => _error =
+          'เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ — ตรวจสอบว่า backend กำลังรันอยู่ และตั้งค่า MEDTRACK_API_BASE_URL ถูกต้อง');
     } catch (e) {
-      setState(() => _error = 'เข้าสู่ระบบไม่สำเร็จ กรุณาลองใหม่');
+      setState(() => _error = 'เข้าสู่ระบบไม่สำเร็จ: $e');
     } finally {
       if (mounted) setState(() => _loading = false);
     }

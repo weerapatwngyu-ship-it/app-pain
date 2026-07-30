@@ -25,7 +25,7 @@ npm run start:dev
 # Mobile (ในอีก terminal)
 cd mobile
 flutter pub get
-flutter run --dart-define=MEDTRACK_API_BASE_URL=http://localhost:3000/v1
+flutter run   # เดา API host ให้อัตโนมัติตามแพลตฟอร์ม — ดู mobile/README.md
 ```
 
 ## สถานะการพัฒนา
