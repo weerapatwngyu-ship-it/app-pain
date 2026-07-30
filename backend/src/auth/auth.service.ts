@@ -33,15 +33,7 @@ export class AuthService {
     // that doesn't exist in the database. Caregiver/provider/admin
     // accounts don't own a patient profile themselves.
     if (user.role === UserRole.PATIENT) {
-      await this.patients.save(
-        this.patients.create({
-          ownerUserId: user.id,
-          name: user.name,
-          // Not collected at registration yet (Phase 2: proper onboarding
-          // form) — placeholder so the NOT NULL column is satisfiable.
-          birthDate: '2000-01-01',
-        }),
-      );
+      await this.createPatientProfile(user);
     }
 
     return this.issueTokens(user);
@@ -66,7 +58,25 @@ export class AuthService {
 
   private async findOwnPatientId(user: User): Promise<string | null> {
     if (user.role !== UserRole.PATIENT) return null;
-    const patient = await this.patients.findOne({ where: { ownerUserId: user.id } });
-    return patient?.id ?? null;
+    const existing = await this.patients.findOne({ where: { ownerUserId: user.id } });
+    if (existing) return existing.id;
+
+    // Self-heal accounts created before patient-auto-provisioning existed
+    // (or by any other path that skipped it) — a patient-role user should
+    // never be stuck without an owned patient profile.
+    const created = await this.createPatientProfile(user);
+    return created.id;
+  }
+
+  private createPatientProfile(user: User) {
+    return this.patients.save(
+      this.patients.create({
+        ownerUserId: user.id,
+        name: user.name,
+        // Not collected at registration yet (Phase 2: proper onboarding
+        // form) — placeholder so the NOT NULL column is satisfiable.
+        birthDate: '2000-01-01',
+      }),
+    );
   }
 }

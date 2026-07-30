@@ -145,6 +145,20 @@ describe('AuthService', () => {
       expect(result.user.patientId).toBe(basePatient.id);
     });
 
+    it('self-heals a patient account that has no owned patient profile yet', async () => {
+      const passwordHash = await bcrypt.hash('correct-password', 4);
+      users.findOne.mockResolvedValue({ ...baseUser, passwordHash });
+      patients.findOne.mockResolvedValue(null);
+      patients.save.mockResolvedValue(basePatient);
+
+      const result = await service.login({ email: baseUser.email, password: 'correct-password' });
+
+      expect(patients.save).toHaveBeenCalledWith(
+        expect.objectContaining({ ownerUserId: baseUser.id }),
+      );
+      expect(result.user.patientId).toBe(basePatient.id);
+    });
+
     it('rejects an unknown email', async () => {
       users.findOne.mockResolvedValue(null);
 
