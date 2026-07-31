@@ -138,123 +138,135 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
       ),
       body: SafeArea(
         top: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-          child: Form(
-            key: _formKey,
-            child: ListView(
-              children: [
-                const Text(
-                  'ข้อมูลส่วนตัว',
-                  style: TextStyle(fontSize: 26, fontWeight: FontWeight.w700, color: OnboardingColors.text),
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  'กรุณากรอกข้อมูลเพื่อเป็นประโยชน์สำหรับแพทย์และเอกสารทางการแพทย์ของท่าน',
-                  style: TextStyle(color: OnboardingColors.textMuted),
-                ),
-                const SizedBox(height: 24),
-                const Text('ชื่อจริง*', style: TextStyle(fontWeight: FontWeight.w600)),
-                const SizedBox(height: 8),
-                TextFormField(
-                  controller: _firstNameController,
-                  decoration: _decoration('ชื่อจริง'),
-                  validator: (v) => (v == null || v.trim().isEmpty) ? 'กรอกชื่อจริง' : null,
-                ),
-                const SizedBox(height: 16),
-                const Text('นามสกุล*', style: TextStyle(fontWeight: FontWeight.w600)),
-                const SizedBox(height: 8),
-                TextFormField(
-                  controller: _lastNameController,
-                  decoration: _decoration('นามสกุล'),
-                  validator: (v) => (v == null || v.trim().isEmpty) ? 'กรอกนามสกุล' : null,
-                ),
-                const SizedBox(height: 16),
-                const Text('เบอร์โทรศัพท์*', style: TextStyle(fontWeight: FontWeight.w600)),
-                const SizedBox(height: 8),
-                TextFormField(
-                  initialValue: widget.phone,
-                  enabled: false,
-                  decoration: _decoration(widget.phone),
-                ),
-                const SizedBox(height: 16),
-                const Text('อีเมล*', style: TextStyle(fontWeight: FontWeight.w600)),
-                const SizedBox(height: 8),
-                TextFormField(
-                  controller: _emailController,
-                  keyboardType: TextInputType.emailAddress,
-                  decoration: _decoration('example@mordee.com'),
-                  validator: (v) =>
-                      (v == null || !v.contains('@')) ? 'กรอกอีเมลให้ถูกต้อง' : null,
-                ),
-                const SizedBox(height: 4),
-                const Text(
-                  'ท่านสามารถรับข่าวสาร และกู้คืนบัญชีของท่านผ่านทางอีเมลนี้',
-                  style: TextStyle(color: OnboardingColors.textMuted, fontSize: 12),
-                ),
-                const SizedBox(height: 16),
-                const Text('วันเกิด*', style: TextStyle(fontWeight: FontWeight.w600)),
-                const SizedBox(height: 8),
-                InkWell(
-                  onTap: _pickBirthDate,
-                  child: InputDecorator(
-                    decoration: _decoration('วว/ดด/ปปปป'),
-                    child: Text(
-                      _birthDate == null ? 'วว/ดด/ปปปป' : _formatBirthDate(_birthDate!),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            children: [
+              Expanded(
+                child: ListView(
+                  padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
+                  children: [
+                    const Text(
+                      'ข้อมูลส่วนตัว',
                       style: TextStyle(
-                        color: _birthDate == null ? Colors.grey : OnboardingColors.text,
+                        fontSize: 26,
+                        fontWeight: FontWeight.w700,
+                        color: OnboardingColors.text,
                       ),
                     ),
-                  ),
-                ),
-                const SizedBox(height: 4),
-                const Text(
-                  'กรุณาระบุปีเกิดเป็น ค.ศ.',
-                  style: TextStyle(color: OnboardingColors.textMuted, fontSize: 12),
-                ),
-                const SizedBox(height: 16),
-                const Text('เพศสภาพ*', style: TextStyle(fontWeight: FontWeight.w600)),
-                const SizedBox(height: 8),
-                Row(
-                  children: _genderOptions.entries.map((entry) {
-                    final selected = _gender == entry.key;
-                    return Expanded(
-                      child: Padding(
-                        padding: const EdgeInsets.only(right: 8),
-                        child: OutlinedButton(
-                          onPressed: () => setState(() => _gender = entry.key),
-                          style: OutlinedButton.styleFrom(
-                            backgroundColor: selected ? OnboardingColors.teal.withOpacity(0.12) : null,
-                            side: BorderSide(
-                              color: selected ? OnboardingColors.teal : OnboardingColors.border,
-                            ),
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                          ),
-                          child: Text(
-                            entry.value,
-                            style: TextStyle(
-                              color: selected ? OnboardingColors.teal : OnboardingColors.text,
-                              fontWeight: FontWeight.w600,
-                            ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'กรุณากรอกข้อมูลเพื่อเป็นประโยชน์สำหรับแพทย์และเอกสารทางการแพทย์ของท่าน',
+                      style: TextStyle(color: OnboardingColors.textMuted),
+                    ),
+                    const SizedBox(height: 24),
+                    const Text('ชื่อจริง*', style: TextStyle(fontWeight: FontWeight.w600)),
+                    const SizedBox(height: 8),
+                    TextFormField(
+                      controller: _firstNameController,
+                      decoration: _decoration('ชื่อจริง'),
+                      validator: (v) => (v == null || v.trim().isEmpty) ? 'กรอกชื่อจริง' : null,
+                    ),
+                    const SizedBox(height: 16),
+                    const Text('นามสกุล*', style: TextStyle(fontWeight: FontWeight.w600)),
+                    const SizedBox(height: 8),
+                    TextFormField(
+                      controller: _lastNameController,
+                      decoration: _decoration('นามสกุล'),
+                      validator: (v) => (v == null || v.trim().isEmpty) ? 'กรอกนามสกุล' : null,
+                    ),
+                    const SizedBox(height: 16),
+                    const Text('เบอร์โทรศัพท์*', style: TextStyle(fontWeight: FontWeight.w600)),
+                    const SizedBox(height: 8),
+                    TextFormField(
+                      initialValue: widget.phone,
+                      enabled: false,
+                      decoration: _decoration(widget.phone),
+                    ),
+                    const SizedBox(height: 16),
+                    const Text('อีเมล*', style: TextStyle(fontWeight: FontWeight.w600)),
+                    const SizedBox(height: 8),
+                    TextFormField(
+                      controller: _emailController,
+                      keyboardType: TextInputType.emailAddress,
+                      decoration: _decoration('example@mordee.com'),
+                      validator: (v) =>
+                          (v == null || !v.contains('@')) ? 'กรอกอีเมลให้ถูกต้อง' : null,
+                    ),
+                    const SizedBox(height: 4),
+                    const Text(
+                      'ท่านสามารถรับข่าวสาร และกู้คืนบัญชีของท่านผ่านทางอีเมลนี้',
+                      style: TextStyle(color: OnboardingColors.textMuted, fontSize: 12),
+                    ),
+                    const SizedBox(height: 16),
+                    const Text('วันเกิด*', style: TextStyle(fontWeight: FontWeight.w600)),
+                    const SizedBox(height: 8),
+                    InkWell(
+                      onTap: _pickBirthDate,
+                      child: InputDecorator(
+                        decoration: _decoration('วว/ดด/ปปปป'),
+                        child: Text(
+                          _birthDate == null ? 'วว/ดด/ปปปป' : _formatBirthDate(_birthDate!),
+                          style: TextStyle(
+                            color: _birthDate == null ? Colors.grey : OnboardingColors.text,
                           ),
                         ),
                       ),
-                    );
-                  }).toList(),
+                    ),
+                    const SizedBox(height: 4),
+                    const Text(
+                      'กรุณาระบุปีเกิดเป็น ค.ศ.',
+                      style: TextStyle(color: OnboardingColors.textMuted, fontSize: 12),
+                    ),
+                    const SizedBox(height: 16),
+                    const Text('เพศสภาพ*', style: TextStyle(fontWeight: FontWeight.w600)),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: _genderOptions.entries.map((entry) {
+                        final selected = _gender == entry.key;
+                        return Expanded(
+                          child: Padding(
+                            padding: const EdgeInsets.only(right: 8),
+                            child: OutlinedButton(
+                              onPressed: () => setState(() => _gender = entry.key),
+                              style: OutlinedButton.styleFrom(
+                                backgroundColor:
+                                    selected ? OnboardingColors.teal.withOpacity(0.12) : null,
+                                side: BorderSide(
+                                  color: selected ? OnboardingColors.teal : OnboardingColors.border,
+                                ),
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                shape:
+                                    RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              ),
+                              child: Text(
+                                entry.value,
+                                style: TextStyle(
+                                  color: selected ? OnboardingColors.teal : OnboardingColors.text,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                    if (_error != null) ...[
+                      const SizedBox(height: 16),
+                      Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
+                    ],
+                  ],
                 ),
-                if (_error != null) ...[
-                  const SizedBox(height: 16),
-                  Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
-                ],
-                const SizedBox(height: 32),
-                OnboardingPrimaryButton(
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
+                child: OnboardingPrimaryButton(
                   label: 'ดำเนินการต่อ',
                   loading: _loading,
                   onPressed: _loading ? null : _submit,
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
