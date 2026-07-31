@@ -18,6 +18,10 @@ describe('AuthService', () => {
     id: 'user-1',
     email: 'patient@example.com',
     passwordHash: '',
+    phone: null,
+    pinHash: null,
+    consentHealth: false,
+    consentMarketing: false,
     name: 'Somchai',
     role: UserRole.PATIENT,
     createdAt: new Date(),
@@ -70,7 +74,7 @@ describe('AuthService', () => {
       users.save.mockImplementation(async (data) => ({ ...baseUser, ...data }) as User);
 
       const result = await service.register({
-        email: baseUser.email,
+        email: baseUser.email!,
         password: 'super-secret',
         name: baseUser.name,
         role: UserRole.PATIENT,
@@ -79,7 +83,7 @@ describe('AuthService', () => {
       expect(users.save).toHaveBeenCalled();
       const savedArg = users.save.mock.calls[0][0] as User;
       expect(savedArg.passwordHash).not.toBe('super-secret');
-      expect(await bcrypt.compare('super-secret', savedArg.passwordHash)).toBe(true);
+      expect(await bcrypt.compare('super-secret', savedArg.passwordHash!)).toBe(true);
 
       expect(patients.save).toHaveBeenCalledWith(
         expect.objectContaining({ ownerUserId: baseUser.id, name: baseUser.name }),
@@ -108,7 +112,7 @@ describe('AuthService', () => {
       users.save.mockImplementation(async (data) => ({ ...providerUser, ...data }) as User);
 
       const result = await service.register({
-        email: providerUser.email,
+        email: providerUser.email!,
         password: 'super-secret',
         name: providerUser.name,
         role: UserRole.PROVIDER,
@@ -123,7 +127,7 @@ describe('AuthService', () => {
 
       await expect(
         service.register({
-          email: baseUser.email,
+          email: baseUser.email!,
           password: 'super-secret',
           name: baseUser.name,
           role: UserRole.PATIENT,
@@ -138,7 +142,7 @@ describe('AuthService', () => {
       const passwordHash = await bcrypt.hash('correct-password', 4);
       users.findOne.mockResolvedValue({ ...baseUser, passwordHash });
 
-      const result = await service.login({ email: baseUser.email, password: 'correct-password' });
+      const result = await service.login({ email: baseUser.email!, password: 'correct-password' });
 
       expect(result.accessToken).toBe('signed-jwt');
       expect(result.user.email).toBe(baseUser.email);
@@ -151,7 +155,7 @@ describe('AuthService', () => {
       patients.findOne.mockResolvedValue(null);
       patients.save.mockResolvedValue(basePatient);
 
-      const result = await service.login({ email: baseUser.email, password: 'correct-password' });
+      const result = await service.login({ email: baseUser.email!, password: 'correct-password' });
 
       expect(patients.save).toHaveBeenCalledWith(
         expect.objectContaining({ ownerUserId: baseUser.id }),
@@ -172,7 +176,7 @@ describe('AuthService', () => {
       users.findOne.mockResolvedValue({ ...baseUser, passwordHash });
 
       await expect(
-        service.login({ email: baseUser.email, password: 'wrong-password' }),
+        service.login({ email: baseUser.email!, password: 'wrong-password' }),
       ).rejects.toBeInstanceOf(UnauthorizedException);
     });
   });

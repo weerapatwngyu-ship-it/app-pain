@@ -17,6 +17,9 @@ export class Patient {
   @Column({ nullable: true })
   primaryCondition?: string;
 
+  @Column({ nullable: true })
+  gender?: string;
+
   @Column({ type: 'timestamptz', default: () => 'now()' })
   createdAt: Date;
 }

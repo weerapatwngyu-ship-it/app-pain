@@ -8,7 +8,7 @@ import '../features/alerts/data/alerts_repository.dart';
 import '../features/alerts/presentation/alerts_screen.dart';
 import '../features/auth/data/auth_repository_impl.dart';
 import '../features/auth/domain/entities/user.dart';
-import '../features/auth/presentation/login_screen.dart';
+import '../features/auth/presentation/onboarding/phone_entry_screen.dart';
 import '../features/medication/data/medication_repository_impl.dart';
 import '../features/medication/domain/usecases/log_dose_usecase.dart';
 import '../features/medication/presentation/today_schedule_screen.dart';
@@ -47,9 +47,9 @@ class _MedTrackAppState extends State<MedTrackApp> {
   }
 
   Widget _buildLogin() {
-    return LoginScreen(
+    return PhoneEntryScreen(
       authRepository: _authRepository,
-      onLoggedIn: (user) => setState(() => _currentUser = user),
+      onAuthenticated: (user) => setState(() => _currentUser = user),
     );
   }
 
