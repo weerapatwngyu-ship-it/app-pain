@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../core/network/api_client.dart';
 import '../core/storage/local_database.dart';
+import '../features/admin/data/admin_repository.dart';
+import '../features/admin/presentation/admin_screen.dart';
 import '../features/alerts/data/alerts_repository.dart';
 import '../features/alerts/presentation/alerts_screen.dart';
 import '../features/auth/data/auth_repository_impl.dart';
@@ -31,6 +33,7 @@ class _MedTrackAppState extends State<MedTrackApp> {
       MedicationRepositoryImpl(_apiClient, LocalDatabase.instance);
   late final SymptomRepositoryImpl _symptomRepository = SymptomRepositoryImpl(_apiClient);
   late final AlertsRepository _alertsRepository = AlertsRepository(_apiClient);
+  late final AdminRepository _adminRepository = AdminRepository(_apiClient);
 
   AppUser? _currentUser;
 
@@ -56,9 +59,13 @@ class _MedTrackAppState extends State<MedTrackApp> {
   }
 
   Widget _buildHome(AppUser user) {
-    // Phase 1 MVP is patient-only (see docs/architecture.md §11) — a
-    // caregiver/provider account has no owned patient profile yet, so
-    // there's nothing meaningful to show them here.
+    if (user.role == UserRole.admin) {
+      return AdminScreen(adminRepository: _adminRepository, onLogout: _logout);
+    }
+
+    // Phase 1 MVP is otherwise patient-only (see docs/architecture.md
+    // §11) — a caregiver/provider account has no owned patient profile
+    // yet, so there's nothing meaningful to show them here.
     if (user.patientId == null) {
       return Scaffold(
         appBar: AppBar(

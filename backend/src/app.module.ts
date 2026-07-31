@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { AdminModule } from './admin/admin.module';
 import { AlertsModule } from './alerts/alerts.module';
 import { AuthModule } from './auth/auth.module';
 import { DoseLogsModule } from './dose-logs/dose-logs.module';
@@ -27,6 +28,7 @@ import { SymptomLogsModule } from './symptom-logs/symptom-logs.module';
       }),
     }),
     AuthModule,
+    AdminModule,
     PatientsModule,
     PatientLinksModule,
     PrescriptionsModule,
