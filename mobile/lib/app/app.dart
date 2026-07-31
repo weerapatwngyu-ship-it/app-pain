@@ -5,17 +5,13 @@ import '../core/storage/local_database.dart';
 import '../features/admin/data/admin_repository.dart';
 import '../features/admin/presentation/admin_screen.dart';
 import '../features/alerts/data/alerts_repository.dart';
-import '../features/alerts/presentation/alerts_screen.dart';
 import '../features/auth/data/auth_repository_impl.dart';
 import '../features/auth/domain/entities/user.dart';
 import '../features/auth/presentation/onboarding/phone_entry_screen.dart';
 import '../features/medication/data/medication_repository_impl.dart';
-import '../features/medication/domain/usecases/log_dose_usecase.dart';
-import '../features/medication/presentation/today_schedule_screen.dart';
 import '../features/symptom_tracking/data/symptom_repository_impl.dart';
-import '../features/symptom_tracking/domain/usecases/record_symptom_usecase.dart';
-import '../features/symptom_tracking/presentation/symptom_log_screen.dart';
 import '../shared/theme/app_theme.dart';
+import 'patient_home_shell.dart';
 
 class MedTrackApp extends StatefulWidget {
   const MedTrackApp({super.key, required this.apiBaseUrl});
@@ -86,42 +82,13 @@ class _MedTrackAppState extends State<MedTrackApp> {
       );
     }
 
-    final patientId = user.patientId!;
-    return DefaultTabController(
-      length: 3,
-      child: Scaffold(
-        appBar: AppBar(
-          title: const Text('MedTrack'),
-          actions: [
-            IconButton(
-              onPressed: _logout,
-              icon: const Icon(Icons.logout),
-              tooltip: 'ออกจากระบบ',
-            ),
-          ],
-          bottom: const TabBar(
-            tabs: [
-              Tab(icon: Icon(Icons.medication_outlined), text: 'ยาวันนี้'),
-              Tab(icon: Icon(Icons.monitor_heart_outlined), text: 'บันทึกอาการ'),
-              Tab(icon: Icon(Icons.notifications_outlined), text: 'แจ้งเตือน'),
-            ],
-          ),
-        ),
-        body: TabBarView(
-          children: [
-            TodayScheduleScreen(
-              patientId: patientId,
-              medicationRepository: _medicationRepository,
-              logDoseUseCase: LogDoseUseCase(_medicationRepository),
-            ),
-            SymptomLogScreen(
-              patientId: patientId,
-              recordSymptomUseCase: RecordSymptomUseCase(_symptomRepository),
-            ),
-            AlertsScreen(alertsRepository: _alertsRepository),
-          ],
-        ),
-      ),
+    return PatientHomeShell(
+      user: user,
+      patientId: user.patientId!,
+      medicationRepository: _medicationRepository,
+      symptomRepository: _symptomRepository,
+      alertsRepository: _alertsRepository,
+      onLogout: _logout,
     );
   }
 }
