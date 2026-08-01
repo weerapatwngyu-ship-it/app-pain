@@ -29,4 +29,12 @@ class AppUser {
       patientId: json['patientId'] as String?,
     );
   }
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'email': email,
+        'name': name,
+        'role': role.name,
+        'patientId': patientId,
+      };
 }

@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 
 import '../core/network/api_client.dart';
 import '../core/storage/local_database.dart';
+import '../core/storage/session_storage.dart';
 import '../features/admin/data/admin_repository.dart';
 import '../features/admin/presentation/admin_screen.dart';
 import '../features/alerts/data/alerts_repository.dart';
 import '../features/auth/data/auth_repository_impl.dart';
+import '../features/auth/domain/auth_repository.dart';
 import '../features/auth/domain/entities/user.dart';
 import '../features/auth/presentation/onboarding/phone_entry_screen.dart';
 import '../features/medication/data/medication_repository_impl.dart';
@@ -30,27 +32,58 @@ class _MedTrackAppState extends State<MedTrackApp> {
   late final SymptomRepositoryImpl _symptomRepository = SymptomRepositoryImpl(_apiClient);
   late final AlertsRepository _alertsRepository = AlertsRepository(_apiClient);
   late final AdminRepository _adminRepository = AdminRepository(_apiClient);
+  final SessionStorage _sessionStorage = SessionStorage();
 
   AppUser? _currentUser;
+  bool _restoringSession = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _restoreSession();
+  }
+
+  Future<void> _restoreSession() async {
+    final session = await _sessionStorage.load();
+    if (session != null) {
+      _apiClient.setAccessToken(session.accessToken);
+    }
+    if (!mounted) return;
+    setState(() {
+      _currentUser = session?.user;
+      _restoringSession = false;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'MedTrack',
       theme: AppTheme.light(),
-      home: _currentUser != null ? _buildHome(_currentUser!) : _buildLogin(),
+      home: _restoringSession
+          ? const Scaffold(body: Center(child: CircularProgressIndicator()))
+          : (_currentUser != null ? _buildHome(_currentUser!) : _buildLogin()),
     );
   }
 
   Widget _buildLogin() {
     return PhoneEntryScreen(
       authRepository: _authRepository,
-      onAuthenticated: (user) => setState(() => _currentUser = user),
+      onAuthenticated: _handleAuthenticated,
     );
+  }
+
+  void _handleAuthenticated(AppUser user) {
+    setState(() => _currentUser = user);
+    final token = _apiClient.accessToken;
+    if (token != null) {
+      _sessionStorage.save(AuthSession(accessToken: token, user: user));
+    }
   }
 
   void _logout() {
     _apiClient.setAccessToken(null);
+    _sessionStorage.clear();
     setState(() => _currentUser = null);
   }
 
