@@ -102,6 +102,7 @@ describe('AuthService', () => {
           name: baseUser.name,
           role: UserRole.PATIENT,
           patientId: basePatient.id,
+          phone: null,
         },
       });
     });

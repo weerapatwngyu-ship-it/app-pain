@@ -11,6 +11,7 @@ import '../features/auth/domain/auth_repository.dart';
 import '../features/auth/domain/entities/user.dart';
 import '../features/auth/presentation/onboarding/phone_entry_screen.dart';
 import '../features/medication/data/medication_repository_impl.dart';
+import '../features/profile/data/patient_profile_repository.dart';
 import '../features/symptom_tracking/data/symptom_repository_impl.dart';
 import '../shared/theme/app_theme.dart';
 import 'patient_home_shell.dart';
@@ -32,6 +33,8 @@ class _MedTrackAppState extends State<MedTrackApp> {
   late final SymptomRepositoryImpl _symptomRepository = SymptomRepositoryImpl(_apiClient);
   late final AlertsRepository _alertsRepository = AlertsRepository(_apiClient);
   late final AdminRepository _adminRepository = AdminRepository(_apiClient);
+  late final PatientProfileRepository _patientProfileRepository =
+      PatientProfileRepository(_apiClient);
   final SessionStorage _sessionStorage = SessionStorage();
 
   AppUser? _currentUser;
@@ -121,6 +124,7 @@ class _MedTrackAppState extends State<MedTrackApp> {
       medicationRepository: _medicationRepository,
       symptomRepository: _symptomRepository,
       alertsRepository: _alertsRepository,
+      patientProfileRepository: _patientProfileRepository,
       onLogout: _logout,
     );
   }

@@ -7,6 +7,7 @@ class AppUser {
     required this.name,
     required this.role,
     this.patientId,
+    this.phone,
   });
 
   final String id;
@@ -20,6 +21,10 @@ class AppUser {
   /// patient id are different rows/tables on the backend).
   final String? patientId;
 
+  /// Set for accounts created via the phone/OTP flow, null for accounts
+  /// created via email/password.
+  final String? phone;
+
   factory AppUser.fromJson(Map<String, dynamic> json) {
     return AppUser(
       id: json['id'] as String,
@@ -27,6 +32,7 @@ class AppUser {
       name: json['name'] as String,
       role: UserRole.values.byName(json['role'] as String),
       patientId: json['patientId'] as String?,
+      phone: json['phone'] as String?,
     );
   }
 
@@ -36,5 +42,6 @@ class AppUser {
         'name': name,
         'role': role.name,
         'patientId': patientId,
+        'phone': phone,
       };
 }

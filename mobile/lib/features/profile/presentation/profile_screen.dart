@@ -2,13 +2,21 @@ import 'package:flutter/material.dart';
 
 import '../../auth/domain/entities/user.dart';
 import '../../auth/presentation/onboarding/onboarding_theme.dart';
+import '../data/patient_profile_repository.dart';
+import 'personal_info_detail_screen.dart';
 import 'settings_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
-  const ProfileScreen({super.key, required this.user, required this.onLogout});
+  const ProfileScreen({
+    super.key,
+    required this.user,
+    required this.onLogout,
+    required this.patientProfileRepository,
+  });
 
   final AppUser user;
   final VoidCallback onLogout;
+  final PatientProfileRepository patientProfileRepository;
 
   /// Short, human-friendly stand-in for a "member code" — derived from the
   /// account's real id (not fabricated), since the backend doesn't hand out
@@ -78,7 +86,14 @@ class ProfileScreen extends StatelessWidget {
             _MenuTile(
               icon: Icons.person_outline,
               label: 'แก้ไขข้อมูลส่วนตัว',
-              onTap: () => _comingSoon(context),
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => PersonalInfoDetailScreen(
+                    user: user,
+                    repository: patientProfileRepository,
+                  ),
+                ),
+              ),
             ),
             _MenuTile(
               icon: Icons.favorite_border,

@@ -160,7 +160,14 @@ export class AuthService {
     const patientId = await this.findOwnPatientId(user);
     return {
       accessToken: this.jwt.sign(payload),
-      user: { id: user.id, email: user.email, name: user.name, role: user.role, patientId },
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        patientId,
+        phone: user.phone,
+      },
     };
   }
 

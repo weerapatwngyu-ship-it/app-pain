@@ -7,6 +7,7 @@ import '../features/auth/presentation/onboarding/onboarding_theme.dart';
 import '../features/medication/data/medication_repository_impl.dart';
 import '../features/medication/domain/usecases/log_dose_usecase.dart';
 import '../features/medication/presentation/today_schedule_screen.dart';
+import '../features/profile/data/patient_profile_repository.dart';
 import '../features/profile/presentation/profile_screen.dart';
 import '../features/symptom_tracking/data/symptom_repository_impl.dart';
 import '../features/symptom_tracking/domain/usecases/record_symptom_usecase.dart';
@@ -22,6 +23,7 @@ class PatientHomeShell extends StatefulWidget {
     required this.medicationRepository,
     required this.symptomRepository,
     required this.alertsRepository,
+    required this.patientProfileRepository,
     required this.onLogout,
   });
 
@@ -30,6 +32,7 @@ class PatientHomeShell extends StatefulWidget {
   final MedicationRepositoryImpl medicationRepository;
   final SymptomRepositoryImpl symptomRepository;
   final AlertsRepository alertsRepository;
+  final PatientProfileRepository patientProfileRepository;
   final VoidCallback onLogout;
 
   @override
@@ -52,7 +55,11 @@ class _PatientHomeShellState extends State<PatientHomeShell> {
         recordSymptomUseCase: RecordSymptomUseCase(widget.symptomRepository),
       ),
       AlertsScreen(alertsRepository: widget.alertsRepository),
-      ProfileScreen(user: widget.user, onLogout: widget.onLogout),
+      ProfileScreen(
+        user: widget.user,
+        onLogout: widget.onLogout,
+        patientProfileRepository: widget.patientProfileRepository,
+      ),
     ];
 
     return Scaffold(
