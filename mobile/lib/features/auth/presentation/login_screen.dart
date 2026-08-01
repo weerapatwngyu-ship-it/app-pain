@@ -47,6 +47,10 @@ class _LoginScreenState extends State<LoginScreen> {
         password: _passwordController.text,
       );
       widget.onLoggedIn(session.user);
+      // Reached via the phone entry screen's staff-login shortcut, so this
+      // is pushed on top of the root — pop back to it or the swapped
+      // MaterialApp.home stays hidden underneath.
+      if (mounted) Navigator.of(context).popUntil((route) => route.isFirst);
     } on ApiException catch (e) {
       setState(() => _error = e.statusCode == 401
           ? 'อีเมลหรือรหัสผ่านไม่ถูกต้อง'
@@ -67,8 +71,11 @@ class _LoginScreenState extends State<LoginScreen> {
         builder: (_) => RegisterScreen(
           authRepository: widget.authRepository,
           onRegistered: (user) {
-            Navigator.of(context).pop();
             widget.onLoggedIn(user);
+            // Pop RegisterScreen + LoginScreen both, back to the root —
+            // a single pop() only clears RegisterScreen and leaves
+            // LoginScreen covering the now-swapped MaterialApp.home.
+            Navigator.of(context).popUntil((route) => route.isFirst);
           },
         ),
       ),

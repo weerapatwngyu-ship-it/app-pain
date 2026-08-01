@@ -53,6 +53,10 @@ class _PinLoginScreenState extends State<PinLoginScreen> {
       final session =
           await widget.authRepository.loginWithPhonePin(phone: widget.phone, pin: _pin);
       widget.onAuthenticated(session.user);
+      // This screen is pushed on top of the root (phone entry -> OTP ->
+      // here) — swapping MaterialApp.home alone only updates the
+      // bottom-of-stack route, so pop back to it to actually show it.
+      if (mounted) Navigator.of(context).popUntil((route) => route.isFirst);
     } on ApiException catch (_) {
       setState(() {
         _error = 'รหัส PIN ไม่ถูกต้อง';

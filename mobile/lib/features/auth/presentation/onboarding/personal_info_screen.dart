@@ -99,7 +99,15 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
       await Navigator.of(context).push(
         MaterialPageRoute(
           builder: (_) => AccountCreatedScreen(
-            onStart: () => widget.onAuthenticated(session.user),
+            onStart: () {
+              // `onAuthenticated` swaps MaterialApp.home, but that only
+              // updates the bottom-of-stack route — this screen is 5
+              // pushes deep (phone -> OTP -> consent -> PIN -> personal
+              // info -> here), so without popping back to root nothing
+              // visible changes when it's called.
+              widget.onAuthenticated(session.user);
+              Navigator.of(context).popUntil((route) => route.isFirst);
+            },
           ),
         ),
       );
