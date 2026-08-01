@@ -7,6 +7,7 @@ import { AuthModule } from './auth/auth.module';
 import { DoseLogsModule } from './dose-logs/dose-logs.module';
 import { PatientLinksModule } from './patient-links/patient-links.module';
 import { PatientsModule } from './patients/patients.module';
+import { PharmaciesModule } from './pharmacies/pharmacies.module';
 import { PrescriptionsModule } from './prescriptions/prescriptions.module';
 import { SymptomLogsModule } from './symptom-logs/symptom-logs.module';
 
@@ -35,6 +36,7 @@ import { SymptomLogsModule } from './symptom-logs/symptom-logs.module';
     DoseLogsModule,
     SymptomLogsModule,
     AlertsModule,
+    PharmaciesModule,
   ],
 })
 export class AppModule {}
