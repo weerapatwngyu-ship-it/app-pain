@@ -13,8 +13,11 @@ import { RegisterDto } from './dto/register.dto';
 import { User, UserRole } from './entities/user.entity';
 
 const SALT_ROUNDS = 12;
-const OTP_TTL_MS = 5 * 60 * 1000;
-const OTP_VERIFIED_TTL_MS = 10 * 60 * 1000;
+const OTP_TTL_MS = 15 * 60 * 1000;
+// Generous window between OTP verification and finishing registration —
+// this is dev/local testing, not a production SMS flow under time
+// pressure, so err toward not making people re-verify mid-signup.
+const OTP_VERIFIED_TTL_MS = 60 * 60 * 1000;
 
 interface OtpRecord {
   otp: string;
