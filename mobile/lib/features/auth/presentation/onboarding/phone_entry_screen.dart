@@ -6,7 +6,6 @@ import 'package:flutter/services.dart';
 import '../../../../core/network/api_client.dart';
 import '../../domain/auth_repository.dart';
 import '../../domain/entities/user.dart';
-import '../login_screen.dart';
 import 'onboarding_theme.dart';
 import 'otp_verify_screen.dart';
 
@@ -97,18 +96,6 @@ class _PhoneEntryScreenState extends State<PhoneEntryScreen> {
     }
   }
 
-  Future<void> _useStaffLogin() async {
-    final authRepository = widget.authRepository;
-    await Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => LoginScreen(
-          authRepository: authRepository,
-          onLoggedIn: widget.onAuthenticated,
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -119,10 +106,13 @@ class _PhoneEntryScreenState extends State<PhoneEntryScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              OnboardingHeader(
-                icon: Icons.close,
-                onIconTap: _useStaffLogin,
-                title: 'เข้าสู่ระบบ / ลงทะเบียน',
+              const Text(
+                'เข้าสู่ระบบ / ลงทะเบียน',
+                style: TextStyle(
+                  fontSize: 26,
+                  fontWeight: FontWeight.w700,
+                  color: OnboardingColors.text,
+                ),
               ),
               const SizedBox(height: 24),
               const Text(
