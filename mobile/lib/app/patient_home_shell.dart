@@ -16,9 +16,9 @@ import '../features/symptom_tracking/data/symptom_repository_impl.dart';
 import '../features/symptom_tracking/domain/usecases/record_symptom_usecase.dart';
 import '../features/symptom_tracking/presentation/symptom_log_screen.dart';
 
-/// Bottom-nav shell for a logged-in patient — หน้าหลัก (today's dose
-/// schedule) / กิจกรรม (symptom log) / แจ้งเตือน (alerts) / โปรไฟล์, plus a
-/// center-docked FAB for ร้านขายยาใกล้ฉัน (nearby pharmacy finder).
+/// Bottom nav for a logged-in patient — หน้าหลัก (today's dose schedule) /
+/// กิจกรรม (symptom log) / ร้านยา (nearby pharmacy finder, opens as its own
+/// screen rather than a tab) / แจ้งเตือน (alerts) / โปรไฟล์.
 class PatientHomeShell extends StatefulWidget {
   const PatientHomeShell({
     super.key,
@@ -84,46 +84,47 @@ class _PatientHomeShellState extends State<PatientHomeShell> {
 
     return Scaffold(
       body: IndexedStack(index: _index, children: tabs),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: OnboardingColors.teal,
-        tooltip: 'ร้านขายยาใกล้ฉัน',
-        onPressed: _openPharmacyFinder,
-        child: const Icon(Icons.local_pharmacy_outlined, color: Colors.white),
-      ),
-      bottomNavigationBar: BottomAppBar(
-        shape: const CircularNotchedRectangle(),
-        notchMargin: 8,
-        color: Colors.white,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: [
-            _NavItem(
-              icon: Icons.home_outlined,
-              label: 'หน้าหลัก',
-              selected: _index == 0,
-              onTap: () => setState(() => _index = 0),
-            ),
-            _NavItem(
-              icon: Icons.event_note_outlined,
-              label: 'กิจกรรม',
-              selected: _index == 1,
-              onTap: () => setState(() => _index = 1),
-            ),
-            const SizedBox(width: 48), // space for the notched FAB
-            _NavItem(
-              icon: Icons.mail_outline,
-              label: 'แจ้งเตือน',
-              selected: _index == 2,
-              onTap: () => setState(() => _index = 2),
-            ),
-            _NavItem(
-              icon: Icons.person_outline,
-              label: 'โปรไฟล์',
-              selected: _index == 3,
-              onTap: () => setState(() => _index = 3),
-            ),
-          ],
+      bottomNavigationBar: DecoratedBox(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          border: Border(top: BorderSide(color: OnboardingColors.border)),
+        ),
+        child: SafeArea(
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _NavItem(
+                icon: Icons.home_outlined,
+                label: 'หน้าหลัก',
+                selected: _index == 0,
+                onTap: () => setState(() => _index = 0),
+              ),
+              _NavItem(
+                icon: Icons.event_note_outlined,
+                label: 'กิจกรรม',
+                selected: _index == 1,
+                onTap: () => setState(() => _index = 1),
+              ),
+              _NavItem(
+                icon: Icons.local_pharmacy_outlined,
+                label: 'ร้านยา',
+                selected: false,
+                onTap: _openPharmacyFinder,
+              ),
+              _NavItem(
+                icon: Icons.mail_outline,
+                label: 'แจ้งเตือน',
+                selected: _index == 2,
+                onTap: () => setState(() => _index = 2),
+              ),
+              _NavItem(
+                icon: Icons.person_outline,
+                label: 'โปรไฟล์',
+                selected: _index == 3,
+                onTap: () => setState(() => _index = 3),
+              ),
+            ],
+          ),
         ),
       ),
     );
