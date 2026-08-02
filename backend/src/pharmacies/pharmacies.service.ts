@@ -1,66 +1,80 @@
-import { BadGatewayException, Injectable, ServiceUnavailableException } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
+import { BadGatewayException, Injectable } from '@nestjs/common';
 import { NearbyQueryDto } from './dto/nearby-query.dto';
 import { NearbyPharmacy } from './entities/nearby-pharmacy';
 
 const EARTH_RADIUS_METERS = 6371000;
+const OVERPASS_URL = 'https://overpass-api.de/api/interpreter';
 
-interface GooglePlacesResult {
-  place_id: string;
-  name: string;
-  vicinity?: string;
-  geometry: { location: { lat: number; lng: number } };
-  opening_hours?: { open_now?: boolean };
+interface OverpassElement {
+  type: 'node' | 'way' | 'relation';
+  id: number;
+  lat?: number;
+  lon?: number;
+  center?: { lat: number; lon: number };
+  tags?: Record<string, string>;
 }
 
-interface GooglePlacesResponse {
-  status: string;
-  error_message?: string;
-  results: GooglePlacesResult[];
+interface OverpassResponse {
+  elements: OverpassElement[];
 }
 
+/** Finds nearby pharmacies via OpenStreetMap's Overpass API — free, no API
+ * key or billing account needed (unlike Google Places). Coverage is
+ * community-contributed so it can be sparser than Google's in some areas,
+ * but it's a real, live query against OSM's `amenity=pharmacy` data. */
 @Injectable()
 export class PharmaciesService {
-  constructor(private readonly config: ConfigService) {}
-
   async findNearby(query: NearbyQueryDto): Promise<NearbyPharmacy[]> {
-    const apiKey = this.config.get<string>('GOOGLE_MAPS_API_KEY');
-    if (!apiKey) {
-      throw new ServiceUnavailableException(
-        'ยังไม่ได้ตั้งค่า GOOGLE_MAPS_API_KEY ใน backend/.env — ฟีเจอร์ค้นหาร้านยาใกล้ฉันจึงยังใช้งานไม่ได้',
-      );
-    }
-
     const radius = query.radiusMeters ?? 1500;
-    const url = new URL('https://maps.googleapis.com/maps/api/place/nearbysearch/json');
-    url.searchParams.set('location', `${query.lat},${query.lng}`);
-    url.searchParams.set('radius', String(radius));
-    url.searchParams.set('type', 'pharmacy');
-    url.searchParams.set('key', apiKey);
+    const overpassQuery = `
+      [out:json][timeout:25];
+      (
+        node["amenity"="pharmacy"](around:${radius},${query.lat},${query.lng});
+        way["amenity"="pharmacy"](around:${radius},${query.lat},${query.lng});
+      );
+      out center tags;
+    `;
 
-    const response = await fetch(url);
-    const body = (await response.json()) as GooglePlacesResponse;
+    const response = await fetch(OVERPASS_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'User-Agent': 'MedTrack (medication tracking app, dev/local testing)',
+      },
+      body: `data=${encodeURIComponent(overpassQuery)}`,
+    });
 
-    if (body.status === 'ZERO_RESULTS') return [];
-    if (body.status !== 'OK') {
+    if (!response.ok) {
       throw new BadGatewayException(
-        `Google Places API error: ${body.status}${body.error_message ? ` — ${body.error_message}` : ''}`,
+        `OpenStreetMap Overpass API error: HTTP ${response.status}`,
       );
     }
+    const body = (await response.json()) as OverpassResponse;
 
-    return body.results
-      .map((place) => ({
-        placeId: place.place_id,
-        name: place.name,
-        address: place.vicinity ?? '',
-        lat: place.geometry.location.lat,
-        lng: place.geometry.location.lng,
-        distanceMeters: Math.round(
-          this.haversineMeters(query.lat, query.lng, place.geometry.location.lat, place.geometry.location.lng),
-        ),
-        openNow: place.opening_hours?.open_now ?? null,
-      }))
+    return body.elements
+      .map((el) => this.toNearbyPharmacy(el, query.lat, query.lng))
+      .filter((p): p is NearbyPharmacy => p !== null)
       .sort((a, b) => a.distanceMeters - b.distanceMeters);
+  }
+
+  private toNearbyPharmacy(el: OverpassElement, originLat: number, originLng: number): NearbyPharmacy | null {
+    const lat = el.lat ?? el.center?.lat;
+    const lng = el.lon ?? el.center?.lon;
+    if (lat === undefined || lng === undefined) return null;
+
+    const tags = el.tags ?? {};
+    const addressParts = [tags['addr:housenumber'], tags['addr:street'], tags['addr:city']]
+      .filter(Boolean);
+
+    return {
+      placeId: `${el.type}/${el.id}`,
+      name: tags.name ?? 'ร้านขายยา',
+      address: addressParts.join(' '),
+      lat,
+      lng,
+      distanceMeters: Math.round(this.haversineMeters(originLat, originLng, lat, lng)),
+      openNow: null, // OSM's opening_hours tag is a free-text spec, not reliably parseable to a boolean
+    };
   }
 
   private haversineMeters(lat1: number, lng1: number, lat2: number, lng2: number): number {
