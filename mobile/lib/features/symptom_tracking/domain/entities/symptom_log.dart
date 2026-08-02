@@ -1,7 +1,7 @@
 class SymptomLog {
   const SymptomLog({
     required this.patientId,
-    required this.painScore,
+    this.painScore,
     this.category,
     this.customFields,
     this.id,
@@ -9,7 +9,7 @@ class SymptomLog {
   });
 
   final String patientId;
-  final int painScore;
+  final int? painScore;
   final String? category;
   final Map<String, dynamic>? customFields;
 
@@ -20,7 +20,7 @@ class SymptomLog {
 
   Map<String, dynamic> toJson() => {
         'patientId': patientId,
-        'painScore': painScore,
+        if (painScore != null) 'painScore': painScore,
         if (category != null) 'category': category,
         if (customFields != null) 'customFields': customFields,
       };
@@ -29,7 +29,7 @@ class SymptomLog {
     return SymptomLog(
       id: json['id'] as String?,
       patientId: json['patientId'] as String,
-      painScore: json['painScore'] as int,
+      painScore: json['painScore'] as int?,
       category: json['category'] as String?,
       customFields: json['customFields'] as Map<String, dynamic>?,
       recordedAt:

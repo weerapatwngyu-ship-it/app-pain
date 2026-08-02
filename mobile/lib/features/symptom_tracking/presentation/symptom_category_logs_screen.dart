@@ -61,14 +61,17 @@ class _SymptomCategoryLogsScreenState extends State<SymptomCategoryLogsScreen> {
             separatorBuilder: (_, __) => const Divider(color: OnboardingColors.border),
             itemBuilder: (context, index) {
               final log = logs[index];
+              final category = symptomCategories.firstWhere(
+                (c) => c.key == log.category,
+                orElse: () => symptomCategories.last,
+              );
               return ListTile(
                 leading: CircleAvatar(
                   backgroundColor: OnboardingColors.teal,
-                  child: Text('${log.painScore}', style: const TextStyle(color: Colors.white)),
+                  child: Icon(category.icon, color: Colors.white, size: 20),
                 ),
                 title: Text(symptomCategoryLabel(log.category)),
                 subtitle: log.recordedAt != null ? Text(_formatDate(log.recordedAt!)) : null,
-                trailing: const Text('คะแนนความเจ็บปวด', style: TextStyle(fontSize: 11, color: OnboardingColors.textMuted)),
               );
             },
           );

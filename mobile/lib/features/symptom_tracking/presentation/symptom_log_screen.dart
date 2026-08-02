@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../../../shared/widgets/pain_score_slider.dart';
 import '../../auth/presentation/onboarding/onboarding_theme.dart';
 import '../domain/entities/symptom_category.dart';
 import '../domain/entities/symptom_log.dart';
@@ -21,7 +20,6 @@ class SymptomLogScreen extends StatefulWidget {
 }
 
 class _SymptomLogScreenState extends State<SymptomLogScreen> {
-  int _painScore = 0;
   String? _category;
   bool _saving = false;
   String? _error;
@@ -37,7 +35,7 @@ class _SymptomLogScreenState extends State<SymptomLogScreen> {
     });
     try {
       await widget.recordSymptomUseCase(
-        SymptomLog(patientId: widget.patientId, painScore: _painScore, category: _category),
+        SymptomLog(patientId: widget.patientId, category: _category),
       );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -82,11 +80,6 @@ class _SymptomLogScreenState extends State<SymptomLogScreen> {
                   labelStyle: TextStyle(color: selected ? Colors.white : OnboardingColors.text),
                 );
               }).toList(),
-            ),
-            const SizedBox(height: 24),
-            PainScoreSlider(
-              value: _painScore,
-              onChanged: (v) => setState(() => _painScore = v),
             ),
             if (_error != null) ...[
               const SizedBox(height: 12),

@@ -13,10 +13,11 @@ export class CreateSymptomLogDto {
   @IsUUID()
   patientId: string;
 
+  @IsOptional()
   @IsInt()
   @Min(0)
   @Max(10)
-  painScore: number;
+  painScore?: number;
 
   @IsOptional()
   @IsIn(SYMPTOM_CATEGORIES)

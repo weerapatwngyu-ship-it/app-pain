@@ -11,8 +11,8 @@ export class SymptomLog {
   @Column({ type: 'timestamptz', default: () => 'now()' })
   recordedAt: Date;
 
-  @Column({ type: 'int' })
-  painScore: number;
+  @Column({ type: 'int', nullable: true })
+  painScore?: number;
 
   // Fixed, mobile-defined set (head/stomach/skin/respiratory/joint/other) —
   // lets the app group a patient's own logs by symptom area on the home
