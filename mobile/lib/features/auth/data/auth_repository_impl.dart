@@ -83,6 +83,15 @@ class AuthRepositoryImpl implements AuthRepository {
     return _toSession(json as Map<String, dynamic>);
   }
 
+  @override
+  Future<AppUser> updateProfile({String? name, String? email}) async {
+    final json = await _client.patch('/auth/profile', body: {
+      if (name != null) 'name': name,
+      if (email != null) 'email': email,
+    }) as Map<String, dynamic>;
+    return AppUser.fromJson(json['user'] as Map<String, dynamic>);
+  }
+
   AuthSession _toSession(Map<String, dynamic> json) {
     final session = AuthSession(
       accessToken: json['accessToken'] as String,

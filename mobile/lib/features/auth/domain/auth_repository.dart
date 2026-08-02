@@ -51,4 +51,6 @@ abstract class AuthRepository {
   });
 
   Future<AuthSession> loginWithPhonePin({required String phone, required String pin});
+
+  Future<AppUser> updateProfile({String? name, String? email});
 }

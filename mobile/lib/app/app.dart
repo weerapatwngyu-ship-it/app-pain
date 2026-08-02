@@ -129,7 +129,9 @@ class _MedTrackAppState extends State<MedTrackApp> {
       alertsRepository: _alertsRepository,
       patientProfileRepository: _patientProfileRepository,
       pharmacyFinderRepository: _pharmacyFinderRepository,
+      authRepository: _authRepository,
       onLogout: _logout,
+      onUserUpdated: _handleAuthenticated,
     );
   }
 }

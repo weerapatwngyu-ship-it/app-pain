@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../features/alerts/data/alerts_repository.dart';
 import '../features/alerts/presentation/alerts_screen.dart';
+import '../features/auth/domain/auth_repository.dart';
 import '../features/auth/domain/entities/user.dart';
 import '../features/auth/presentation/onboarding/onboarding_theme.dart';
 import '../features/medication/data/medication_repository_impl.dart';
@@ -28,7 +29,9 @@ class PatientHomeShell extends StatefulWidget {
     required this.alertsRepository,
     required this.patientProfileRepository,
     required this.pharmacyFinderRepository,
+    required this.authRepository,
     required this.onLogout,
+    required this.onUserUpdated,
   });
 
   final AppUser user;
@@ -38,7 +41,9 @@ class PatientHomeShell extends StatefulWidget {
   final AlertsRepository alertsRepository;
   final PatientProfileRepository patientProfileRepository;
   final PharmacyFinderRepository pharmacyFinderRepository;
+  final AuthRepository authRepository;
   final VoidCallback onLogout;
+  final ValueChanged<AppUser> onUserUpdated;
 
   @override
   State<PatientHomeShell> createState() => _PatientHomeShellState();
@@ -71,7 +76,9 @@ class _PatientHomeShellState extends State<PatientHomeShell> {
       ProfileScreen(
         user: widget.user,
         onLogout: widget.onLogout,
+        authRepository: widget.authRepository,
         patientProfileRepository: widget.patientProfileRepository,
+        onUserUpdated: widget.onUserUpdated,
       ),
     ];
 

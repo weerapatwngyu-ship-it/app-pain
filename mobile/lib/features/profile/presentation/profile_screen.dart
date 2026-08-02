@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../auth/domain/auth_repository.dart';
 import '../../auth/domain/entities/user.dart';
 import '../../auth/presentation/onboarding/onboarding_theme.dart';
 import '../data/patient_profile_repository.dart';
@@ -11,12 +12,16 @@ class ProfileScreen extends StatelessWidget {
     super.key,
     required this.user,
     required this.onLogout,
+    required this.authRepository,
     required this.patientProfileRepository,
+    required this.onUserUpdated,
   });
 
   final AppUser user;
   final VoidCallback onLogout;
+  final AuthRepository authRepository;
   final PatientProfileRepository patientProfileRepository;
+  final ValueChanged<AppUser> onUserUpdated;
 
   /// Short, human-friendly stand-in for a "member code" — derived from the
   /// account's real id (not fabricated), since the backend doesn't hand out
@@ -90,7 +95,9 @@ class ProfileScreen extends StatelessWidget {
                 MaterialPageRoute(
                   builder: (_) => PersonalInfoDetailScreen(
                     user: user,
+                    authRepository: authRepository,
                     repository: patientProfileRepository,
+                    onUserUpdated: onUserUpdated,
                   ),
                 ),
               ),

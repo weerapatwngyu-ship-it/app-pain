@@ -10,6 +10,7 @@ import { OtpRequestDto } from './dto/otp-request.dto';
 import { OtpVerifyDto } from './dto/otp-verify.dto';
 import { RegisterPhoneDto } from './dto/register-phone.dto';
 import { RegisterDto } from './dto/register.dto';
+import { UpdateProfileDto } from './dto/update-profile.dto';
 import { User, UserRole } from './entities/user.entity';
 
 const SALT_ROUNDS = 12;
@@ -155,19 +156,37 @@ export class AuthService {
     return this.issueTokens(user);
   }
 
+  async updateProfile(userId: string, dto: UpdateProfileDto) {
+    const user = await this.users.findOne({ where: { id: userId } });
+    if (!user) throw new UnauthorizedException();
+
+    if (dto.email && dto.email !== user.email) {
+      const existing = await this.users.findOne({ where: { email: dto.email } });
+      if (existing) throw new ConflictException('อีเมลนี้ถูกใช้สมัครสมาชิกแล้ว');
+    }
+
+    Object.assign(user, dto);
+    const saved = await this.users.save(user);
+    return { user: await this.toUserJson(saved) };
+  }
+
   private async issueTokens(user: User) {
     const payload = { sub: user.id, email: user.email, role: user.role };
-    const patientId = await this.findOwnPatientId(user);
     return {
       accessToken: this.jwt.sign(payload),
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        role: user.role,
-        patientId,
-        phone: user.phone,
-      },
+      user: await this.toUserJson(user),
+    };
+  }
+
+  private async toUserJson(user: User) {
+    const patientId = await this.findOwnPatientId(user);
+    return {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      patientId,
+      phone: user.phone,
     };
   }
 

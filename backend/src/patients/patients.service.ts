@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { PatientLink, PatientLinkStatus } from '../patient-links/entities/patient-link.entity';
 import { CreatePatientDto } from './dto/create-patient.dto';
+import { UpdatePatientDto } from './dto/update-patient.dto';
 import { Patient } from './entities/patient.entity';
 
 @Injectable()
@@ -21,6 +22,12 @@ export class PatientsService {
     if (!patient) throw new NotFoundException('Patient not found');
     await this.assertAccess(patient, requestUserId);
     return patient;
+  }
+
+  async update(patientId: string, requestUserId: string, dto: UpdatePatientDto): Promise<Patient> {
+    const patient = await this.findOne(patientId, requestUserId);
+    Object.assign(patient, dto);
+    return this.patients.save(patient);
   }
 
   private async assertAccess(patient: Patient, requestUserId: string) {

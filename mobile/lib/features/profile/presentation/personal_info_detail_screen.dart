@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 
+import '../../auth/domain/auth_repository.dart';
 import '../../auth/domain/entities/user.dart';
 import '../../auth/presentation/onboarding/onboarding_theme.dart';
 import '../data/patient_profile_repository.dart';
 import '../domain/entities/patient_profile.dart';
+import 'personal_info_edit_screen.dart';
 
 const _genderLabels = {
   'female': 'หญิง',
@@ -15,27 +17,42 @@ class PersonalInfoDetailScreen extends StatefulWidget {
   const PersonalInfoDetailScreen({
     super.key,
     required this.user,
+    required this.authRepository,
     required this.repository,
+    required this.onUserUpdated,
   });
 
   final AppUser user;
+  final AuthRepository authRepository;
   final PatientProfileRepository repository;
+  final ValueChanged<AppUser> onUserUpdated;
 
   @override
   State<PersonalInfoDetailScreen> createState() => _PersonalInfoDetailScreenState();
 }
 
 class _PersonalInfoDetailScreenState extends State<PersonalInfoDetailScreen> {
-  late Future<PatientProfile>? _profileFuture =
-      widget.user.patientId != null ? widget.repository.fetch(widget.user.patientId!) : null;
+  late AppUser _user = widget.user;
+  PatientProfile? _profile;
+  Future<PatientProfile>? _profileFuture;
 
-  String get _firstName {
-    final parts = widget.user.name.trim().split(RegExp(r'\s+'));
+  @override
+  void initState() {
+    super.initState();
+    _loadProfile();
+  }
+
+  void _loadProfile() {
+    _profileFuture = _user.patientId != null ? widget.repository.fetch(_user.patientId!) : null;
+  }
+
+  String _firstNameOf(AppUser user) {
+    final parts = user.name.trim().split(RegExp(r'\s+'));
     return parts.isEmpty ? '' : parts.first;
   }
 
-  String get _lastName {
-    final parts = widget.user.name.trim().split(RegExp(r'\s+'));
+  String _lastNameOf(AppUser user) {
+    final parts = user.name.trim().split(RegExp(r'\s+'));
     return parts.length > 1 ? parts.sublist(1).join(' ') : '';
   }
 
@@ -45,10 +62,25 @@ class _PersonalInfoDetailScreenState extends State<PersonalInfoDetailScreen> {
     return '${parts[2]}/${parts[1]}/${parts[0]}';
   }
 
-  void _comingSoon() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('ฟีเจอร์นี้อยู่ระหว่างการพัฒนา')),
+  Future<void> _openEdit() async {
+    final result = await Navigator.of(context).push<(AppUser, PatientProfile?)>(
+      MaterialPageRoute(
+        builder: (_) => PersonalInfoEditScreen(
+          user: _user,
+          profile: _profile,
+          authRepository: widget.authRepository,
+          patientProfileRepository: widget.repository,
+        ),
+      ),
     );
+    if (result == null) return;
+    final (updatedUser, updatedProfile) = result;
+    widget.onUserUpdated(updatedUser);
+    setState(() {
+      _user = updatedUser;
+      _profile = updatedProfile;
+      _loadProfile();
+    });
   }
 
   @override
@@ -79,7 +111,7 @@ class _PersonalInfoDetailScreenState extends State<PersonalInfoDetailScreen> {
                     ),
                   ),
                   TextButton(
-                    onPressed: _comingSoon,
+                    onPressed: _openEdit,
                     child: const Text('แก้ไข', style: TextStyle(color: OnboardingColors.teal)),
                   ),
                 ],
@@ -102,6 +134,7 @@ class _PersonalInfoDetailScreenState extends State<PersonalInfoDetailScreen> {
                               ),
                             );
                           }
+                          _profile = snapshot.data;
                           return _buildCard(context, snapshot.data);
                         },
                       ),
@@ -129,10 +162,10 @@ class _PersonalInfoDetailScreenState extends State<PersonalInfoDetailScreen> {
               child: Icon(Icons.person, color: Colors.white, size: 48),
             ),
             const SizedBox(height: 20),
-            _InfoRow(label: 'ชื่อจริง', value: _firstName),
-            _InfoRow(label: 'นามสกุล', value: _lastName),
-            _InfoRow(label: 'เบอร์โทรศัพท์', value: widget.user.phone ?? '-'),
-            _InfoRow(label: 'อีเมล', value: widget.user.email),
+            _InfoRow(label: 'ชื่อจริง', value: _firstNameOf(_user)),
+            _InfoRow(label: 'นามสกุล', value: _lastNameOf(_user)),
+            _InfoRow(label: 'เบอร์โทรศัพท์', value: _user.phone ?? '-'),
+            _InfoRow(label: 'อีเมล', value: _user.email),
             _InfoRow(
               label: 'วันเกิด',
               value: profile == null ? '-' : _formatBirthDate(profile.birthDate),
