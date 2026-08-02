@@ -64,6 +64,7 @@ class _PatientHomeShellState extends State<PatientHomeShell> {
   Widget build(BuildContext context) {
     final tabs = [
       TodayScheduleScreen(
+        user: widget.user,
         patientId: widget.patientId,
         medicationRepository: widget.medicationRepository,
         logDoseUseCase: LogDoseUseCase(widget.medicationRepository),
