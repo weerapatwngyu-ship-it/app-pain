@@ -75,9 +75,7 @@ class _PharmacyFinderScreenState extends State<PharmacyFinderScreen> {
       });
     } on ApiException catch (e) {
       setState(() {
-        _error = e.statusCode == 503
-            ? _readableApiMessage(e)
-            : 'ค้นหาร้านยาไม่สำเร็จ (HTTP ${e.statusCode})';
+        _error = 'ค้นหาร้านยาไม่สำเร็จ (HTTP ${e.statusCode}): ${_readableApiMessage(e)}';
         _loading = false;
       });
     } on SocketException catch (_) {
