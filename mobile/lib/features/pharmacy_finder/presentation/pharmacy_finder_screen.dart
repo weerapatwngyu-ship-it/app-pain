@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -60,7 +61,9 @@ class _PharmacyFinderScreenState extends State<PharmacyFinderScreen> {
         return;
       }
 
-      final position = await Geolocator.getCurrentPosition();
+      final position = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(timeLimit: Duration(seconds: 15)),
+      );
       final results = await widget.repository.findNearby(
         lat: position.latitude,
         lng: position.longitude,
@@ -80,6 +83,12 @@ class _PharmacyFinderScreenState extends State<PharmacyFinderScreen> {
     } on SocketException catch (_) {
       setState(() {
         _error = 'เชื่อมต่อเซิร์ฟเวอร์ไม่ได้';
+        _loading = false;
+      });
+    } on TimeoutException catch (_) {
+      setState(() {
+        _error = 'หาตำแหน่งไม่สำเร็จ (หมดเวลา) — ถ้ารันบน emulator ต้องตั้งตำแหน่งจำลองก่อน '
+            '(Extended Controls > Location) เพราะ emulator ไม่มีสัญญาณ GPS จริง';
         _loading = false;
       });
     } catch (e) {
