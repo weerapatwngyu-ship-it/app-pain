@@ -14,6 +14,12 @@ export class SymptomLog {
   @Column({ type: 'int' })
   painScore: number;
 
+  // Fixed, mobile-defined set (head/stomach/skin/respiratory/joint/other) —
+  // lets the app group a patient's own logs by symptom area on the home
+  // screen. Nullable so older rows without a category still work.
+  @Column({ type: 'varchar', nullable: true })
+  category?: string;
+
   @Column({ type: 'jsonb', nullable: true })
   customFields?: Record<string, unknown>;
 }

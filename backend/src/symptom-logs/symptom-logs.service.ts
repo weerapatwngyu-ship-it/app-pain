@@ -20,6 +20,26 @@ export class SymptomLogsService {
     return this.symptomLogs.save(this.symptomLogs.create(dto));
   }
 
+  findAll(patientId: string, category?: string) {
+    return this.symptomLogs.find({
+      where: category ? { patientId, category } : { patientId },
+      order: { recordedAt: 'DESC' },
+    });
+  }
+
+  async countByCategory(patientId: string): Promise<Record<string, number>> {
+    const rows = await this.symptomLogs
+      .createQueryBuilder('log')
+      .select('log.category', 'category')
+      .addSelect('COUNT(*)', 'count')
+      .where('log.patientId = :patientId', { patientId })
+      .andWhere('log.category IS NOT NULL')
+      .groupBy('log.category')
+      .getRawMany<{ category: string; count: string }>();
+
+    return Object.fromEntries(rows.map((r) => [r.category, Number(r.count)]));
+  }
+
   async trends(patientId: string) {
     const symptoms = await this.symptomLogs.find({
       where: { patientId },

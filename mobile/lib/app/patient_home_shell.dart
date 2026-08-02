@@ -68,6 +68,7 @@ class _PatientHomeShellState extends State<PatientHomeShell> {
         patientId: widget.patientId,
         medicationRepository: widget.medicationRepository,
         logDoseUseCase: LogDoseUseCase(widget.medicationRepository),
+        symptomRepository: widget.symptomRepository,
       ),
       SymptomLogScreen(
         patientId: widget.patientId,
