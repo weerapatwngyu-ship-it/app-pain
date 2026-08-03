@@ -6,4 +6,5 @@ export interface NearbyPharmacy {
   lng: number;
   distanceMeters: number;
   openNow: boolean | null;
+  type: 'pharmacy' | 'clinic';
 }

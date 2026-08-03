@@ -10,6 +10,7 @@ import '../../../core/network/api_client.dart';
 import '../../auth/presentation/onboarding/onboarding_theme.dart';
 import '../data/pharmacy_finder_repository.dart';
 import '../domain/entities/nearby_pharmacy.dart';
+import 'pharmacy_map_view.dart';
 
 class PharmacyFinderScreen extends StatefulWidget {
   const PharmacyFinderScreen({super.key, required this.repository});
@@ -24,7 +25,10 @@ class _PharmacyFinderScreenState extends State<PharmacyFinderScreen> {
   bool _loading = true;
   String? _error;
   bool _showOpenAppSettings = false;
+  bool _showMap = false;
   List<NearbyPharmacy> _pharmacies = const [];
+  double? _userLat;
+  double? _userLng;
 
   @override
   void initState() {
@@ -72,6 +76,8 @@ class _PharmacyFinderScreenState extends State<PharmacyFinderScreen> {
       if (!mounted) return;
       setState(() {
         _pharmacies = results;
+        _userLat = position.latitude;
+        _userLng = position.longitude;
         _loading = false;
       });
     } on ApiException catch (e) {
@@ -123,10 +129,21 @@ class _PharmacyFinderScreenState extends State<PharmacyFinderScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              OnboardingHeader(
-                icon: Icons.arrow_back,
-                onIconTap: () => Navigator.of(context).pop(),
-                title: 'ร้านขายยาใกล้ฉัน',
+              Row(
+                children: [
+                  Expanded(
+                    child: OnboardingHeader(
+                      icon: Icons.arrow_back,
+                      onIconTap: () => Navigator.of(context).pop(),
+                      title: 'ร้านยา/คลินิกใกล้ฉัน',
+                    ),
+                  ),
+                  if (!_loading && _error == null && _pharmacies.isNotEmpty)
+                    OnboardingIconButton(
+                      icon: _showMap ? Icons.list : Icons.map_outlined,
+                      onTap: () => setState(() => _showMap = !_showMap),
+                    ),
+                ],
               ),
               const SizedBox(height: 16),
               Expanded(child: _buildBody()),
@@ -160,7 +177,18 @@ class _PharmacyFinderScreenState extends State<PharmacyFinderScreen> {
       );
     }
     if (_pharmacies.isEmpty) {
-      return const Center(child: Text('ไม่พบร้านขายยาใกล้เคียง'));
+      return const Center(child: Text('ไม่พบร้านยา/คลินิกใกล้เคียง'));
+    }
+    if (_showMap && _userLat != null && _userLng != null) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: PharmacyMapView(
+          userLat: _userLat!,
+          userLng: _userLng!,
+          pharmacies: _pharmacies,
+          onTapPharmacy: _showPharmacySheet,
+        ),
+      );
     }
     return RefreshIndicator(
       onRefresh: _load,
@@ -171,24 +199,57 @@ class _PharmacyFinderScreenState extends State<PharmacyFinderScreen> {
       ),
     );
   }
+
+  void _showPharmacySheet(NearbyPharmacy pharmacy) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(pharmacy.name, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
+            if (pharmacy.address.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              Text(pharmacy.address, style: const TextStyle(color: OnboardingColors.textMuted)),
+            ],
+            const SizedBox(height: 4),
+            Text(
+              pharmacy.formattedDistance,
+              style: const TextStyle(color: OnboardingColors.teal, fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 16),
+            OnboardingPrimaryButton(
+              label: 'เปิดใน Google Maps',
+              onPressed: () => openPharmacyInGoogleMaps(context, pharmacy),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+Future<void> openPharmacyInGoogleMaps(BuildContext context, NearbyPharmacy pharmacy) async {
+  final uri = Uri.parse(
+    'https://www.google.com/maps/search/?api=1&query=${pharmacy.lat},${pharmacy.lng}',
+  );
+  final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
+  if (!opened && context.mounted) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('เปิด Google Maps ไม่สำเร็จ')),
+    );
+  }
 }
 
 class _PharmacyTile extends StatelessWidget {
   const _PharmacyTile({required this.pharmacy});
 
   final NearbyPharmacy pharmacy;
-
-  Future<void> _openInGoogleMaps(BuildContext context) async {
-    final uri = Uri.parse(
-      'https://www.google.com/maps/search/?api=1&query=${pharmacy.lat},${pharmacy.lng}',
-    );
-    final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
-    if (!opened && context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('เปิด Google Maps ไม่สำเร็จ')),
-      );
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -197,9 +258,12 @@ class _PharmacyTile extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const CircleAvatar(
-            backgroundColor: Color(0xFFDCEBE6),
-            child: Icon(Icons.local_pharmacy_outlined, color: OnboardingColors.teal),
+          CircleAvatar(
+            backgroundColor: const Color(0xFFDCEBE6),
+            child: Icon(
+              pharmacy.isPharmacy ? Icons.local_pharmacy_outlined : Icons.medical_services_outlined,
+              color: OnboardingColors.teal,
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -238,7 +302,7 @@ class _PharmacyTile extends StatelessWidget {
             ),
           ),
           IconButton(
-            onPressed: () => _openInGoogleMaps(context),
+            onPressed: () => openPharmacyInGoogleMaps(context, pharmacy),
             icon: const Icon(Icons.map_outlined, color: OnboardingColors.teal),
             tooltip: 'เปิดใน Google Maps',
           ),

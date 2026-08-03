@@ -7,6 +7,7 @@ class NearbyPharmacy {
     required this.lng,
     required this.distanceMeters,
     required this.openNow,
+    required this.type,
   });
 
   final String placeId;
@@ -17,6 +18,11 @@ class NearbyPharmacy {
   final int distanceMeters;
   final bool? openNow;
 
+  /// 'pharmacy' or 'clinic' — which OSM amenity this result came from.
+  final String type;
+
+  bool get isPharmacy => type == 'pharmacy';
+
   factory NearbyPharmacy.fromJson(Map<String, dynamic> json) {
     return NearbyPharmacy(
       placeId: json['placeId'] as String,
@@ -26,6 +32,7 @@ class NearbyPharmacy {
       lng: (json['lng'] as num).toDouble(),
       distanceMeters: json['distanceMeters'] as int,
       openNow: json['openNow'] as bool?,
+      type: json['type'] as String? ?? 'pharmacy',
     );
   }
 

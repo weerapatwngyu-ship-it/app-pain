@@ -18,19 +18,25 @@ interface OverpassResponse {
   elements: OverpassElement[];
 }
 
-/** Finds nearby pharmacies via OpenStreetMap's Overpass API — free, no API
- * key or billing account needed (unlike Google Places). Coverage is
- * community-contributed so it can be sparser than Google's in some areas,
- * but it's a real, live query against OSM's `amenity=pharmacy` data. */
+/** Finds nearby pharmacies and clinics via OpenStreetMap's Overpass API —
+ * free, no API key or billing account needed (unlike Google Places).
+ * Coverage is community-contributed so it can be sparser than Google's in
+ * some areas, but it's a real, live query against OSM's `amenity=pharmacy`
+ * / `amenity=clinic` / `amenity=doctors` data. */
 @Injectable()
 export class PharmaciesService {
   async findNearby(query: NearbyQueryDto): Promise<NearbyPharmacy[]> {
     const radius = query.radiusMeters ?? 1500;
+    const around = `around:${radius},${query.lat},${query.lng}`;
     const overpassQuery = `
       [out:json][timeout:25];
       (
-        node["amenity"="pharmacy"](around:${radius},${query.lat},${query.lng});
-        way["amenity"="pharmacy"](around:${radius},${query.lat},${query.lng});
+        node["amenity"="pharmacy"](${around});
+        way["amenity"="pharmacy"](${around});
+        node["amenity"="clinic"](${around});
+        way["amenity"="clinic"](${around});
+        node["amenity"="doctors"](${around});
+        way["amenity"="doctors"](${around});
       );
       out center tags;
     `;
@@ -65,15 +71,17 @@ export class PharmaciesService {
     const tags = el.tags ?? {};
     const addressParts = [tags['addr:housenumber'], tags['addr:street'], tags['addr:city']]
       .filter(Boolean);
+    const isPharmacy = tags.amenity === 'pharmacy';
 
     return {
       placeId: `${el.type}/${el.id}`,
-      name: tags.name ?? 'ร้านขายยา',
+      name: tags.name ?? (isPharmacy ? 'ร้านขายยา' : 'คลินิก'),
       address: addressParts.join(' '),
       lat,
       lng,
       distanceMeters: Math.round(this.haversineMeters(originLat, originLng, lat, lng)),
       openNow: null, // OSM's opening_hours tag is a free-text spec, not reliably parseable to a boolean
+      type: isPharmacy ? 'pharmacy' : 'clinic',
     };
   }
 
