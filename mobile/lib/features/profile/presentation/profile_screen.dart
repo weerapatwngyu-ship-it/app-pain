@@ -4,7 +4,11 @@ import '../../../shared/widgets/user_avatar.dart';
 import '../../auth/domain/auth_repository.dart';
 import '../../auth/domain/entities/user.dart';
 import '../../auth/presentation/onboarding/onboarding_theme.dart';
+import '../../doctors/data/doctor_repository.dart';
+import '../../pharmacy_finder/data/pharmacy_finder_repository.dart';
+import '../../symptom_tracking/data/symptom_repository_impl.dart';
 import '../data/patient_profile_repository.dart';
+import 'all_menu_screen.dart';
 import 'personal_info_detail_screen.dart';
 import 'settings_screen.dart';
 
@@ -12,17 +16,25 @@ class ProfileScreen extends StatelessWidget {
   const ProfileScreen({
     super.key,
     required this.user,
+    required this.patientId,
     required this.onLogout,
     required this.authRepository,
     required this.patientProfileRepository,
+    required this.symptomRepository,
+    required this.doctorRepository,
+    required this.pharmacyFinderRepository,
     required this.mediaBaseUrl,
     required this.onUserUpdated,
   });
 
   final AppUser user;
+  final String patientId;
   final VoidCallback onLogout;
   final AuthRepository authRepository;
   final PatientProfileRepository patientProfileRepository;
+  final SymptomRepositoryImpl symptomRepository;
+  final DoctorRepository doctorRepository;
+  final PharmacyFinderRepository pharmacyFinderRepository;
   final String mediaBaseUrl;
   final ValueChanged<AppUser> onUserUpdated;
 
@@ -69,6 +81,26 @@ class ProfileScreen extends StatelessWidget {
                     ],
                   ),
                 ),
+                OnboardingIconButton(
+                  icon: Icons.grid_view_outlined,
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => AllMenuScreen(
+                        user: user,
+                        patientId: patientId,
+                        authRepository: authRepository,
+                        patientProfileRepository: patientProfileRepository,
+                        symptomRepository: symptomRepository,
+                        doctorRepository: doctorRepository,
+                        pharmacyFinderRepository: pharmacyFinderRepository,
+                        mediaBaseUrl: mediaBaseUrl,
+                        onUserUpdated: onUserUpdated,
+                        onLogout: onLogout,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
                 OnboardingIconButton(
                   icon: Icons.settings_outlined,
                   onTap: () => Navigator.of(context).push(

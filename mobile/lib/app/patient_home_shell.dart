@@ -89,9 +89,13 @@ class _PatientHomeShellState extends State<PatientHomeShell> {
       AlertsScreen(alertsRepository: widget.alertsRepository),
       ProfileScreen(
         user: widget.user,
+        patientId: widget.patientId,
         onLogout: widget.onLogout,
         authRepository: widget.authRepository,
         patientProfileRepository: widget.patientProfileRepository,
+        symptomRepository: widget.symptomRepository,
+        doctorRepository: widget.doctorRepository,
+        pharmacyFinderRepository: widget.pharmacyFinderRepository,
         mediaBaseUrl: widget.mediaBaseUrl,
         onUserUpdated: widget.onUserUpdated,
       ),
