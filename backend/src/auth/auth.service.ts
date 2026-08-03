@@ -178,6 +178,14 @@ export class AuthService {
     };
   }
 
+  async updateAvatar(userId: string, avatarUrl: string) {
+    const user = await this.users.findOne({ where: { id: userId } });
+    if (!user) throw new UnauthorizedException();
+    user.avatarUrl = avatarUrl;
+    const saved = await this.users.save(user);
+    return { user: await this.toUserJson(saved) };
+  }
+
   private async toUserJson(user: User) {
     const patientId = await this.findOwnPatientId(user);
     return {
@@ -187,6 +195,7 @@ export class AuthService {
       role: user.role,
       patientId,
       phone: user.phone,
+      avatarUrl: user.avatarUrl,
     };
   }
 

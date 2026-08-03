@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../shared/widgets/user_avatar.dart';
 import '../../auth/domain/auth_repository.dart';
 import '../../auth/domain/entities/user.dart';
 import '../../auth/presentation/onboarding/onboarding_theme.dart';
@@ -14,6 +15,7 @@ class ProfileScreen extends StatelessWidget {
     required this.onLogout,
     required this.authRepository,
     required this.patientProfileRepository,
+    required this.mediaBaseUrl,
     required this.onUserUpdated,
   });
 
@@ -21,6 +23,7 @@ class ProfileScreen extends StatelessWidget {
   final VoidCallback onLogout;
   final AuthRepository authRepository;
   final PatientProfileRepository patientProfileRepository;
+  final String mediaBaseUrl;
   final ValueChanged<AppUser> onUserUpdated;
 
   /// Short, human-friendly stand-in for a "member code" — derived from the
@@ -44,17 +47,10 @@ class ProfileScreen extends StatelessWidget {
           children: [
             Row(
               children: [
-                CircleAvatar(
+                UserAvatar(
+                  name: user.name,
+                  avatarUrl: user.avatarUrl != null ? '$mediaBaseUrl${user.avatarUrl}' : null,
                   radius: 28,
-                  backgroundColor: OnboardingColors.teal,
-                  child: Text(
-                    user.name.trim().isEmpty ? '?' : user.name.trim()[0],
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 22,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
                 ),
                 const SizedBox(width: 16),
                 Expanded(

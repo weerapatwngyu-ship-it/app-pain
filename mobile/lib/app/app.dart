@@ -130,6 +130,7 @@ class _MedTrackAppState extends State<MedTrackApp> {
       patientProfileRepository: _patientProfileRepository,
       pharmacyFinderRepository: _pharmacyFinderRepository,
       authRepository: _authRepository,
+      mediaBaseUrl: _apiClient.originUrl,
       onLogout: _logout,
       onUserUpdated: _handleAuthenticated,
     );

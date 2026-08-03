@@ -1,6 +1,17 @@
-import { Body, Controller, Patch, Post, UseGuards } from '@nestjs/common';
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Patch,
+  Post,
+  UploadedFile,
+  UseGuards,
+  UseInterceptors,
+} from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { AuthUser, CurrentUser } from '../common/current-user.decorator';
 import { AuthService } from './auth.service';
+import { avatarUploadOptions } from './avatar-upload.config';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { LoginPhonePinDto } from './dto/login-phone-pin.dto';
 import { LoginDto } from './dto/login.dto';
@@ -48,5 +59,13 @@ export class AuthController {
   @Patch('profile')
   updateProfile(@CurrentUser() user: AuthUser, @Body() dto: UpdateProfileDto) {
     return this.authService.updateProfile(user.userId, dto);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('avatar')
+  @UseInterceptors(FileInterceptor('file', avatarUploadOptions))
+  uploadAvatar(@CurrentUser() user: AuthUser, @UploadedFile() file?: Express.Multer.File) {
+    if (!file) throw new BadRequestException('กรุณาแนบไฟล์รูปภาพ');
+    return this.authService.updateAvatar(user.userId, `/uploads/avatars/${file.filename}`);
   }
 }

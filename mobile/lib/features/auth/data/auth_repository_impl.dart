@@ -92,6 +92,16 @@ class AuthRepositoryImpl implements AuthRepository {
     return AppUser.fromJson(json['user'] as Map<String, dynamic>);
   }
 
+  @override
+  Future<AppUser> uploadAvatar({required List<int> fileBytes, required String fileName}) async {
+    final json = await _client.uploadFile(
+      '/auth/avatar',
+      fileBytes: fileBytes,
+      fileName: fileName,
+    ) as Map<String, dynamic>;
+    return AppUser.fromJson(json['user'] as Map<String, dynamic>);
+  }
+
   AuthSession _toSession(Map<String, dynamic> json) {
     final session = AuthSession(
       accessToken: json['accessToken'] as String,

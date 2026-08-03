@@ -22,6 +22,7 @@ describe('AuthService', () => {
     pinHash: null,
     consentHealth: false,
     consentMarketing: false,
+    avatarUrl: null,
     name: 'Somchai',
     role: UserRole.PATIENT,
     createdAt: new Date(),
@@ -103,6 +104,7 @@ describe('AuthService', () => {
           role: UserRole.PATIENT,
           patientId: basePatient.id,
           phone: null,
+          avatarUrl: null,
         },
       });
     });

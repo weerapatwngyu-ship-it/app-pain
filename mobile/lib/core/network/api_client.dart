@@ -26,6 +26,10 @@ class ApiClient {
 
   String? get accessToken => _accessToken;
 
+  /// `baseUrl` without the trailing `/v1` API prefix — static assets
+  /// (uploaded avatars) are served at the server root, not under `/v1`.
+  String get originUrl => baseUrl.replaceFirst(RegExp(r'/v1/?$'), '');
+
   Map<String, String> get _headers => {
         'Content-Type': 'application/json',
         if (_accessToken != null) 'Authorization': 'Bearer $_accessToken',
@@ -43,6 +47,28 @@ class ApiClient {
       _send('PATCH', path, body: body);
 
   Future<dynamic> delete(String path) => _send('DELETE', path);
+
+  /// Multipart upload — used for avatar photos. `fileBytes` is sent as the
+  /// `file` field with `fileName` as its filename.
+  Future<dynamic> uploadFile(
+    String path, {
+    required List<int> fileBytes,
+    required String fileName,
+  }) async {
+    final uri = Uri.parse('$baseUrl$path');
+    final request = http.MultipartRequest('POST', uri)
+      ..headers.addAll({if (_accessToken != null) 'Authorization': 'Bearer $_accessToken'})
+      ..files.add(http.MultipartFile.fromBytes('file', fileBytes, filename: fileName));
+
+    final streamed = await _httpClient.send(request);
+    final response = await http.Response.fromStream(streamed);
+
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      if (response.body.isEmpty) return null;
+      return jsonDecode(response.body);
+    }
+    throw ApiException(response.statusCode, response.body);
+  }
 
   Future<dynamic> _send(String method, String path, {Map<String, dynamic>? body}) async {
     final uri = Uri.parse('$baseUrl$path');

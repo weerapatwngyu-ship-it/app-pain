@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 
+import '../../../shared/widgets/user_avatar.dart';
+import '../../auth/domain/auth_repository.dart';
 import '../../auth/domain/entities/user.dart';
 import '../../auth/presentation/onboarding/onboarding_theme.dart';
 import '../../symptom_tracking/domain/entities/symptom_category.dart';
@@ -18,6 +21,9 @@ class TodayScheduleScreen extends StatefulWidget {
     required this.medicationRepository,
     required this.logDoseUseCase,
     required this.symptomRepository,
+    required this.authRepository,
+    required this.mediaBaseUrl,
+    required this.onUserUpdated,
   });
 
   final AppUser user;
@@ -25,6 +31,9 @@ class TodayScheduleScreen extends StatefulWidget {
   final MedicationRepository medicationRepository;
   final LogDoseUseCase logDoseUseCase;
   final SymptomRepository symptomRepository;
+  final AuthRepository authRepository;
+  final String mediaBaseUrl;
+  final ValueChanged<AppUser> onUserUpdated;
 
   @override
   State<TodayScheduleScreen> createState() => _TodayScheduleScreenState();
@@ -39,6 +48,8 @@ class _TodayScheduleScreenState extends State<TodayScheduleScreen> {
   /// so this tracks only what's been actioned since the screen loaded, not
   /// history from a prior session.
   final Set<String> _actionedScheduleIds = {};
+
+  bool _uploadingAvatar = false;
 
   @override
   void initState() {
@@ -73,6 +84,54 @@ class _TodayScheduleScreenState extends State<TodayScheduleScreen> {
     );
   }
 
+  Future<void> _pickAndUploadAvatar() async {
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Wrap(
+          children: [
+            ListTile(
+              leading: const Icon(Icons.photo_camera_outlined),
+              title: const Text('ถ่ายรูป'),
+              onTap: () => Navigator.of(context).pop(ImageSource.camera),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library_outlined),
+              title: const Text('เลือกจากคลังภาพ'),
+              onTap: () => Navigator.of(context).pop(ImageSource.gallery),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (source == null || !mounted) return;
+
+    final picked = await ImagePicker().pickImage(
+      source: source,
+      maxWidth: 1024,
+      imageQuality: 85,
+    );
+    if (picked == null || !mounted) return;
+
+    setState(() => _uploadingAvatar = true);
+    try {
+      final bytes = await picked.readAsBytes();
+      final updatedUser = await widget.authRepository.uploadAvatar(
+        fileBytes: bytes,
+        fileName: picked.name,
+      );
+      widget.onUserUpdated(updatedUser);
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('อัปโหลดรูปไม่สำเร็จ ลองใหม่อีกครั้ง')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _uploadingAvatar = false);
+    }
+  }
+
   String get _greeting {
     final hour = DateTime.now().hour;
     if (hour < 6) return 'สวัสดีตอนดึก';
@@ -103,7 +162,15 @@ class _TodayScheduleScreenState extends State<TodayScheduleScreen> {
             return ListView(
               padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
               children: [
-                _Header(greeting: _greeting, name: widget.user.name),
+                _Header(
+                  greeting: _greeting,
+                  name: widget.user.name,
+                  avatarUrl: widget.user.avatarUrl != null
+                      ? '${widget.mediaBaseUrl}${widget.user.avatarUrl}'
+                      : null,
+                  uploadingAvatar: _uploadingAvatar,
+                  onAvatarTap: _pickAndUploadAvatar,
+                ),
                 const SizedBox(height: 20),
                 _SummaryCard(total: items.length, done: doneCount),
                 const SizedBox(height: 24),
@@ -176,22 +243,30 @@ class _TodayScheduleScreenState extends State<TodayScheduleScreen> {
 }
 
 class _Header extends StatelessWidget {
-  const _Header({required this.greeting, required this.name});
+  const _Header({
+    required this.greeting,
+    required this.name,
+    required this.avatarUrl,
+    required this.uploadingAvatar,
+    required this.onAvatarTap,
+  });
 
   final String greeting;
   final String name;
+  final String? avatarUrl;
+  final bool uploadingAvatar;
+  final VoidCallback onAvatarTap;
 
   @override
   Widget build(BuildContext context) {
     return Row(
       children: [
-        CircleAvatar(
+        UserAvatar(
+          name: name,
+          avatarUrl: avatarUrl,
           radius: 24,
-          backgroundColor: OnboardingColors.teal,
-          child: Text(
-            name.trim().isEmpty ? '?' : name.trim()[0],
-            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
-          ),
+          loading: uploadingAvatar,
+          onTap: onAvatarTap,
         ),
         const SizedBox(width: 12),
         Expanded(

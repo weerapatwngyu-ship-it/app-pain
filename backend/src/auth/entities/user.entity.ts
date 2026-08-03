@@ -36,6 +36,9 @@ export class User {
   @Column({ default: false })
   consentMarketing: boolean;
 
+  @Column({ type: 'varchar', nullable: true })
+  avatarUrl: string | null;
+
   @Column()
   name: string;
 

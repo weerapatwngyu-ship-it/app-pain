@@ -49,6 +49,10 @@
 	</dict>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>MedTrack ใช้ตำแหน่งของคุณเพื่อค้นหาร้านขายยาที่อยู่ใกล้เคียง</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>MedTrack ใช้คลังภาพของคุณเพื่อเปลี่ยนรูปโปรไฟล์</string>
+	<key>NSCameraUsageDescription</key>
+	<string>MedTrack ใช้กล้องเพื่อถ่ายรูปโปรไฟล์</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>UILaunchStoryboardName</key>

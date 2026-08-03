@@ -8,12 +8,18 @@ class AppUser {
     required this.role,
     this.patientId,
     this.phone,
+    this.avatarUrl,
   });
 
   final String id;
   final String email;
   final String name;
   final UserRole role;
+
+  /// Relative path returned by the backend (e.g. `/uploads/avatars/xxx.jpg`)
+  /// — callers must prepend the API server's origin (not `ApiClient.baseUrl`,
+  /// which includes the `/v1` prefix) to load it.
+  final String? avatarUrl;
 
   /// The patient profile this account owns — set for `patient`-role
   /// accounts (auto-created on register), null otherwise. Screens that
@@ -33,6 +39,7 @@ class AppUser {
       role: UserRole.values.byName(json['role'] as String),
       patientId: json['patientId'] as String?,
       phone: json['phone'] as String?,
+      avatarUrl: json['avatarUrl'] as String?,
     );
   }
 
@@ -43,5 +50,6 @@ class AppUser {
         'role': role.name,
         'patientId': patientId,
         'phone': phone,
+        'avatarUrl': avatarUrl,
       };
 }
