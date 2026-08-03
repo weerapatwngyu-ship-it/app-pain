@@ -5,6 +5,7 @@ import '../features/alerts/presentation/alerts_screen.dart';
 import '../features/auth/domain/auth_repository.dart';
 import '../features/auth/domain/entities/user.dart';
 import '../features/auth/presentation/onboarding/onboarding_theme.dart';
+import '../features/doctors/data/doctor_repository.dart';
 import '../features/medication/data/medication_repository_impl.dart';
 import '../features/medication/domain/usecases/log_dose_usecase.dart';
 import '../features/medication/presentation/today_schedule_screen.dart';
@@ -30,6 +31,7 @@ class PatientHomeShell extends StatefulWidget {
     required this.patientProfileRepository,
     required this.pharmacyFinderRepository,
     required this.authRepository,
+    required this.doctorRepository,
     required this.mediaBaseUrl,
     required this.onLogout,
     required this.onUserUpdated,
@@ -43,6 +45,7 @@ class PatientHomeShell extends StatefulWidget {
   final PatientProfileRepository patientProfileRepository;
   final PharmacyFinderRepository pharmacyFinderRepository;
   final AuthRepository authRepository;
+  final DoctorRepository doctorRepository;
 
   /// Server origin (no `/v1` prefix) — prepended to `user.avatarUrl` to load
   /// the uploaded avatar image.
@@ -75,6 +78,7 @@ class _PatientHomeShellState extends State<PatientHomeShell> {
         logDoseUseCase: LogDoseUseCase(widget.medicationRepository),
         symptomRepository: widget.symptomRepository,
         authRepository: widget.authRepository,
+        doctorRepository: widget.doctorRepository,
         mediaBaseUrl: widget.mediaBaseUrl,
         onUserUpdated: widget.onUserUpdated,
       ),

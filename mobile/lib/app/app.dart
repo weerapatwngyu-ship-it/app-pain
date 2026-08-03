@@ -10,6 +10,7 @@ import '../features/auth/data/auth_repository_impl.dart';
 import '../features/auth/domain/auth_repository.dart';
 import '../features/auth/domain/entities/user.dart';
 import '../features/auth/presentation/onboarding/phone_entry_screen.dart';
+import '../features/doctors/data/doctor_repository.dart';
 import '../features/medication/data/medication_repository_impl.dart';
 import '../features/pharmacy_finder/data/pharmacy_finder_repository.dart';
 import '../features/profile/data/patient_profile_repository.dart';
@@ -38,6 +39,7 @@ class _MedTrackAppState extends State<MedTrackApp> {
       PatientProfileRepository(_apiClient);
   late final PharmacyFinderRepository _pharmacyFinderRepository =
       PharmacyFinderRepository(_apiClient);
+  late final DoctorRepository _doctorRepository = DoctorRepository(_apiClient);
   final SessionStorage _sessionStorage = SessionStorage();
 
   AppUser? _currentUser;
@@ -130,6 +132,7 @@ class _MedTrackAppState extends State<MedTrackApp> {
       patientProfileRepository: _patientProfileRepository,
       pharmacyFinderRepository: _pharmacyFinderRepository,
       authRepository: _authRepository,
+      doctorRepository: _doctorRepository,
       mediaBaseUrl: _apiClient.originUrl,
       onLogout: _logout,
       onUserUpdated: _handleAuthenticated,

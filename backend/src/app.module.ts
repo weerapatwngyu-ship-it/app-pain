@@ -4,6 +4,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AdminModule } from './admin/admin.module';
 import { AlertsModule } from './alerts/alerts.module';
 import { AuthModule } from './auth/auth.module';
+import { DoctorsModule } from './doctors/doctors.module';
 import { DoseLogsModule } from './dose-logs/dose-logs.module';
 import { PatientLinksModule } from './patient-links/patient-links.module';
 import { PatientsModule } from './patients/patients.module';
@@ -37,6 +38,7 @@ import { SymptomLogsModule } from './symptom-logs/symptom-logs.module';
     SymptomLogsModule,
     AlertsModule,
     PharmaciesModule,
+    DoctorsModule,
   ],
 })
 export class AppModule {}

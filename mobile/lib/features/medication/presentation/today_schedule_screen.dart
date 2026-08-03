@@ -5,6 +5,10 @@ import '../../../shared/widgets/user_avatar.dart';
 import '../../auth/domain/auth_repository.dart';
 import '../../auth/domain/entities/user.dart';
 import '../../auth/presentation/onboarding/onboarding_theme.dart';
+import '../../doctors/data/doctor_repository.dart';
+import '../../doctors/domain/entities/doctor.dart';
+import '../../doctors/presentation/doctor_detail_screen.dart';
+import '../../doctors/presentation/doctor_list_screen.dart';
 import '../../symptom_tracking/domain/entities/symptom_category.dart';
 import '../../symptom_tracking/domain/symptom_repository.dart';
 import '../../symptom_tracking/presentation/symptom_category_logs_screen.dart';
@@ -22,6 +26,7 @@ class TodayScheduleScreen extends StatefulWidget {
     required this.logDoseUseCase,
     required this.symptomRepository,
     required this.authRepository,
+    required this.doctorRepository,
     required this.mediaBaseUrl,
     required this.onUserUpdated,
   });
@@ -32,6 +37,7 @@ class TodayScheduleScreen extends StatefulWidget {
   final LogDoseUseCase logDoseUseCase;
   final SymptomRepository symptomRepository;
   final AuthRepository authRepository;
+  final DoctorRepository doctorRepository;
   final String mediaBaseUrl;
   final ValueChanged<AppUser> onUserUpdated;
 
@@ -42,6 +48,7 @@ class TodayScheduleScreen extends StatefulWidget {
 class _TodayScheduleScreenState extends State<TodayScheduleScreen> {
   late Future<List<DoseScheduleItem>> _scheduleFuture;
   late Future<Map<String, int>> _categoryCountsFuture;
+  late Future<List<Doctor>> _doctorsFuture;
 
   /// Doses logged (taken or skipped) during this app session — the backend
   /// doesn't return today's already-logged status alongside the schedule,
@@ -56,6 +63,36 @@ class _TodayScheduleScreenState extends State<TodayScheduleScreen> {
     super.initState();
     _scheduleFuture = widget.medicationRepository.todaySchedule(widget.patientId);
     _categoryCountsFuture = widget.symptomRepository.categoryCounts(widget.patientId);
+    _doctorsFuture = widget.doctorRepository.fetchAll();
+  }
+
+  void _reloadDoctors() {
+    setState(() => _doctorsFuture = widget.doctorRepository.fetchAll());
+  }
+
+  Future<void> _openDoctorList() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => DoctorListScreen(
+          repository: widget.doctorRepository,
+          mediaBaseUrl: widget.mediaBaseUrl,
+        ),
+      ),
+    );
+    _reloadDoctors();
+  }
+
+  Future<void> _openDoctor(Doctor doctor) async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => DoctorDetailScreen(
+          doctor: doctor,
+          repository: widget.doctorRepository,
+          mediaBaseUrl: widget.mediaBaseUrl,
+        ),
+      ),
+    );
+    _reloadDoctors();
   }
 
   void _openCategory(String? category) {
@@ -178,6 +215,52 @@ class _TodayScheduleScreenState extends State<TodayScheduleScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     const Text(
+                      'ปรึกษาแพทย์',
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+                    ),
+                    TextButton(
+                      onPressed: _openDoctorList,
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text('ดูทั้งหมด', style: TextStyle(color: OnboardingColors.teal)),
+                          Icon(Icons.chevron_right, size: 18, color: OnboardingColors.teal),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                FutureBuilder<List<Doctor>>(
+                  future: _doctorsFuture,
+                  builder: (context, snapshot) {
+                    final doctors = snapshot.data ?? const <Doctor>[];
+                    return SizedBox(
+                      height: 132,
+                      child: ListView.separated(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: doctors.length + 1,
+                        separatorBuilder: (_, __) => const SizedBox(width: 12),
+                        itemBuilder: (context, index) {
+                          if (index == doctors.length) {
+                            return _AddDoctorTile(onTap: _openDoctorList);
+                          }
+                          final doctor = doctors[index];
+                          return _DoctorTile(
+                            doctor: doctor,
+                            mediaBaseUrl: widget.mediaBaseUrl,
+                            onTap: () => _openDoctor(doctor),
+                          );
+                        },
+                      ),
+                    );
+                  },
+                ),
+                const SizedBox(height: 24),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
                       'หมวดอาการ',
                       style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
                     ),
@@ -279,6 +362,93 @@ class _Header extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _DoctorTile extends StatelessWidget {
+  const _DoctorTile({required this.doctor, required this.mediaBaseUrl, required this.onTap});
+
+  final Doctor doctor;
+  final String mediaBaseUrl;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final photoUrl = doctor.photoUrl != null ? '$mediaBaseUrl${doctor.photoUrl}' : null;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        width: 96,
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+        decoration: BoxDecoration(
+          border: Border.all(color: OnboardingColors.border),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            CircleAvatar(
+              radius: 24,
+              backgroundColor: OnboardingColors.teal,
+              backgroundImage: photoUrl != null ? NetworkImage(photoUrl) : null,
+              child: photoUrl == null
+                  ? const Icon(Icons.medical_services_outlined, color: Colors.white, size: 20)
+                  : null,
+            ),
+            const SizedBox(height: 6),
+            Text(
+              doctor.name,
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+            ),
+            Text(
+              doctor.specialty,
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 10, color: OnboardingColors.textMuted),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _AddDoctorTile extends StatelessWidget {
+  const _AddDoctorTile({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        width: 96,
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+        decoration: BoxDecoration(
+          border: Border.all(color: OnboardingColors.border, style: BorderStyle.solid),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: const Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            CircleAvatar(
+              radius: 24,
+              backgroundColor: Color(0xFFF3FAF8),
+              child: Icon(Icons.add, color: OnboardingColors.teal),
+            ),
+            SizedBox(height: 6),
+            Text('เพิ่มแพทย์', textAlign: TextAlign.center, style: TextStyle(fontSize: 12)),
+          ],
+        ),
+      ),
     );
   }
 }
