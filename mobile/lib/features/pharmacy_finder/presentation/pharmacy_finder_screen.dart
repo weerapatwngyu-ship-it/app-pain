@@ -4,6 +4,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/network/api_client.dart';
 import '../../auth/presentation/onboarding/onboarding_theme.dart';
@@ -177,6 +178,18 @@ class _PharmacyTile extends StatelessWidget {
 
   final NearbyPharmacy pharmacy;
 
+  Future<void> _openInGoogleMaps(BuildContext context) async {
+    final uri = Uri.parse(
+      'https://www.google.com/maps/search/?api=1&query=${pharmacy.lat},${pharmacy.lng}',
+    );
+    final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!opened && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('เปิด Google Maps ไม่สำเร็จ')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Padding(
@@ -223,6 +236,11 @@ class _PharmacyTile extends StatelessWidget {
                 ),
               ],
             ),
+          ),
+          IconButton(
+            onPressed: () => _openInGoogleMaps(context),
+            icon: const Icon(Icons.map_outlined, color: OnboardingColors.teal),
+            tooltip: 'เปิดใน Google Maps',
           ),
         ],
       ),
