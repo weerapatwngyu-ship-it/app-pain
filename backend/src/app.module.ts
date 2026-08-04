@@ -18,16 +18,26 @@ import { SymptomLogsModule } from './symptom-logs/symptom-logs.module';
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: (config: ConfigService) => ({
-        type: 'postgres',
-        host: config.get<string>('DB_HOST', 'localhost'),
-        port: config.get<number>('DB_PORT', 5432),
-        username: config.get<string>('DB_USERNAME', 'medtrack'),
-        password: config.get<string>('DB_PASSWORD', 'medtrack'),
-        database: config.get<string>('DB_NAME', 'medtrack'),
-        autoLoadEntities: true,
-        synchronize: true,
-      }),
+      useFactory: (config: ConfigService) => {
+        // Hosted Postgres (Render/Neon/Supabase/etc) is normally handed to
+        // you as one connection string via DATABASE_URL, and needs SSL.
+        // Local dev keeps using the discrete DB_* vars from .env.
+        const databaseUrl = config.get<string>('DATABASE_URL');
+        return {
+          type: 'postgres',
+          ...(databaseUrl
+            ? { url: databaseUrl, ssl: { rejectUnauthorized: false } }
+            : {
+                host: config.get<string>('DB_HOST', 'localhost'),
+                port: config.get<number>('DB_PORT', 5432),
+                username: config.get<string>('DB_USERNAME', 'medtrack'),
+                password: config.get<string>('DB_PASSWORD', 'medtrack'),
+                database: config.get<string>('DB_NAME', 'medtrack'),
+              }),
+          autoLoadEntities: true,
+          synchronize: true,
+        };
+      },
     }),
     AuthModule,
     AdminModule,
