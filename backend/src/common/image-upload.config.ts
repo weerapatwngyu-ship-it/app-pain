@@ -1,42 +1,26 @@
 import { BadRequestException } from '@nestjs/common';
-import { existsSync, mkdirSync } from 'fs';
-import { diskStorage } from 'multer';
-import { extname, join } from 'path';
-import { v4 as uuidv4 } from 'uuid';
+import { memoryStorage } from 'multer';
 
-const ALLOWED_MIME_TYPES: Record<string, string> = {
-  'image/jpeg': '.jpg',
-  'image/png': '.png',
-  'image/webp': '.webp',
+const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+
+/** Multer options for image uploads. Files are held in memory and then
+ * written to Postgres by ImagesService — hosted free tiers reset the
+ * container filesystem, so anything saved to disk is lost on restart.
+ *
+ * The 2 MB cap keeps a handful of avatars from eating a free database
+ * quota; the mobile client already downscales before uploading. */
+export const imageUploadOptions = {
+  storage: memoryStorage(),
+  limits: { fileSize: 2 * 1024 * 1024 },
+  fileFilter: (
+    _req: unknown,
+    file: Express.Multer.File,
+    callback: (error: Error | null, accept: boolean) => void,
+  ) => {
+    if (!ALLOWED_MIME_TYPES.includes(file.mimetype)) {
+      callback(new BadRequestException('รองรับเฉพาะไฟล์รูปภาพ JPG, PNG หรือ WEBP เท่านั้น'), false);
+      return;
+    }
+    callback(null, true);
+  },
 };
-
-/** Multer options for an image upload endpoint storing files under
- * `uploads/<subdir>/`, served back at `/uploads/<subdir>/<file>` (see
- * `app.useStaticAssets` in main.ts). Shared by avatar and doctor-photo
- * uploads. */
-export function createImageUploadOptions(subdir: string) {
-  const dir = join(process.cwd(), 'uploads', subdir);
-  if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
-
-  return {
-    storage: diskStorage({
-      destination: dir,
-      filename: (_req, file, callback) => {
-        const ext = ALLOWED_MIME_TYPES[file.mimetype] ?? extname(file.originalname);
-        callback(null, `${uuidv4()}${ext}`);
-      },
-    }),
-    limits: { fileSize: 5 * 1024 * 1024 },
-    fileFilter: (
-      _req: unknown,
-      file: Express.Multer.File,
-      callback: (error: Error | null, accept: boolean) => void,
-    ) => {
-      if (!ALLOWED_MIME_TYPES[file.mimetype]) {
-        callback(new BadRequestException('รองรับเฉพาะไฟล์รูปภาพ JPG, PNG หรือ WEBP เท่านั้น'), false);
-        return;
-      }
-      callback(null, true);
-    },
-  };
-}

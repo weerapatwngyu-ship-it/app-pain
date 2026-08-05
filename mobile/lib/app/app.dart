@@ -44,11 +44,25 @@ class _MedTrackAppState extends State<MedTrackApp> {
 
   AppUser? _currentUser;
   bool _restoringSession = true;
+  bool _sessionExpiredNotice = false;
 
   @override
   void initState() {
     super.initState();
+    _apiClient.onUnauthorized = _handleSessionExpired;
     _restoreSession();
+  }
+
+  /// The stored token was rejected (expired, or signed by a different
+  /// server). Clear it and return to login rather than leaving the user on
+  /// screens that all fail with "Unauthorized".
+  void _handleSessionExpired() {
+    if (!mounted || _currentUser == null) return;
+    _sessionStorage.clear();
+    setState(() {
+      _currentUser = null;
+      _sessionExpiredNotice = true;
+    });
   }
 
   Future<void> _restoreSession() async {
@@ -78,11 +92,15 @@ class _MedTrackAppState extends State<MedTrackApp> {
     return PhoneEntryScreen(
       authRepository: _authRepository,
       onAuthenticated: _handleAuthenticated,
+      notice: _sessionExpiredNotice ? 'เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่' : null,
     );
   }
 
   void _handleAuthenticated(AppUser user) {
-    setState(() => _currentUser = user);
+    setState(() {
+      _currentUser = user;
+      _sessionExpiredNotice = false;
+    });
     final token = _apiClient.accessToken;
     if (token != null) {
       _sessionStorage.save(AuthSession(accessToken: token, user: user));
@@ -92,7 +110,10 @@ class _MedTrackAppState extends State<MedTrackApp> {
   void _logout() {
     _apiClient.setAccessToken(null);
     _sessionStorage.clear();
-    setState(() => _currentUser = null);
+    setState(() {
+      _currentUser = null;
+      _sessionExpiredNotice = false;
+    });
   }
 
   Widget _buildHome(AppUser user) {
@@ -133,7 +154,7 @@ class _MedTrackAppState extends State<MedTrackApp> {
       pharmacyFinderRepository: _pharmacyFinderRepository,
       authRepository: _authRepository,
       doctorRepository: _doctorRepository,
-      mediaBaseUrl: _apiClient.originUrl,
+      mediaBaseUrl: _apiClient.baseUrl,
       onLogout: _logout,
       onUserUpdated: _handleAuthenticated,
     );

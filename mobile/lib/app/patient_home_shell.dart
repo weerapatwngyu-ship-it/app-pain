@@ -47,8 +47,8 @@ class PatientHomeShell extends StatefulWidget {
   final AuthRepository authRepository;
   final DoctorRepository doctorRepository;
 
-  /// Server origin (no `/v1` prefix) — prepended to `user.avatarUrl` to load
-  /// the uploaded avatar image.
+  /// API base URL — prepended to the relative image paths the backend
+  /// returns (`user.avatarUrl`, `doctor.photoUrl`) to form a loadable URL.
   final String mediaBaseUrl;
   final VoidCallback onLogout;
   final ValueChanged<AppUser> onUserUpdated;
