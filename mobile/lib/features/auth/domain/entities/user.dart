@@ -16,9 +16,8 @@ class AppUser {
   final String name;
   final UserRole role;
 
-  /// Relative path returned by the backend (e.g. `/uploads/avatars/xxx.jpg`)
-  /// — callers must prepend the API server's origin (not `ApiClient.baseUrl`,
-  /// which includes the `/v1` prefix) to load it.
+  /// Relative path returned by the backend (e.g. `/images/<uuid>`) —
+  /// callers prepend `ApiClient.baseUrl` to load it.
   final String? avatarUrl;
 
   /// The patient profile this account owns — set for `patient`-role

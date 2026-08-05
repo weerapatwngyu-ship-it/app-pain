@@ -22,13 +22,14 @@ class ApiClient {
   final http.Client _httpClient;
   String? _accessToken;
 
+  /// Called when the server rejects the token we're holding (HTTP 401) —
+  /// the app wires this to a sign-out so an expired session drops the user
+  /// back to the login screen instead of leaving every screen failing.
+  void Function()? onUnauthorized;
+
   void setAccessToken(String? token) => _accessToken = token;
 
   String? get accessToken => _accessToken;
-
-  /// `baseUrl` without the trailing `/v1` API prefix — static assets
-  /// (uploaded avatars) are served at the server root, not under `/v1`.
-  String get originUrl => baseUrl.replaceFirst(RegExp(r'/v1/?$'), '');
 
   Map<String, String> get _headers => {
         'Content-Type': 'application/json',
@@ -67,6 +68,13 @@ class ApiClient {
       if (response.body.isEmpty) return null;
       return jsonDecode(response.body);
     }
+    // Only a rejected *existing* token means the session died. A 401 with no
+    // token is just a failed sign-in attempt (wrong PIN/OTP), which the
+    // login screens report themselves.
+    if (response.statusCode == 401 && _accessToken != null) {
+      _accessToken = null;
+      onUnauthorized?.call();
+    }
     throw ApiException(response.statusCode, response.body);
   }
 
@@ -81,6 +89,13 @@ class ApiClient {
     if (response.statusCode >= 200 && response.statusCode < 300) {
       if (response.body.isEmpty) return null;
       return jsonDecode(response.body);
+    }
+    // Only a rejected *existing* token means the session died. A 401 with no
+    // token is just a failed sign-in attempt (wrong PIN/OTP), which the
+    // login screens report themselves.
+    if (response.statusCode == 401 && _accessToken != null) {
+      _accessToken = null;
+      onUnauthorized?.call();
     }
     throw ApiException(response.statusCode, response.body);
   }

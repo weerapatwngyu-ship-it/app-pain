@@ -36,10 +36,15 @@ class PhoneEntryScreen extends StatefulWidget {
     super.key,
     required this.authRepository,
     required this.onAuthenticated,
+    this.notice,
   });
 
   final AuthRepository authRepository;
   final ValueChanged<AppUser> onAuthenticated;
+
+  /// Shown above the form when the user was sent here rather than arriving
+  /// on their own — e.g. their session expired mid-use.
+  final String? notice;
 
   @override
   State<PhoneEntryScreen> createState() => _PhoneEntryScreenState();
@@ -119,6 +124,28 @@ class _PhoneEntryScreenState extends State<PhoneEntryScreen> {
                 'เข้าสู่ระบบ หรือ ลงทะเบียนด้วยหมายเลขโทรศัพท์',
                 style: TextStyle(fontSize: 16, color: OnboardingColors.textMuted),
               ),
+              if (widget.notice != null) ...[
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFF4E5),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.info_outline, size: 20, color: Color(0xFFB26A00)),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          widget.notice!,
+                          style: const TextStyle(fontSize: 14, color: Color(0xFFB26A00)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
               const SizedBox(height: 24),
               TextField(
                 controller: _phoneController,

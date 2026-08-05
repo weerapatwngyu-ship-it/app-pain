@@ -1,11 +1,14 @@
 import { Module } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AdminModule } from './admin/admin.module';
 import { AlertsModule } from './alerts/alerts.module';
 import { AuthModule } from './auth/auth.module';
 import { DoctorsModule } from './doctors/doctors.module';
 import { DoseLogsModule } from './dose-logs/dose-logs.module';
+import { ImagesModule } from './images/images.module';
 import { PatientLinksModule } from './patient-links/patient-links.module';
 import { PatientsModule } from './patients/patients.module';
 import { PharmaciesModule } from './pharmacies/pharmacies.module';
@@ -15,6 +18,9 @@ import { SymptomLogsModule } from './symptom-logs/symptom-logs.module';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    // Baseline request cap per IP. Auth endpoints tighten this further —
+    // without a cap, OTP requests and PIN guesses can be run in bulk.
+    ThrottlerModule.forRoot([{ ttl: 60_000, limit: 100 }]),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -49,6 +55,8 @@ import { SymptomLogsModule } from './symptom-logs/symptom-logs.module';
     AlertsModule,
     PharmaciesModule,
     DoctorsModule,
+    ImagesModule,
   ],
+  providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })
 export class AppModule {}

@@ -12,8 +12,8 @@ class Doctor {
   final String specialty;
   final String? bio;
 
-  /// Relative path returned by the backend (e.g. `/uploads/doctors/xxx.jpg`)
-  /// — prepend the API server's origin, not `ApiClient.baseUrl`, to load it.
+  /// Relative path returned by the backend (e.g. `/images/<uuid>`) —
+  /// prepend `ApiClient.baseUrl` to load it.
   final String? photoUrl;
 
   factory Doctor.fromJson(Map<String, dynamic> json) {
