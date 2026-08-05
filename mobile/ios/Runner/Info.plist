@@ -47,19 +47,6 @@
 			</array>
 		</dict>
 	</dict>
-	<!-- Brings the Google sign-in redirect back into the app; must match the
-	     `redirectTo` passed to signInWithOAuth. -->
-	<key>CFBundleURLTypes</key>
-	<array>
-		<dict>
-			<key>CFBundleTypeRole</key>
-			<string>Editor</string>
-			<key>CFBundleURLSchemes</key>
-			<array>
-				<string>com.example.medtrack</string>
-			</array>
-		</dict>
-	</array>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>MedTrack ใช้ตำแหน่งของคุณเพื่อค้นหาร้านขายยาที่อยู่ใกล้เคียง</string>
 	<key>NSPhotoLibraryUsageDescription</key>

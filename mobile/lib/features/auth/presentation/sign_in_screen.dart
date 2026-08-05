@@ -3,10 +3,13 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'onboarding/onboarding_theme.dart';
 
-/// Sign-in is a single tap: Supabase Auth hands the Google flow off to the
-/// browser and returns to the app through the deep link registered in the
-/// Android manifest. This app never sees a password, and identity
-/// verification is Google's job rather than a homegrown OTP.
+/// Email/password against Supabase Auth — no external provider, no OAuth
+/// redirect, nothing to configure outside the Supabase dashboard.
+///
+/// Supabase requires confirming the address via an emailed link before a
+/// new account can sign in (see `_signUp`'s success message). That's what
+/// stands in for phone verification here: it isn't optional, and there is
+/// no server of this app's own to bypass it from.
 class SignInScreen extends StatefulWidget {
   const SignInScreen({super.key, this.notice});
 
@@ -19,28 +22,79 @@ class SignInScreen extends StatefulWidget {
 }
 
 class _SignInScreenState extends State<SignInScreen> {
+  final _formKey = GlobalKey<FormState>();
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+
+  bool _isSignUp = false;
   bool _loading = false;
   String? _error;
+  String? _info;
 
-  Future<void> _signInWithGoogle() async {
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    if (!_formKey.currentState!.validate()) return;
     setState(() {
       _loading = true;
       _error = null;
+      _info = null;
     });
+
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
+
     try {
-      await Supabase.instance.client.auth.signInWithOAuth(
-        OAuthProvider.google,
-        redirectTo: 'com.example.medtrack://login-callback',
-      );
-      // The browser now owns the flow. Completion arrives as an auth state
-      // change on the deep link, which app.dart is listening for, so there
-      // is nothing to await here.
+      if (_isSignUp) {
+        await _signUp(email, password);
+      } else {
+        await Supabase.instance.client.auth.signInWithPassword(
+          email: email,
+          password: password,
+        );
+        // Success updates app.dart's session listener — nothing more to do.
+      }
     } on AuthException catch (e) {
-      setState(() => _error = e.message);
+      setState(() => _error = _readableAuthError(e));
     } catch (e) {
       setState(() => _error = 'เข้าสู่ระบบไม่สำเร็จ: $e');
     } finally {
       if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _signUp(String email, String password) async {
+    final result = await Supabase.instance.client.auth.signUp(email: email, password: password);
+    if (!mounted) return;
+
+    if (result.session != null) {
+      // Email confirmation is off for this project — signed in immediately.
+      return;
+    }
+
+    // Confirmation required: nothing to do but tell the user to check their
+    // inbox, then switch them to the sign-in form for after they click it.
+    setState(() {
+      _isSignUp = false;
+      _info = 'ส่งอีเมลยืนยันไปที่ $email แล้ว — เปิดอีเมลแล้วกดลิงก์ยืนยันก่อน จึงจะเข้าสู่ระบบได้';
+    });
+  }
+
+  String _readableAuthError(AuthException e) {
+    switch (e.message) {
+      case 'Invalid login credentials':
+        return 'อีเมลหรือรหัสผ่านไม่ถูกต้อง';
+      case 'User already registered':
+        return 'อีเมลนี้สมัครไว้แล้ว — ลองเข้าสู่ระบบแทน';
+      case 'Email not confirmed':
+        return 'ยังไม่ได้ยืนยันอีเมล — เปิดอีเมลแล้วกดลิงก์ยืนยันก่อน';
+      default:
+        return e.message;
     }
   }
 
@@ -49,110 +103,141 @@ class _SignInScreenState extends State<SignInScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
-        child: Padding(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const Spacer(),
-              const Icon(Icons.medical_services, size: 64, color: OnboardingColors.teal),
-              const SizedBox(height: 16),
-              const Text(
-                'MedTrack',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 32,
-                  fontWeight: FontWeight.w700,
-                  color: OnboardingColors.text,
-                ),
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'ติดตามการกินยาและอาการของคุณ',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 16, color: OnboardingColors.textMuted),
-              ),
-              if (widget.notice != null) ...[
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
                 const SizedBox(height: 24),
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFFF4E5),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.info_outline, size: 20, color: Color(0xFFB26A00)),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          widget.notice!,
-                          style: const TextStyle(fontSize: 14, color: Color(0xFFB26A00)),
-                        ),
-                      ),
-                    ],
+                const Icon(Icons.medical_services, size: 64, color: OnboardingColors.teal),
+                const SizedBox(height: 16),
+                const Text(
+                  'MedTrack',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 32,
+                    fontWeight: FontWeight.w700,
+                    color: OnboardingColors.text,
                   ),
                 ),
-              ],
-              const Spacer(),
-              if (_error != null) ...[
+                const SizedBox(height: 8),
                 Text(
-                  _error!,
+                  _isSignUp ? 'สมัครสมาชิกใหม่' : 'เข้าสู่ระบบ',
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: Theme.of(context).colorScheme.error),
+                  style: const TextStyle(fontSize: 16, color: OnboardingColors.textMuted),
+                ),
+                if (widget.notice != null) _Banner(text: widget.notice!, color: const Color(0xFFB26A00), background: const Color(0xFFFFF4E5)),
+                if (_info != null) _Banner(text: _info!, color: OnboardingColors.teal, background: const Color(0xFFE8F5F3)),
+                const SizedBox(height: 32),
+                TextFormField(
+                  controller: _emailController,
+                  keyboardType: TextInputType.emailAddress,
+                  autocorrect: false,
+                  decoration: _decoration('อีเมล'),
+                  validator: (v) => (v == null || !v.contains('@')) ? 'กรอกอีเมลให้ถูกต้อง' : null,
                 ),
                 const SizedBox(height: 16),
+                TextFormField(
+                  controller: _passwordController,
+                  obscureText: true,
+                  decoration: _decoration('รหัสผ่าน (อย่างน้อย 6 ตัวอักษร)'),
+                  validator: (v) =>
+                      (v == null || v.length < 6) ? 'รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร' : null,
+                ),
+                if (_error != null) ...[
+                  const SizedBox(height: 16),
+                  Text(
+                    _error!,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: Theme.of(context).colorScheme.error),
+                  ),
+                ],
+                const SizedBox(height: 24),
+                SizedBox(
+                  height: 56,
+                  child: ElevatedButton(
+                    onPressed: _loading ? null : _submit,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: OnboardingColors.teal,
+                      disabledBackgroundColor: OnboardingColors.tealDisabled,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    ),
+                    child: _loading
+                        ? const SizedBox(
+                            height: 22,
+                            width: 22,
+                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                          )
+                        : Text(
+                            _isSignUp ? 'สมัครสมาชิก' : 'เข้าสู่ระบบ',
+                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                          ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextButton(
+                  onPressed: _loading
+                      ? null
+                      : () => setState(() {
+                            _isSignUp = !_isSignUp;
+                            _error = null;
+                            _info = null;
+                          }),
+                  child: Text(_isSignUp ? 'มีบัญชีอยู่แล้ว? เข้าสู่ระบบ' : 'ยังไม่มีบัญชี? สมัครสมาชิก'),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'การเข้าสู่ระบบถือว่าคุณยอมรับให้แอปเก็บข้อมูลสุขภาพ\nเพื่อใช้ติดตามการรักษาของคุณ',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 12, color: OnboardingColors.textMuted),
+                ),
               ],
-              _GoogleSignInButton(onPressed: _loading ? null : _signInWithGoogle, loading: _loading),
-              const SizedBox(height: 16),
-              const Text(
-                'การเข้าสู่ระบบถือว่าคุณยอมรับให้แอปเก็บข้อมูลสุขภาพ\nเพื่อใช้ติดตามการรักษาของคุณ',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 12, color: OnboardingColors.textMuted),
-              ),
-              const SizedBox(height: 16),
-            ],
+            ),
           ),
         ),
       ),
     );
   }
+
+  InputDecoration _decoration(String hint) => InputDecoration(
+        hintText: hint,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: const BorderSide(color: OnboardingColors.border),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: const BorderSide(color: OnboardingColors.border),
+        ),
+      );
 }
 
-class _GoogleSignInButton extends StatelessWidget {
-  const _GoogleSignInButton({required this.onPressed, required this.loading});
+class _Banner extends StatelessWidget {
+  const _Banner({required this.text, required this.color, required this.background});
 
-  final VoidCallback? onPressed;
-  final bool loading;
+  final String text;
+  final Color color;
+  final Color background;
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 56,
-      child: OutlinedButton(
-        onPressed: onPressed,
-        style: OutlinedButton.styleFrom(
-          side: const BorderSide(color: OnboardingColors.border),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          foregroundColor: OnboardingColors.text,
+    return Padding(
+      padding: const EdgeInsets.only(top: 16),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(color: background, borderRadius: BorderRadius.circular(12)),
+        child: Row(
+          children: [
+            Icon(Icons.info_outline, size: 20, color: color),
+            const SizedBox(width: 8),
+            Expanded(child: Text(text, style: TextStyle(fontSize: 14, color: color))),
+          ],
         ),
-        child: loading
-            ? const SizedBox(
-                height: 22,
-                width: 22,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              )
-            : const Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.account_circle, size: 22, color: Color(0xFF4285F4)),
-                  SizedBox(width: 12),
-                  Text(
-                    'เข้าสู่ระบบด้วย Google',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                  ),
-                ],
-              ),
       ),
     );
   }
