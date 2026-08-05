@@ -5,11 +5,22 @@ import 'package:medtrack/features/auth/presentation/sign_in_screen.dart';
 
 void main() {
   // MedTrackApp itself needs an initialized Supabase client, so the sign-in
-  // screen is exercised directly — it only reaches Supabase on tap.
-  testWidgets('offers Google as the way in', (tester) async {
+  // screen is exercised directly — it only reaches Supabase on submit.
+  testWidgets('offers email/password sign-in by default', (tester) async {
     await tester.pumpWidget(const MaterialApp(home: SignInScreen()));
 
-    expect(find.text('เข้าสู่ระบบด้วย Google'), findsOneWidget);
+    expect(find.text('เข้าสู่ระบบ'), findsWidgets);
+    expect(find.text('ยังไม่มีบัญชี? สมัครสมาชิก'), findsOneWidget);
+  });
+
+  testWidgets('switches to the sign-up form', (tester) async {
+    await tester.pumpWidget(const MaterialApp(home: SignInScreen()));
+
+    await tester.tap(find.text('ยังไม่มีบัญชี? สมัครสมาชิก'));
+    await tester.pump();
+
+    expect(find.text('สมัครสมาชิก'), findsWidgets);
+    expect(find.text('มีบัญชีอยู่แล้ว? เข้าสู่ระบบ'), findsOneWidget);
   });
 
   testWidgets('explains why the user was returned to sign-in', (tester) async {

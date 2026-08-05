@@ -21,11 +21,10 @@ MedTrack แอปจ่ายยาและติดตามอาการ�
 1. สร้างโปรเจกต์ที่ [supabase.com](https://supabase.com)
 2. เปิด SQL Editor แล้วรัน [`supabase/schema.sql`](supabase/schema.sql) หนึ่งครั้ง
    (สร้างตาราง + กฎความปลอดภัย + ที่เก็บรูป)
-3. Authentication → Providers → เปิด **Google** แล้วใส่ OAuth client ID/secret
-   จาก Google Cloud Console
-4. Authentication → URL Configuration → Redirect URLs เพิ่ม
-   `com.example.medtrack://login-callback`
-5. รันแอป:
+3. เข้าสู่ระบบด้วยอีเมล/รหัสผ่านของ Supabase Auth เอง ไม่ต้องตั้งค่าอะไรเพิ่ม —
+   Supabase เปิดวิธีนี้ไว้เป็นค่าเริ่มต้นอยู่แล้ว (ผู้ใช้ใหม่ต้องกดลิงก์ยืนยันในอีเมล
+   ก่อนเข้าสู่ระบบครั้งแรกได้)
+4. รันแอป:
 
 ```bash
 cd mobile
