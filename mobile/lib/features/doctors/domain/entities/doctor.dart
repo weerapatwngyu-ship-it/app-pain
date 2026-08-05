@@ -1,3 +1,5 @@
+import '../../../auth/domain/entities/user.dart' show usableImagePath;
+
 class Doctor {
   const Doctor({
     required this.id,
@@ -22,7 +24,7 @@ class Doctor {
       name: json['name'] as String,
       specialty: json['specialty'] as String,
       bio: json['bio'] as String?,
-      photoUrl: json['photoUrl'] as String?,
+      photoUrl: usableImagePath(json['photoUrl'] as String?),
     );
   }
 }

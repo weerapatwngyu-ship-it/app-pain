@@ -1,5 +1,14 @@
 enum UserRole { patient, caregiver, provider, admin }
 
+/// Images used to be written to the server's filesystem and served from
+/// `/uploads/...`. Those files are gone (the host wipes the container disk
+/// on restart), so rows still holding such a path have no image behind
+/// them — treat them as unset and fall back to the initial-letter avatar.
+String? usableImagePath(String? path) {
+  if (path == null || path.startsWith('/uploads/')) return null;
+  return path;
+}
+
 class AppUser {
   const AppUser({
     required this.id,
@@ -38,7 +47,7 @@ class AppUser {
       role: UserRole.values.byName(json['role'] as String),
       patientId: json['patientId'] as String?,
       phone: json['phone'] as String?,
-      avatarUrl: json['avatarUrl'] as String?,
+      avatarUrl: usableImagePath(json['avatarUrl'] as String?),
     );
   }
 
