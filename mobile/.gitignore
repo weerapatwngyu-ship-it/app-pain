@@ -8,6 +8,9 @@ build/
 .flutter-plugins
 .flutter-plugins-dependencies
 
+# Local Supabase credentials (see dart_defines.example.json)
+dart_defines.json
+
 # IDE
 .idea/
 *.iml
