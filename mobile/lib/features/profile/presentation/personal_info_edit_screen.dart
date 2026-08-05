@@ -1,9 +1,8 @@
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../../../core/network/api_client.dart';
 import '../../auth/domain/auth_repository.dart';
 import '../../auth/domain/entities/user.dart';
 import '../../auth/presentation/onboarding/onboarding_theme.dart';
@@ -120,10 +119,12 @@ class _PersonalInfoEditScreenState extends State<PersonalInfoEditScreen> {
 
       if (!mounted) return;
       Navigator.of(context).pop((updatedUser, updatedProfile));
-    } on ApiException catch (e) {
-      setState(() => _error = e.statusCode == 409
+    } on PostgrestException catch (e) {
+      // 23505 is Postgres' unique-violation code; here that means the email
+      // is already on another account.
+      setState(() => _error = e.code == '23505'
           ? 'อีเมลนี้ถูกใช้สมัครสมาชิกแล้ว'
-          : 'บันทึกไม่สำเร็จ: ${_readableApiMessage(e)}');
+          : 'บันทึกไม่สำเร็จ: ${e.message}');
     } on SocketException catch (_) {
       setState(() => _error = 'เชื่อมต่อเซิร์ฟเวอร์ไม่ได้');
     } catch (e) {
@@ -131,19 +132,6 @@ class _PersonalInfoEditScreenState extends State<PersonalInfoEditScreen> {
     } finally {
       if (mounted) setState(() => _loading = false);
     }
-  }
-
-  static String _readableApiMessage(ApiException e) {
-    try {
-      final decoded = jsonDecode(e.message);
-      if (decoded is Map && decoded['message'] != null) {
-        final message = decoded['message'];
-        return message is List ? message.join(', ') : message.toString();
-      }
-    } catch (_) {
-      // Not JSON — fall through to the raw body below.
-    }
-    return e.message.isEmpty ? 'HTTP ${e.statusCode}' : e.message;
   }
 
   InputDecoration _decoration(String hint) => InputDecoration(

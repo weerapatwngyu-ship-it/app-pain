@@ -1,14 +1,10 @@
-import '../../../core/network/api_client.dart';
+import '../../../core/supabase/supabase_refs.dart';
 import '../domain/entities/patient_profile.dart';
 
 class PatientProfileRepository {
-  PatientProfileRepository(this._client);
-
-  final ApiClient _client;
-
   Future<PatientProfile> fetch(String patientId) async {
-    final json = await _client.get('/patients/$patientId') as Map<String, dynamic>;
-    return PatientProfile.fromJson(json);
+    final row = await db.from('patients').select().eq('id', patientId).single();
+    return PatientProfile.fromRow(row);
   }
 
   Future<PatientProfile> update(
@@ -17,11 +13,16 @@ class PatientProfileRepository {
     String? birthDate,
     String? gender,
   }) async {
-    final json = await _client.patch('/patients/$patientId', body: {
-      if (name != null) 'name': name,
-      if (birthDate != null) 'birthDate': birthDate,
-      if (gender != null) 'gender': gender,
-    }) as Map<String, dynamic>;
-    return PatientProfile.fromJson(json);
+    final row = await db
+        .from('patients')
+        .update({
+          if (name != null) 'name': name,
+          if (birthDate != null) 'birth_date': birthDate,
+          if (gender != null) 'gender': gender,
+        })
+        .eq('id', patientId)
+        .select()
+        .single();
+    return PatientProfile.fromRow(row);
   }
 }

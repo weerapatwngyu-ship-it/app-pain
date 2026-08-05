@@ -1,5 +1,3 @@
-import '../../../auth/domain/entities/user.dart' show usableImagePath;
-
 class Doctor {
   const Doctor({
     required this.id,
@@ -14,17 +12,16 @@ class Doctor {
   final String specialty;
   final String? bio;
 
-  /// Relative path returned by the backend (e.g. `/images/<uuid>`) —
-  /// prepend `ApiClient.baseUrl` to load it.
+  /// Absolute URL into Supabase Storage, or null when no photo was uploaded.
   final String? photoUrl;
 
-  factory Doctor.fromJson(Map<String, dynamic> json) {
+  factory Doctor.fromRow(Map<String, dynamic> row) {
     return Doctor(
-      id: json['id'] as String,
-      name: json['name'] as String,
-      specialty: json['specialty'] as String,
-      bio: json['bio'] as String?,
-      photoUrl: usableImagePath(json['photoUrl'] as String?),
+      id: row['id'] as String,
+      name: row['name'] as String,
+      specialty: row['specialty'] as String,
+      bio: row['bio'] as String?,
+      photoUrl: row['photo_url'] as String?,
     );
   }
 }

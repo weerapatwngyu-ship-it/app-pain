@@ -9,24 +9,34 @@ MedTrack แอปจ่ายยาและติดตามอาการ�
 
 | ไดเรกทอรี | รายละเอียด |
 |---|---|
-| [`backend/`](backend/README.md) | NestJS + TypeORM + PostgreSQL API (Phase 1 MVP) |
-| [`mobile/`](mobile/README.md) | Flutter mobile client (Phase 1 MVP) |
+| [`mobile/`](mobile/README.md) | Flutter mobile client |
+| `supabase/` | สคีมาฐานข้อมูลและกฎความปลอดภัย (RLS) — รันใน Supabase SQL Editor |
 | `docs/` | เอกสารออกแบบสถาปัตยกรรมระบบ |
 
 ## เริ่มต้นใช้งาน
 
-```bash
-# Backend
-cd backend
-cp .env.example .env
-npm install
-npm run start:dev
+แอปคุยกับ Supabase โดยตรง ไม่มีเซิร์ฟเวอร์ของเราเองคั่นกลาง — ไม่ต้องเปิด backend
+ค้างไว้ และไม่ต้องอยู่ WiFi วงเดียวกัน
 
-# Mobile (ในอีก terminal)
+1. สร้างโปรเจกต์ที่ [supabase.com](https://supabase.com)
+2. เปิด SQL Editor แล้วรัน [`supabase/schema.sql`](supabase/schema.sql) หนึ่งครั้ง
+   (สร้างตาราง + กฎความปลอดภัย + ที่เก็บรูป)
+3. Authentication → Providers → เปิด **Google** แล้วใส่ OAuth client ID/secret
+   จาก Google Cloud Console
+4. Authentication → URL Configuration → Redirect URLs เพิ่ม
+   `com.example.medtrack://login-callback`
+5. รันแอป:
+
+```bash
 cd mobile
 flutter pub get
-flutter run   # เดา API host ให้อัตโนมัติตามแพลตฟอร์ม — ดู mobile/README.md
+flutter run \
+  --dart-define=SUPABASE_URL=https://<project-ref>.supabase.co \
+  --dart-define=SUPABASE_ANON_KEY=<anon key>
 ```
+
+`SUPABASE_ANON_KEY` เป็น key สาธารณะ ใส่ในแอปได้ปลอดภัย — สิทธิ์การเข้าถึงข้อมูล
+ถูกกำหนดด้วยกฎ RLS ในฐานข้อมูล ไม่ใช่ด้วยการซ่อน key
 
 ## สถานะการพัฒนา
 

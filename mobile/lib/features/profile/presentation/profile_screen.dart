@@ -23,7 +23,6 @@ class ProfileScreen extends StatelessWidget {
     required this.symptomRepository,
     required this.doctorRepository,
     required this.pharmacyFinderRepository,
-    required this.mediaBaseUrl,
     required this.onUserUpdated,
   });
 
@@ -35,7 +34,6 @@ class ProfileScreen extends StatelessWidget {
   final SymptomRepositoryImpl symptomRepository;
   final DoctorRepository doctorRepository;
   final PharmacyFinderRepository pharmacyFinderRepository;
-  final String mediaBaseUrl;
   final ValueChanged<AppUser> onUserUpdated;
 
   /// Short, human-friendly stand-in for a "member code" — derived from the
@@ -61,7 +59,7 @@ class ProfileScreen extends StatelessWidget {
               children: [
                 UserAvatar(
                   name: user.name,
-                  avatarUrl: user.avatarUrl != null ? '$mediaBaseUrl${user.avatarUrl}' : null,
+                  avatarUrl: user.avatarUrl != null ? user.avatarUrl! : null,
                   radius: 28,
                 ),
                 const SizedBox(width: 16),
@@ -93,7 +91,6 @@ class ProfileScreen extends StatelessWidget {
                         symptomRepository: symptomRepository,
                         doctorRepository: doctorRepository,
                         pharmacyFinderRepository: pharmacyFinderRepository,
-                        mediaBaseUrl: mediaBaseUrl,
                         onUserUpdated: onUserUpdated,
                         onLogout: onLogout,
                       ),

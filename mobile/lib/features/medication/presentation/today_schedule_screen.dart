@@ -27,7 +27,6 @@ class TodayScheduleScreen extends StatefulWidget {
     required this.symptomRepository,
     required this.authRepository,
     required this.doctorRepository,
-    required this.mediaBaseUrl,
     required this.onUserUpdated,
   });
 
@@ -38,7 +37,6 @@ class TodayScheduleScreen extends StatefulWidget {
   final SymptomRepository symptomRepository;
   final AuthRepository authRepository;
   final DoctorRepository doctorRepository;
-  final String mediaBaseUrl;
   final ValueChanged<AppUser> onUserUpdated;
 
   @override
@@ -75,7 +73,6 @@ class _TodayScheduleScreenState extends State<TodayScheduleScreen> {
       MaterialPageRoute(
         builder: (_) => DoctorListScreen(
           repository: widget.doctorRepository,
-          mediaBaseUrl: widget.mediaBaseUrl,
         ),
       ),
     );
@@ -88,7 +85,6 @@ class _TodayScheduleScreenState extends State<TodayScheduleScreen> {
         builder: (_) => DoctorDetailScreen(
           doctor: doctor,
           repository: widget.doctorRepository,
-          mediaBaseUrl: widget.mediaBaseUrl,
         ),
       ),
     );
@@ -203,7 +199,7 @@ class _TodayScheduleScreenState extends State<TodayScheduleScreen> {
                   greeting: _greeting,
                   name: widget.user.name,
                   avatarUrl: widget.user.avatarUrl != null
-                      ? '${widget.mediaBaseUrl}${widget.user.avatarUrl}'
+                      ? widget.user.avatarUrl!
                       : null,
                   uploadingAvatar: _uploadingAvatar,
                   onAvatarTap: _pickAndUploadAvatar,
@@ -248,7 +244,6 @@ class _TodayScheduleScreenState extends State<TodayScheduleScreen> {
                           final doctor = doctors[index];
                           return _DoctorTile(
                             doctor: doctor,
-                            mediaBaseUrl: widget.mediaBaseUrl,
                             onTap: () => _openDoctor(doctor),
                           );
                         },
@@ -367,15 +362,14 @@ class _Header extends StatelessWidget {
 }
 
 class _DoctorTile extends StatelessWidget {
-  const _DoctorTile({required this.doctor, required this.mediaBaseUrl, required this.onTap});
+  const _DoctorTile({required this.doctor, required this.onTap});
 
   final Doctor doctor;
-  final String mediaBaseUrl;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final photoUrl = doctor.photoUrl != null ? '$mediaBaseUrl${doctor.photoUrl}' : null;
+    final photoUrl = doctor.photoUrl;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(16),

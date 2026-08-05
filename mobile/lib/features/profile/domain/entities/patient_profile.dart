@@ -1,14 +1,14 @@
 class PatientProfile {
   const PatientProfile({required this.birthDate, this.gender});
 
-  /// ISO `YYYY-MM-DD`, as stored/returned by the backend.
+  /// ISO `YYYY-MM-DD`, as stored in Postgres.
   final String birthDate;
   final String? gender;
 
-  factory PatientProfile.fromJson(Map<String, dynamic> json) {
+  factory PatientProfile.fromRow(Map<String, dynamic> row) {
     return PatientProfile(
-      birthDate: json['birthDate'] as String,
-      gender: json['gender'] as String?,
+      birthDate: row['birth_date'] as String,
+      gender: row['gender'] as String?,
     );
   }
 }

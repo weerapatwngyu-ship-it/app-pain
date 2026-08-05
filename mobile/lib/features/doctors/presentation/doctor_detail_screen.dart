@@ -10,12 +10,10 @@ class DoctorDetailScreen extends StatefulWidget {
     super.key,
     required this.doctor,
     required this.repository,
-    required this.mediaBaseUrl,
   });
 
   final Doctor doctor;
   final DoctorRepository repository;
-  final String mediaBaseUrl;
 
   @override
   State<DoctorDetailScreen> createState() => _DoctorDetailScreenState();
@@ -35,7 +33,6 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
       MaterialPageRoute(
         builder: (_) => DoctorFormScreen(
           repository: widget.repository,
-          mediaBaseUrl: widget.mediaBaseUrl,
           doctor: _doctor,
         ),
       ),
@@ -45,7 +42,7 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final photoUrl = _doctor.photoUrl != null ? '${widget.mediaBaseUrl}${_doctor.photoUrl}' : null;
+    final photoUrl = _doctor.photoUrl != null ? _doctor.photoUrl! : null;
 
     return Scaffold(
       appBar: AppBar(

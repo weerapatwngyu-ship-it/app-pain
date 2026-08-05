@@ -10,12 +10,10 @@ class DoctorFormScreen extends StatefulWidget {
   const DoctorFormScreen({
     super.key,
     required this.repository,
-    required this.mediaBaseUrl,
     this.doctor,
   });
 
   final DoctorRepository repository;
-  final String mediaBaseUrl;
   final Doctor? doctor;
 
   @override
@@ -121,7 +119,7 @@ class _DoctorFormScreenState extends State<DoctorFormScreen> {
   @override
   Widget build(BuildContext context) {
     final existingPhotoUrl =
-        widget.doctor?.photoUrl != null ? '${widget.mediaBaseUrl}${widget.doctor!.photoUrl}' : null;
+        widget.doctor?.photoUrl != null ? widget.doctor!.photoUrl! : null;
 
     return Scaffold(
       appBar: AppBar(title: Text(_isEditing ? 'แก้ไขข้อมูลแพทย์' : 'เพิ่มโปรไฟล์แพทย์')),

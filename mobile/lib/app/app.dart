@@ -3,10 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../core/network/api_client.dart';
 import '../core/storage/local_database.dart';
-import '../features/admin/data/admin_repository.dart';
-import '../features/admin/presentation/admin_screen.dart';
 import '../features/alerts/data/alerts_repository.dart';
 import '../features/auth/data/auth_repository_impl.dart';
 import '../features/auth/domain/entities/user.dart';
@@ -20,27 +17,21 @@ import '../shared/theme/app_theme.dart';
 import 'patient_home_shell.dart';
 
 class MedTrackApp extends StatefulWidget {
-  const MedTrackApp({super.key, required this.apiBaseUrl});
-
-  final String apiBaseUrl;
+  const MedTrackApp({super.key});
 
   @override
   State<MedTrackApp> createState() => _MedTrackAppState();
 }
 
 class _MedTrackAppState extends State<MedTrackApp> {
-  late final ApiClient _apiClient = ApiClient(baseUrl: widget.apiBaseUrl);
-  late final AuthRepositoryImpl _authRepository = AuthRepositoryImpl(_apiClient);
-  late final MedicationRepositoryImpl _medicationRepository =
-      MedicationRepositoryImpl(_apiClient, LocalDatabase.instance);
-  late final SymptomRepositoryImpl _symptomRepository = SymptomRepositoryImpl(_apiClient);
-  late final AlertsRepository _alertsRepository = AlertsRepository(_apiClient);
-  late final AdminRepository _adminRepository = AdminRepository(_apiClient);
-  late final PatientProfileRepository _patientProfileRepository =
-      PatientProfileRepository(_apiClient);
-  late final PharmacyFinderRepository _pharmacyFinderRepository =
-      PharmacyFinderRepository(_apiClient);
-  late final DoctorRepository _doctorRepository = DoctorRepository(_apiClient);
+  final AuthRepositoryImpl _authRepository = AuthRepositoryImpl();
+  final MedicationRepositoryImpl _medicationRepository =
+      MedicationRepositoryImpl(LocalDatabase.instance);
+  final SymptomRepositoryImpl _symptomRepository = SymptomRepositoryImpl();
+  final AlertsRepository _alertsRepository = AlertsRepository();
+  final PatientProfileRepository _patientProfileRepository = PatientProfileRepository();
+  final PharmacyFinderRepository _pharmacyFinderRepository = PharmacyFinderRepository();
+  final DoctorRepository _doctorRepository = DoctorRepository();
 
   StreamSubscription<AuthState>? _authSubscription;
 
@@ -52,7 +43,6 @@ class _MedTrackAppState extends State<MedTrackApp> {
   @override
   void initState() {
     super.initState();
-    _apiClient.onUnauthorized = _handleSessionExpired;
 
     // Supabase restores any saved session before emitting, and emits again
     // when the Google redirect lands back in the app — so one listener
@@ -72,8 +62,6 @@ class _MedTrackAppState extends State<MedTrackApp> {
   /// Mirrors the Supabase session onto the API client, then loads the
   /// app-side profile that carries role and patientId.
   Future<void> _applySession(Session? session) async {
-    _apiClient.setAccessToken(session?.accessToken);
-
     if (session == null) {
       if (!mounted) return;
       setState(() {
@@ -100,14 +88,6 @@ class _MedTrackAppState extends State<MedTrackApp> {
         _resolvingUser = false;
       });
     }
-  }
-
-  /// The backend rejected the Supabase token. Ending the Supabase session
-  /// makes the listener above return the app to the sign-in screen.
-  void _handleSessionExpired() {
-    if (!mounted || _currentUser == null) return;
-    setState(() => _sessionExpiredNotice = true);
-    unawaited(Supabase.instance.client.auth.signOut());
   }
 
   @override
@@ -162,13 +142,9 @@ class _MedTrackAppState extends State<MedTrackApp> {
   }
 
   Widget _buildSignedIn(AppUser user) {
-    if (user.role == UserRole.admin) {
-      return AdminScreen(adminRepository: _adminRepository, onLogout: _logout);
-    }
-
-    // Phase 1 MVP is otherwise patient-only (see docs/architecture.md
-    // §11) — a caregiver/provider account has no owned patient profile
-    // yet, so there's nothing meaningful to show them here.
+    // Phase 1 MVP is patient-only (see docs/architecture.md §11) — a
+    // caregiver/provider account has no owned patient profile yet, so
+    // there's nothing meaningful to show them here.
     if (user.patientId == null) {
       return Scaffold(
         appBar: AppBar(
@@ -199,7 +175,6 @@ class _MedTrackAppState extends State<MedTrackApp> {
       pharmacyFinderRepository: _pharmacyFinderRepository,
       authRepository: _authRepository,
       doctorRepository: _doctorRepository,
-      mediaBaseUrl: _apiClient.baseUrl,
       onLogout: _logout,
       onUserUpdated: _handleUserUpdated,
     );

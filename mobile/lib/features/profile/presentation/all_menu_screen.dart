@@ -27,7 +27,6 @@ class AllMenuScreen extends StatelessWidget {
     required this.symptomRepository,
     required this.doctorRepository,
     required this.pharmacyFinderRepository,
-    required this.mediaBaseUrl,
     required this.onUserUpdated,
     required this.onLogout,
   });
@@ -39,7 +38,6 @@ class AllMenuScreen extends StatelessWidget {
   final SymptomRepositoryImpl symptomRepository;
   final DoctorRepository doctorRepository;
   final PharmacyFinderRepository pharmacyFinderRepository;
-  final String mediaBaseUrl;
   final ValueChanged<AppUser> onUserUpdated;
   final VoidCallback onLogout;
 
@@ -94,7 +92,6 @@ class AllMenuScreen extends StatelessWidget {
                 MaterialPageRoute(
                   builder: (_) => DoctorListScreen(
                     repository: doctorRepository,
-                    mediaBaseUrl: mediaBaseUrl,
                   ),
                 ),
               ),

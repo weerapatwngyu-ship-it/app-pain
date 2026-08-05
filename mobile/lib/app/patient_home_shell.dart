@@ -32,7 +32,6 @@ class PatientHomeShell extends StatefulWidget {
     required this.pharmacyFinderRepository,
     required this.authRepository,
     required this.doctorRepository,
-    required this.mediaBaseUrl,
     required this.onLogout,
     required this.onUserUpdated,
   });
@@ -47,9 +46,6 @@ class PatientHomeShell extends StatefulWidget {
   final AuthRepository authRepository;
   final DoctorRepository doctorRepository;
 
-  /// API base URL — prepended to the relative image paths the backend
-  /// returns (`user.avatarUrl`, `doctor.photoUrl`) to form a loadable URL.
-  final String mediaBaseUrl;
   final VoidCallback onLogout;
   final ValueChanged<AppUser> onUserUpdated;
 
@@ -79,7 +75,6 @@ class _PatientHomeShellState extends State<PatientHomeShell> {
         symptomRepository: widget.symptomRepository,
         authRepository: widget.authRepository,
         doctorRepository: widget.doctorRepository,
-        mediaBaseUrl: widget.mediaBaseUrl,
         onUserUpdated: widget.onUserUpdated,
       ),
       SymptomLogScreen(
@@ -96,7 +91,6 @@ class _PatientHomeShellState extends State<PatientHomeShell> {
         symptomRepository: widget.symptomRepository,
         doctorRepository: widget.doctorRepository,
         pharmacyFinderRepository: widget.pharmacyFinderRepository,
-        mediaBaseUrl: widget.mediaBaseUrl,
         onUserUpdated: widget.onUserUpdated,
       ),
     ];

@@ -1,14 +1,5 @@
 enum UserRole { patient, caregiver, provider, admin }
 
-/// Images used to be written to the server's filesystem and served from
-/// `/uploads/...`. Those files are gone (the host wipes the container disk
-/// on restart), so rows still holding such a path have no image behind
-/// them — treat them as unset and fall back to the initial-letter avatar.
-String? usableImagePath(String? path) {
-  if (path == null || path.startsWith('/uploads/')) return null;
-  return path;
-}
-
 class AppUser {
   const AppUser({
     required this.id,
@@ -25,39 +16,24 @@ class AppUser {
   final String name;
   final UserRole role;
 
-  /// Relative path returned by the backend (e.g. `/images/<uuid>`) —
-  /// callers prepend `ApiClient.baseUrl` to load it.
-  final String? avatarUrl;
-
-  /// The patient profile this account owns — set for `patient`-role
-  /// accounts (auto-created on register), null otherwise. Screens that
-  /// call `/patients/:id/...` need this, not [id] (the user id and the
-  /// patient id are different rows/tables on the backend).
+  /// The patient record this account owns — every `patients`-scoped screen
+  /// needs this, not [id]: the account and the patient are different rows.
   final String? patientId;
 
-  /// Set for accounts created via the phone/OTP flow, null for accounts
-  /// created via email/password.
   final String? phone;
 
-  factory AppUser.fromJson(Map<String, dynamic> json) {
+  /// Absolute URL into Supabase Storage, or null when no photo was uploaded.
+  final String? avatarUrl;
+
+  factory AppUser.fromProfile(Map<String, dynamic> row, {String? patientId}) {
     return AppUser(
-      id: json['id'] as String,
-      email: json['email'] as String,
-      name: json['name'] as String,
-      role: UserRole.values.byName(json['role'] as String),
-      patientId: json['patientId'] as String?,
-      phone: json['phone'] as String?,
-      avatarUrl: usableImagePath(json['avatarUrl'] as String?),
+      id: row['id'] as String,
+      email: row['email'] as String? ?? '',
+      name: row['name'] as String? ?? '',
+      role: UserRole.values.byName(row['role'] as String? ?? 'patient'),
+      patientId: patientId,
+      phone: row['phone'] as String?,
+      avatarUrl: row['avatar_url'] as String?,
     );
   }
-
-  Map<String, dynamic> toJson() => {
-        'id': id,
-        'email': email,
-        'name': name,
-        'role': role.name,
-        'patientId': patientId,
-        'phone': phone,
-        'avatarUrl': avatarUrl,
-      };
 }

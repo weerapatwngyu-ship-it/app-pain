@@ -1,12 +1,10 @@
 import 'dart:async';
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import '../../../core/network/api_client.dart';
 import '../../auth/presentation/onboarding/onboarding_theme.dart';
 import '../data/pharmacy_finder_repository.dart';
 import '../domain/entities/nearby_pharmacy.dart';
@@ -80,14 +78,14 @@ class _PharmacyFinderScreenState extends State<PharmacyFinderScreen> {
         _userLng = position.longitude;
         _loading = false;
       });
-    } on ApiException catch (e) {
+    } on PharmacyLookupException catch (e) {
       setState(() {
-        _error = 'ค้นหาร้านยาไม่สำเร็จ (HTTP ${e.statusCode}): ${_readableApiMessage(e)}';
+        _error = e.message;
         _loading = false;
       });
     } on SocketException catch (_) {
       setState(() {
-        _error = 'เชื่อมต่อเซิร์ฟเวอร์ไม่ได้';
+        _error = 'เชื่อมต่อ OpenStreetMap ไม่ได้ — ตรวจสอบอินเทอร์เน็ต';
         _loading = false;
       });
     } on TimeoutException catch (_) {
@@ -102,21 +100,6 @@ class _PharmacyFinderScreenState extends State<PharmacyFinderScreen> {
         _loading = false;
       });
     }
-  }
-
-  /// The backend returns a JSON body like `{"message": "...", ...}` on
-  /// error — fall back to the raw body if it isn't JSON.
-  static String _readableApiMessage(ApiException e) {
-    try {
-      final decoded = jsonDecode(e.message);
-      if (decoded is Map && decoded['message'] != null) {
-        final message = decoded['message'];
-        return message is List ? message.join(', ') : message.toString();
-      }
-    } catch (_) {
-      // Not JSON — fall through to the raw body below.
-    }
-    return e.message.isEmpty ? 'HTTP ${e.statusCode}' : e.message;
   }
 
   @override

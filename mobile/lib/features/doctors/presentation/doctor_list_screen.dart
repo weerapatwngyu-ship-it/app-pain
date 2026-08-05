@@ -7,10 +7,9 @@ import 'doctor_detail_screen.dart';
 import 'doctor_form_screen.dart';
 
 class DoctorListScreen extends StatefulWidget {
-  const DoctorListScreen({super.key, required this.repository, required this.mediaBaseUrl});
+  const DoctorListScreen({super.key, required this.repository});
 
   final DoctorRepository repository;
-  final String mediaBaseUrl;
 
   @override
   State<DoctorListScreen> createState() => _DoctorListScreenState();
@@ -35,7 +34,6 @@ class _DoctorListScreenState extends State<DoctorListScreen> {
         builder: (_) => DoctorDetailScreen(
           doctor: doctor,
           repository: widget.repository,
-          mediaBaseUrl: widget.mediaBaseUrl,
         ),
       ),
     );
@@ -45,7 +43,7 @@ class _DoctorListScreenState extends State<DoctorListScreen> {
   Future<void> _addDoctor() async {
     await Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => DoctorFormScreen(repository: widget.repository, mediaBaseUrl: widget.mediaBaseUrl),
+        builder: (_) => DoctorFormScreen(repository: widget.repository),
       ),
     );
     _reload();
@@ -79,7 +77,7 @@ class _DoctorListScreenState extends State<DoctorListScreen> {
             separatorBuilder: (_, __) => const Divider(color: OnboardingColors.border),
             itemBuilder: (context, index) {
               final doctor = doctors[index];
-              final photoUrl = doctor.photoUrl != null ? '${widget.mediaBaseUrl}${doctor.photoUrl}' : null;
+              final photoUrl = doctor.photoUrl != null ? doctor.photoUrl! : null;
               return ListTile(
                 onTap: () => _openDoctor(doctor),
                 leading: CircleAvatar(
