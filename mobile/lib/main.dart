@@ -28,7 +28,7 @@ String _defaultApiBaseUrl() {
   if (!kIsWeb && Platform.isAndroid) return 'http://10.0.2.2:3000/v1';
   return 'http://localhost:3000/v1';
 }
-aaaaaaaaaaaaaaaaaaaaaaa
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await NotificationService.instance.init();
