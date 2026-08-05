@@ -1,15 +1,16 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../core/network/api_client.dart';
 import '../core/storage/local_database.dart';
-import '../core/storage/session_storage.dart';
 import '../features/admin/data/admin_repository.dart';
 import '../features/admin/presentation/admin_screen.dart';
 import '../features/alerts/data/alerts_repository.dart';
 import '../features/auth/data/auth_repository_impl.dart';
-import '../features/auth/domain/auth_repository.dart';
 import '../features/auth/domain/entities/user.dart';
-import '../features/auth/presentation/onboarding/phone_entry_screen.dart';
+import '../features/auth/presentation/sign_in_screen.dart';
 import '../features/doctors/data/doctor_repository.dart';
 import '../features/medication/data/medication_repository_impl.dart';
 import '../features/pharmacy_finder/data/pharmacy_finder_repository.dart';
@@ -40,41 +41,73 @@ class _MedTrackAppState extends State<MedTrackApp> {
   late final PharmacyFinderRepository _pharmacyFinderRepository =
       PharmacyFinderRepository(_apiClient);
   late final DoctorRepository _doctorRepository = DoctorRepository(_apiClient);
-  final SessionStorage _sessionStorage = SessionStorage();
+
+  StreamSubscription<AuthState>? _authSubscription;
 
   AppUser? _currentUser;
-  bool _restoringSession = true;
+  bool _resolvingUser = true;
   bool _sessionExpiredNotice = false;
+  String? _profileError;
 
   @override
   void initState() {
     super.initState();
     _apiClient.onUnauthorized = _handleSessionExpired;
-    _restoreSession();
+
+    // Supabase restores any saved session before emitting, and emits again
+    // when the Google redirect lands back in the app — so one listener
+    // covers both cold start and completing a sign-in.
+    _authSubscription = Supabase.instance.client.auth.onAuthStateChange.listen((state) {
+      _applySession(state.session);
+    });
+    _applySession(Supabase.instance.client.auth.currentSession);
   }
 
-  /// The stored token was rejected (expired, or signed by a different
-  /// server). Clear it and return to login rather than leaving the user on
-  /// screens that all fail with "Unauthorized".
+  @override
+  void dispose() {
+    _authSubscription?.cancel();
+    super.dispose();
+  }
+
+  /// Mirrors the Supabase session onto the API client, then loads the
+  /// app-side profile that carries role and patientId.
+  Future<void> _applySession(Session? session) async {
+    _apiClient.setAccessToken(session?.accessToken);
+
+    if (session == null) {
+      if (!mounted) return;
+      setState(() {
+        _currentUser = null;
+        _resolvingUser = false;
+      });
+      return;
+    }
+
+    if (mounted) setState(() => _resolvingUser = true);
+    try {
+      final user = await _authRepository.fetchCurrentUser();
+      if (!mounted) return;
+      setState(() {
+        _currentUser = user;
+        _profileError = null;
+        _sessionExpiredNotice = false;
+        _resolvingUser = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _profileError = 'โหลดข้อมูลผู้ใช้ไม่สำเร็จ — ตรวจสอบว่าเซิร์ฟเวอร์ทำงานอยู่\n\n$e';
+        _resolvingUser = false;
+      });
+    }
+  }
+
+  /// The backend rejected the Supabase token. Ending the Supabase session
+  /// makes the listener above return the app to the sign-in screen.
   void _handleSessionExpired() {
     if (!mounted || _currentUser == null) return;
-    _sessionStorage.clear();
-    setState(() {
-      _currentUser = null;
-      _sessionExpiredNotice = true;
-    });
-  }
-
-  Future<void> _restoreSession() async {
-    final session = await _sessionStorage.load();
-    if (session != null) {
-      _apiClient.setAccessToken(session.accessToken);
-    }
-    if (!mounted) return;
-    setState(() {
-      _currentUser = session?.user;
-      _restoringSession = false;
-    });
+    setState(() => _sessionExpiredNotice = true);
+    unawaited(Supabase.instance.client.auth.signOut());
   }
 
   @override
@@ -82,41 +115,53 @@ class _MedTrackAppState extends State<MedTrackApp> {
     return MaterialApp(
       title: 'MedTrack',
       theme: AppTheme.light(),
-      home: _restoringSession
-          ? const Scaffold(body: Center(child: CircularProgressIndicator()))
-          : (_currentUser != null ? _buildHome(_currentUser!) : _buildLogin()),
+      home: _buildHome(),
     );
   }
 
-  Widget _buildLogin() {
-    return PhoneEntryScreen(
-      authRepository: _authRepository,
-      onAuthenticated: _handleAuthenticated,
-      notice: _sessionExpiredNotice ? 'เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่' : null,
-    );
-  }
-
-  void _handleAuthenticated(AppUser user) {
-    setState(() {
-      _currentUser = user;
-      _sessionExpiredNotice = false;
-    });
-    final token = _apiClient.accessToken;
-    if (token != null) {
-      _sessionStorage.save(AuthSession(accessToken: token, user: user));
+  Widget _buildHome() {
+    if (_resolvingUser) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
+    if (_profileError != null) return _buildProfileError();
+    final user = _currentUser;
+    if (user == null) {
+      return SignInScreen(
+        notice: _sessionExpiredNotice ? 'เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่' : null,
+      );
+    }
+    return _buildSignedIn(user);
   }
+
+  Widget _buildProfileError() {
+    return Scaffold(
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(_profileError!, textAlign: TextAlign.center),
+              const SizedBox(height: 16),
+              OutlinedButton(
+                onPressed: () => _applySession(Supabase.instance.client.auth.currentSession),
+                child: const Text('ลองอีกครั้ง'),
+              ),
+              TextButton(onPressed: _logout, child: const Text('ออกจากระบบ')),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _handleUserUpdated(AppUser user) => setState(() => _currentUser = user);
 
   void _logout() {
-    _apiClient.setAccessToken(null);
-    _sessionStorage.clear();
-    setState(() {
-      _currentUser = null;
-      _sessionExpiredNotice = false;
-    });
+    unawaited(Supabase.instance.client.auth.signOut());
   }
 
-  Widget _buildHome(AppUser user) {
+  Widget _buildSignedIn(AppUser user) {
     if (user.role == UserRole.admin) {
       return AdminScreen(adminRepository: _adminRepository, onLogout: _logout);
     }
@@ -156,7 +201,7 @@ class _MedTrackAppState extends State<MedTrackApp> {
       doctorRepository: _doctorRepository,
       mediaBaseUrl: _apiClient.baseUrl,
       onLogout: _logout,
-      onUserUpdated: _handleAuthenticated,
+      onUserUpdated: _handleUserUpdated,
     );
   }
 }

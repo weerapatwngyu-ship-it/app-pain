@@ -16,6 +16,12 @@ export class User {
   // TypeScript's emitted reflection metadata for a `string | null` union
   // collapses to `Object`, and TypeORM can't map `Object` to a postgres
   // column type without an explicit hint.
+  // The `sub` claim of the Supabase JWT — the identity Supabase Auth owns.
+  // This app keeps its own user row for app-specific fields (role, name,
+  // avatar) and links it to that identity rather than duplicating it.
+  @Column({ type: 'varchar', unique: true, nullable: true })
+  supabaseUserId: string | null;
+
   @Column({ type: 'varchar', unique: true, nullable: true })
   email: string | null;
 

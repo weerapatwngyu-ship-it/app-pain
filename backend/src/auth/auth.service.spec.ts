@@ -1,8 +1,5 @@
-import { ConflictException, UnauthorizedException } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Test } from '@nestjs/testing';
-import * as bcrypt from 'bcrypt';
 import { Repository } from 'typeorm';
 import { Patient } from '../patients/entities/patient.entity';
 import { AuthService } from './auth.service';
@@ -12,12 +9,12 @@ describe('AuthService', () => {
   let service: AuthService;
   let users: jest.Mocked<Repository<User>>;
   let patients: jest.Mocked<Repository<Patient>>;
-  let jwt: jest.Mocked<JwtService>;
 
   const baseUser: User = {
     id: 'user-1',
+    supabaseUserId: 'supabase-abc',
     email: 'patient@example.com',
-    passwordHash: '',
+    passwordHash: null,
     phone: null,
     pinHash: null,
     consentHealth: false,
@@ -45,7 +42,7 @@ describe('AuthService', () => {
           useValue: {
             findOne: jest.fn(),
             create: jest.fn((data) => data),
-            save: jest.fn(),
+            save: jest.fn(async (data) => ({ ...baseUser, ...data }) as User),
           },
         },
         {
@@ -56,131 +53,91 @@ describe('AuthService', () => {
             save: jest.fn().mockResolvedValue(basePatient),
           },
         },
-        {
-          provide: JwtService,
-          useValue: { sign: jest.fn().mockReturnValue('signed-jwt') },
-        },
       ],
     }).compile();
 
     service = moduleRef.get(AuthService);
     users = moduleRef.get(getRepositoryToken(User));
     patients = moduleRef.get(getRepositoryToken(Patient));
-    jwt = moduleRef.get(JwtService);
   });
 
-  describe('register', () => {
-    it('hashes the password, creates a patient profile, and issues a token', async () => {
-      users.findOne.mockResolvedValue(null);
-      users.save.mockImplementation(async (data) => ({ ...baseUser, ...data }) as User);
-
-      const result = await service.register({
-        email: baseUser.email!,
-        password: 'super-secret',
-        name: baseUser.name,
-        role: UserRole.PATIENT,
-      });
-
-      expect(users.save).toHaveBeenCalled();
-      const savedArg = users.save.mock.calls[0][0] as User;
-      expect(savedArg.passwordHash).not.toBe('super-secret');
-      expect(await bcrypt.compare('super-secret', savedArg.passwordHash!)).toBe(true);
-
-      expect(patients.save).toHaveBeenCalledWith(
-        expect.objectContaining({ ownerUserId: baseUser.id, name: baseUser.name }),
-      );
-
-      expect(jwt.sign).toHaveBeenCalledWith({
-        sub: baseUser.id,
-        email: baseUser.email,
-        role: UserRole.PATIENT,
-      });
-      expect(result).toEqual({
-        accessToken: 'signed-jwt',
-        user: {
-          id: baseUser.id,
-          email: baseUser.email,
-          name: baseUser.name,
-          role: UserRole.PATIENT,
-          patientId: basePatient.id,
-          phone: null,
-          avatarUrl: null,
-        },
-      });
-    });
-
-    it('does not create a patient profile for non-patient roles', async () => {
-      const providerUser = { ...baseUser, role: UserRole.PROVIDER };
-      users.findOne.mockResolvedValue(null);
-      users.save.mockImplementation(async (data) => ({ ...providerUser, ...data }) as User);
-
-      const result = await service.register({
-        email: providerUser.email!,
-        password: 'super-secret',
-        name: providerUser.name,
-        role: UserRole.PROVIDER,
-      });
-
-      expect(patients.save).not.toHaveBeenCalled();
-      expect(result.user.patientId).toBeNull();
-    });
-
-    it('rejects registering an email that already exists', async () => {
+  describe('findOrCreateFromSupabase', () => {
+    it('returns the existing row for a known Supabase identity', async () => {
       users.findOne.mockResolvedValue(baseUser);
 
-      await expect(
-        service.register({
-          email: baseUser.email!,
-          password: 'super-secret',
-          name: baseUser.name,
-          role: UserRole.PATIENT,
-        }),
-      ).rejects.toBeInstanceOf(ConflictException);
+      const user = await service.findOrCreateFromSupabase({
+        supabaseUserId: 'supabase-abc',
+        email: baseUser.email,
+        name: baseUser.name,
+      });
+
+      expect(user).toBe(baseUser);
       expect(users.save).not.toHaveBeenCalled();
+    });
+
+    it('creates a patient-role user and profile on first sign-in', async () => {
+      users.findOne.mockResolvedValue(null);
+
+      const user = await service.findOrCreateFromSupabase({
+        supabaseUserId: 'supabase-new',
+        email: 'new@example.com',
+        name: 'Malee',
+      });
+
+      const savedArg = users.save.mock.calls[0][0] as User;
+      expect(savedArg.supabaseUserId).toBe('supabase-new');
+      expect(savedArg.role).toBe(UserRole.PATIENT);
+      expect(savedArg.name).toBe('Malee');
+      expect(patients.save).toHaveBeenCalledWith(
+        expect.objectContaining({ ownerUserId: user.id }),
+      );
+    });
+
+    it('adopts a pre-migration account that matches on email', async () => {
+      const legacy = { ...baseUser, supabaseUserId: null };
+      users.findOne.mockResolvedValueOnce(null).mockResolvedValueOnce(legacy);
+
+      await service.findOrCreateFromSupabase({
+        supabaseUserId: 'supabase-abc',
+        email: baseUser.email,
+        name: baseUser.name,
+      });
+
+      const savedArg = users.save.mock.calls[0][0] as User;
+      expect(savedArg.id).toBe(baseUser.id);
+      expect(savedArg.supabaseUserId).toBe('supabase-abc');
+      expect(patients.save).not.toHaveBeenCalled();
+    });
+
+    it('falls back to the email local part when Google sends no name', async () => {
+      users.findOne.mockResolvedValue(null);
+
+      await service.findOrCreateFromSupabase({
+        supabaseUserId: 'supabase-noname',
+        email: 'somchai@example.com',
+        name: null,
+      });
+
+      const savedArg = users.save.mock.calls[0][0] as User;
+      expect(savedArg.name).toBe('somchai');
     });
   });
 
-  describe('login', () => {
-    it('issues a token with the owned patientId when the password matches', async () => {
-      const passwordHash = await bcrypt.hash('correct-password', 4);
-      users.findOne.mockResolvedValue({ ...baseUser, passwordHash });
+  describe('currentUser', () => {
+    it('reports the owned patient id so the app can call patient routes', async () => {
+      users.findOne.mockResolvedValue(baseUser);
 
-      const result = await service.login({ email: baseUser.email!, password: 'correct-password' });
+      const result = await service.currentUser(baseUser.id);
 
-      expect(result.accessToken).toBe('signed-jwt');
-      expect(result.user.email).toBe(baseUser.email);
-      expect(result.user.patientId).toBe(basePatient.id);
-    });
-
-    it('self-heals a patient account that has no owned patient profile yet', async () => {
-      const passwordHash = await bcrypt.hash('correct-password', 4);
-      users.findOne.mockResolvedValue({ ...baseUser, passwordHash });
-      patients.findOne.mockResolvedValue(null);
-      patients.save.mockResolvedValue(basePatient);
-
-      const result = await service.login({ email: baseUser.email!, password: 'correct-password' });
-
-      expect(patients.save).toHaveBeenCalledWith(
-        expect.objectContaining({ ownerUserId: baseUser.id }),
-      );
-      expect(result.user.patientId).toBe(basePatient.id);
-    });
-
-    it('rejects an unknown email', async () => {
-      users.findOne.mockResolvedValue(null);
-
-      await expect(
-        service.login({ email: 'nobody@example.com', password: 'whatever' }),
-      ).rejects.toBeInstanceOf(UnauthorizedException);
-    });
-
-    it('rejects the wrong password', async () => {
-      const passwordHash = await bcrypt.hash('correct-password', 4);
-      users.findOne.mockResolvedValue({ ...baseUser, passwordHash });
-
-      await expect(
-        service.login({ email: baseUser.email!, password: 'wrong-password' }),
-      ).rejects.toBeInstanceOf(UnauthorizedException);
+      expect(result.user).toEqual({
+        id: baseUser.id,
+        email: baseUser.email,
+        name: baseUser.name,
+        role: UserRole.PATIENT,
+        patientId: basePatient.id,
+        phone: null,
+        avatarUrl: null,
+      });
     });
   });
 });
