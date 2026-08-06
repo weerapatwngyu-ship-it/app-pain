@@ -5,7 +5,21 @@ import 'package:http/http.dart' as http;
 
 import '../domain/entities/nearby_pharmacy.dart';
 
-const _overpassUrl = 'https://overpass-api.de/api/interpreter';
+/// Tried in order. The main instance rate-limits hard and goes down for
+/// maintenance often enough that a single endpoint means the feature is simply
+/// broken whenever it does; the mirrors run the same API over the same data.
+const _overpassEndpoints = [
+  'https://overpass-api.de/api/interpreter',
+  'https://overpass.kumi.systems/api/interpreter',
+  'https://overpass.osm.ch/api/interpreter',
+];
+
+/// Overpass's usage policy requires a request to identify the app behind it,
+/// and the instances refuse an unidentified client outright rather than
+/// throttling it — the default `Dart/3.x (dart:io)` agent came back HTTP 406
+/// from a real device.
+const _userAgent = 'MedTrack/0.1 (https://github.com/weerapatwngyu-ship-it/app-pain)';
+
 const _earthRadiusMeters = 6371000.0;
 
 /// Looks up nearby pharmacies and clinics straight from OpenStreetMap's
@@ -36,18 +50,7 @@ class PharmacyFinderRepository {
 out center tags;
 ''';
 
-    final response = await _httpClient.post(
-      Uri.parse(_overpassUrl),
-      headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-      body: 'data=${Uri.encodeComponent(query)}',
-    );
-
-    if (response.statusCode != 200) {
-      throw PharmacyLookupException(
-        'OpenStreetMap ตอบกลับไม่สำเร็จ (HTTP ${response.statusCode}) — '
-        'บริการนี้ฟรีและบางครั้งคนใช้เยอะ ลองใหม่อีกครั้ง',
-      );
-    }
+    final response = await _postToFirstWorkingEndpoint(query);
 
     final body = jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
     final elements = body['elements'] as List<dynamic>? ?? const [];
@@ -58,6 +61,41 @@ out center tags;
         .toList()
       ..sort((a, b) => a.distanceMeters.compareTo(b.distanceMeters));
     return results;
+  }
+
+  /// Walks the mirror list until one answers 200. Only the last failure is
+  /// reported: if every mirror is refusing, the reason is the same for all of
+  /// them and naming three hosts helps the user with nothing.
+  Future<http.Response> _postToFirstWorkingEndpoint(String query) async {
+    final body = 'data=${Uri.encodeComponent(query)}';
+    Object? lastFailure;
+
+    for (final endpoint in _overpassEndpoints) {
+      try {
+        final response = await _httpClient.post(
+          Uri.parse(endpoint),
+          headers: const {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'User-Agent': _userAgent,
+            'Accept': 'application/json',
+          },
+          body: body,
+        );
+        if (response.statusCode == 200) return response;
+        lastFailure = response.statusCode;
+      } catch (e) {
+        // Network-level failure against this mirror — try the next one before
+        // giving up, since the phone itself may still be online.
+        lastFailure = e;
+      }
+    }
+
+    throw PharmacyLookupException(
+      lastFailure is int
+          ? 'OpenStreetMap ตอบกลับไม่สำเร็จ (HTTP $lastFailure) — '
+              'บริการนี้ฟรีและบางครั้งคนใช้เยอะ ลองใหม่อีกครั้ง'
+          : 'เชื่อมต่อ OpenStreetMap ไม่ได้ — ตรวจสอบอินเทอร์เน็ตแล้วลองใหม่',
+    );
   }
 
   NearbyPharmacy? _toPharmacy(Map<String, dynamic> element, double originLat, double originLng) {

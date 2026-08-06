@@ -278,8 +278,11 @@ class _StatusLine extends StatelessWidget {
       icon = Icons.my_location;
       text = 'กำลังค้นหาตำแหน่ง...';
     } else if (error != null) {
-      icon = Icons.location_off;
-      text = 'ค้นหาตำแหน่งไม่สำเร็จ';
+      icon = Icons.error_outline;
+      // Deliberately vague about which step failed: the message below already
+      // says, and claiming the location lookup failed when it was the place
+      // search sends the user off to check GPS for nothing.
+      text = 'ค้นหาไม่สำเร็จ';
     } else {
       icon = Icons.place_outlined;
       text = 'พบ $count แห่ง ในรัศมี ${(radiusMeters / 1000).toStringAsFixed(1)} กม.';
