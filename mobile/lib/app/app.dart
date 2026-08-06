@@ -9,6 +9,7 @@ import '../features/auth/data/auth_repository_impl.dart';
 import '../features/auth/domain/entities/user.dart';
 import '../features/auth/presentation/sign_in_screen.dart';
 import '../features/doctors/data/doctor_repository.dart';
+import '../features/health_topics/data/health_question_repository.dart';
 import '../features/medication/data/medication_repository_impl.dart';
 import '../features/pharmacy_finder/data/pharmacy_finder_repository.dart';
 import '../features/profile/data/patient_profile_repository.dart';
@@ -32,6 +33,7 @@ class _MedTrackAppState extends State<MedTrackApp> {
   final PatientProfileRepository _patientProfileRepository = PatientProfileRepository();
   final PharmacyFinderRepository _pharmacyFinderRepository = PharmacyFinderRepository();
   final DoctorRepository _doctorRepository = DoctorRepository();
+  final HealthQuestionRepository _healthQuestionRepository = HealthQuestionRepository();
 
   StreamSubscription<AuthState>? _authSubscription;
 
@@ -175,6 +177,7 @@ class _MedTrackAppState extends State<MedTrackApp> {
       pharmacyFinderRepository: _pharmacyFinderRepository,
       authRepository: _authRepository,
       doctorRepository: _doctorRepository,
+      healthQuestionRepository: _healthQuestionRepository,
       onLogout: _logout,
       onUserUpdated: _handleUserUpdated,
     );

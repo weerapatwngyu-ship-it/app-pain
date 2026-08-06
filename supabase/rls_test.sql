@@ -206,3 +206,85 @@ begin;
   insert into storage.objects (bucket_id, name)
     values ('avatars','22222222-2222-2222-2222-222222222222/steal.jpg');
 rollback;
+
+\echo ''
+\echo '=== EXPLOIT 6: patient posts a question that already answers itself (must FAIL) ==='
+-- A question carrying its own "doctor's answer" would show in the app as
+-- though staff had replied, so the insert policy pins the reply columns empty.
+begin;
+  select id as pid from public.patients
+   where owner_user_id='11111111-1111-1111-1111-111111111111' \gset
+  set local role authenticated;
+  select public.as_user('11111111-1111-1111-1111-111111111111');
+  insert into public.health_questions (patient_id, asked_by, topic_key, question, status, answer)
+  values (:'pid','11111111-1111-1111-1111-111111111111','diabetes','ปลอมคำตอบ','answered','กินยาให้เยอะขึ้น');
+rollback;
+
+\echo ''
+\echo '=== EXPLOIT 7: patient attributes a question to another user (must FAIL) ==='
+begin;
+  select id as pid from public.patients
+   where owner_user_id='11111111-1111-1111-1111-111111111111' \gset
+  set local role authenticated;
+  select public.as_user('11111111-1111-1111-1111-111111111111');
+  insert into public.health_questions (patient_id, asked_by, topic_key, question)
+  values (:'pid','22222222-2222-2222-2222-222222222222','diabetes','สวมรอยเป็นคนอื่น');
+rollback;
+
+\echo ''
+\echo '=== EXPLOIT 8: patient rewrites an answered question (must affect 0 rows) ==='
+-- There is no UPDATE policy for patients, so the update matches nothing
+-- rather than erroring.
+begin;
+  select id as pid from public.patients
+   where owner_user_id='11111111-1111-1111-1111-111111111111' \gset
+  insert into public.health_questions (id, patient_id, asked_by, topic_key, question, status, answer)
+  values ('dddddddd-0000-0000-0000-000000000001', :'pid',
+          '11111111-1111-1111-1111-111111111111','diabetes','น้ำตาลสูงทำยังไงดี',
+          'answered','ปรับอาหารและพบแพทย์ตามนัด');
+  set local role authenticated;
+  select public.as_user('11111111-1111-1111-1111-111111111111');
+  \echo '  -- expect UPDATE 0:'
+  update public.health_questions set answer='แก้คำตอบหมอ', status='closed'
+   where id='dddddddd-0000-0000-0000-000000000001';
+  reset role;
+  select answer from public.health_questions where id='dddddddd-0000-0000-0000-000000000001';
+rollback;
+
+\echo ''
+\echo '=== EXPLOIT 9: read another patient''s questions (must be 0 rows) ==='
+begin;
+  select id as pid from public.patients
+   where owner_user_id='11111111-1111-1111-1111-111111111111' \gset
+  insert into public.health_questions (patient_id, asked_by, topic_key, question)
+  values (:'pid','11111111-1111-1111-1111-111111111111','allergy','ผื่นคันที่แขน');
+  set local role authenticated;
+  select public.as_user('22222222-2222-2222-2222-222222222222');
+  \echo '  -- expect 0:'
+  select count(*) as other_patients_questions_visible from public.health_questions;
+rollback;
+
+\echo ''
+\echo '=== POSITIVE 6: patient asks, reads back, and a linked provider answers ==='
+begin;
+  select id as pid from public.patients
+   where owner_user_id='11111111-1111-1111-1111-111111111111' \gset
+  set local role authenticated;
+  select public.as_user('11111111-1111-1111-1111-111111111111');
+  \echo '  -- ask (expect INSERT 0 1):'
+  insert into public.health_questions (patient_id, asked_by, topic_key, question)
+  values (:'pid','11111111-1111-1111-1111-111111111111','hypertension','ความดัน 150/95 อันตรายไหม');
+  \echo '  -- read back (expect 1):'
+  select count(*) as my_questions from public.health_questions;
+
+  reset role;
+  update public.profiles set role='provider' where id='22222222-2222-2222-2222-222222222222';
+  insert into public.patient_links (patient_id, user_id, role, status)
+  values (:'pid','22222222-2222-2222-2222-222222222222','provider','active');
+  set local role authenticated;
+  select public.as_user('22222222-2222-2222-2222-222222222222');
+  \echo '  -- linked provider answers (expect UPDATE 1):'
+  update public.health_questions
+     set answer='ควรวัดซ้ำและพบแพทย์', status='answered', answered_at=now()
+   where patient_id=:'pid';
+rollback;

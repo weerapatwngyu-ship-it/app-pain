@@ -111,6 +111,29 @@ create table if not exists public.doctors (
   created_at timestamptz not null default now()
 );
 
+-- A patient's question about a health topic, plus the reply once staff answer
+-- it. Deliberately not a chat: the doctors table above is a directory, not
+-- accounts — no doctor can sign in yet — so this records the question durably
+-- and shows the patient it is waiting, rather than implying someone is on the
+-- other end in real time.
+create table if not exists public.health_questions (
+  id uuid primary key default gen_random_uuid(),
+  patient_id uuid not null references public.patients (id) on delete cascade,
+  asked_by uuid not null references auth.users (id) on delete cascade,
+  -- Matches HealthTopic.key in the app. Free text on purpose: adding a topic
+  -- to the catalog should not need a migration.
+  topic_key text not null,
+  question text not null,
+  status text not null default 'pending'
+    check (status in ('pending', 'answered', 'closed')),
+  answer text,
+  answered_by uuid references public.doctors (id) on delete set null,
+  answered_at timestamptz,
+  created_at timestamptz not null default now()
+);
+create index if not exists health_questions_patient_idx
+  on public.health_questions (patient_id, created_at desc);
+
 -- ---------------------------------------------------------------------------
 -- Helpers
 --
@@ -299,6 +322,7 @@ alter table public.dose_logs      enable row level security;
 alter table public.symptom_logs   enable row level security;
 alter table public.alerts         enable row level security;
 alter table public.doctors        enable row level security;
+alter table public.health_questions enable row level security;
 
 -- profiles: your own row only.
 drop policy if exists profiles_select_own on public.profiles;
@@ -459,6 +483,34 @@ drop trigger if exists alerts_status_only on public.alerts;
 create trigger alerts_status_only
   before update on public.alerts
   for each row execute function public.alerts_allow_status_change_only();
+
+-- health_questions: the patient (or their caregiver) asks; only staff answer.
+drop policy if exists health_questions_select on public.health_questions;
+create policy health_questions_select on public.health_questions
+  for select to authenticated using (public.can_access_patient(patient_id));
+
+-- asked_by is pinned to the caller so a question cannot be attributed to
+-- someone else, and the reply columns are pinned to empty so a patient cannot
+-- post a question that already carries its own "doctor's answer".
+drop policy if exists health_questions_insert on public.health_questions;
+create policy health_questions_insert on public.health_questions
+  for insert to authenticated
+  with check (
+    public.can_access_patient(patient_id)
+    and asked_by = auth.uid()
+    and status = 'pending'
+    and answer is null
+    and answered_by is null
+    and answered_at is null
+  );
+
+-- No UPDATE policy for patients at all: once asked, a question is theirs to
+-- read but not to rewrite, which keeps the answered record trustworthy.
+drop policy if exists health_questions_answer_staff on public.health_questions;
+create policy health_questions_answer_staff on public.health_questions
+  for update to authenticated
+  using (public.can_manage_patient_care(patient_id))
+  with check (public.can_manage_patient_care(patient_id));
 
 -- doctors: a shared directory — everyone reads, only staff edit.
 drop policy if exists doctors_select on public.doctors;

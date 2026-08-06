@@ -6,6 +6,7 @@ import '../features/auth/domain/auth_repository.dart';
 import '../features/auth/domain/entities/user.dart';
 import '../features/auth/presentation/onboarding/onboarding_theme.dart';
 import '../features/doctors/data/doctor_repository.dart';
+import '../features/health_topics/data/health_question_repository.dart';
 import '../features/medication/data/medication_repository_impl.dart';
 import '../features/medication/domain/usecases/log_dose_usecase.dart';
 import '../features/medication/presentation/today_schedule_screen.dart';
@@ -32,6 +33,7 @@ class PatientHomeShell extends StatefulWidget {
     required this.pharmacyFinderRepository,
     required this.authRepository,
     required this.doctorRepository,
+    required this.healthQuestionRepository,
     required this.onLogout,
     required this.onUserUpdated,
   });
@@ -45,6 +47,7 @@ class PatientHomeShell extends StatefulWidget {
   final PharmacyFinderRepository pharmacyFinderRepository;
   final AuthRepository authRepository;
   final DoctorRepository doctorRepository;
+  final HealthQuestionRepository healthQuestionRepository;
 
   final VoidCallback onLogout;
   final ValueChanged<AppUser> onUserUpdated;
@@ -75,6 +78,7 @@ class _PatientHomeShellState extends State<PatientHomeShell> {
         symptomRepository: widget.symptomRepository,
         authRepository: widget.authRepository,
         doctorRepository: widget.doctorRepository,
+        healthQuestionRepository: widget.healthQuestionRepository,
         onUserUpdated: widget.onUserUpdated,
       ),
       SymptomLogScreen(
@@ -91,6 +95,7 @@ class _PatientHomeShellState extends State<PatientHomeShell> {
         symptomRepository: widget.symptomRepository,
         doctorRepository: widget.doctorRepository,
         pharmacyFinderRepository: widget.pharmacyFinderRepository,
+        healthQuestionRepository: widget.healthQuestionRepository,
         onUserUpdated: widget.onUserUpdated,
       ),
     ];

@@ -5,6 +5,7 @@ import '../../auth/domain/auth_repository.dart';
 import '../../auth/domain/entities/user.dart';
 import '../../auth/presentation/onboarding/onboarding_theme.dart';
 import '../../doctors/data/doctor_repository.dart';
+import '../../health_topics/data/health_question_repository.dart';
 import '../../pharmacy_finder/data/pharmacy_finder_repository.dart';
 import '../../symptom_tracking/data/symptom_repository_impl.dart';
 import '../data/patient_profile_repository.dart';
@@ -23,6 +24,7 @@ class ProfileScreen extends StatelessWidget {
     required this.symptomRepository,
     required this.doctorRepository,
     required this.pharmacyFinderRepository,
+    required this.healthQuestionRepository,
     required this.onUserUpdated,
   });
 
@@ -34,6 +36,7 @@ class ProfileScreen extends StatelessWidget {
   final SymptomRepositoryImpl symptomRepository;
   final DoctorRepository doctorRepository;
   final PharmacyFinderRepository pharmacyFinderRepository;
+  final HealthQuestionRepository healthQuestionRepository;
   final ValueChanged<AppUser> onUserUpdated;
 
   /// Short, human-friendly stand-in for a "member code" — derived from the
@@ -91,6 +94,7 @@ class ProfileScreen extends StatelessWidget {
                         symptomRepository: symptomRepository,
                         doctorRepository: doctorRepository,
                         pharmacyFinderRepository: pharmacyFinderRepository,
+                        healthQuestionRepository: healthQuestionRepository,
                         onUserUpdated: onUserUpdated,
                         onLogout: onLogout,
                       ),

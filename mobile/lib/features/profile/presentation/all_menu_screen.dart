@@ -5,6 +5,9 @@ import '../../auth/domain/entities/user.dart';
 import '../../auth/presentation/onboarding/onboarding_theme.dart';
 import '../../doctors/data/doctor_repository.dart';
 import '../../doctors/presentation/doctor_list_screen.dart';
+import '../../health_topics/data/health_question_repository.dart';
+import '../../health_topics/presentation/health_topics_screen.dart';
+import '../../health_topics/presentation/my_questions_screen.dart';
 import '../../pharmacy_finder/data/pharmacy_finder_repository.dart';
 import '../../pharmacy_finder/presentation/pharmacy_finder_screen.dart';
 import '../../symptom_tracking/data/symptom_repository_impl.dart';
@@ -27,6 +30,7 @@ class AllMenuScreen extends StatelessWidget {
     required this.symptomRepository,
     required this.doctorRepository,
     required this.pharmacyFinderRepository,
+    required this.healthQuestionRepository,
     required this.onUserUpdated,
     required this.onLogout,
   });
@@ -38,6 +42,7 @@ class AllMenuScreen extends StatelessWidget {
   final SymptomRepositoryImpl symptomRepository;
   final DoctorRepository doctorRepository;
   final PharmacyFinderRepository pharmacyFinderRepository;
+  final HealthQuestionRepository healthQuestionRepository;
   final ValueChanged<AppUser> onUserUpdated;
   final VoidCallback onLogout;
 
@@ -102,6 +107,31 @@ class AllMenuScreen extends StatelessWidget {
               onTap: () => Navigator.of(context).push(
                 MaterialPageRoute(
                   builder: (_) => PharmacyFinderScreen(repository: pharmacyFinderRepository),
+                ),
+              ),
+            ),
+            _MenuItem(
+              icon: Icons.local_hospital_outlined,
+              label: 'คลินิกออนไลน์',
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => HealthTopicsScreen(
+                    patientId: patientId,
+                    questionRepository: healthQuestionRepository,
+                    doctorRepository: doctorRepository,
+                  ),
+                ),
+              ),
+            ),
+            _MenuItem(
+              icon: Icons.forum_outlined,
+              label: 'คำถามของฉัน',
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => MyQuestionsScreen(
+                    patientId: patientId,
+                    repository: healthQuestionRepository,
+                  ),
                 ),
               ),
             ),

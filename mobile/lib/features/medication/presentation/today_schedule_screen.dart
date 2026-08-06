@@ -9,6 +9,9 @@ import '../../doctors/data/doctor_repository.dart';
 import '../../doctors/domain/entities/doctor.dart';
 import '../../doctors/presentation/doctor_detail_screen.dart';
 import '../../doctors/presentation/doctor_list_screen.dart';
+import '../../health_topics/data/health_question_repository.dart';
+import '../../health_topics/domain/entities/health_topic.dart';
+import '../../health_topics/presentation/health_topics_screen.dart';
 import '../../symptom_tracking/domain/entities/symptom_category.dart';
 import '../../symptom_tracking/domain/symptom_repository.dart';
 import '../../symptom_tracking/presentation/symptom_category_logs_screen.dart';
@@ -27,6 +30,7 @@ class TodayScheduleScreen extends StatefulWidget {
     required this.symptomRepository,
     required this.authRepository,
     required this.doctorRepository,
+    required this.healthQuestionRepository,
     required this.onUserUpdated,
   });
 
@@ -37,6 +41,7 @@ class TodayScheduleScreen extends StatefulWidget {
   final SymptomRepository symptomRepository;
   final AuthRepository authRepository;
   final DoctorRepository doctorRepository;
+  final HealthQuestionRepository healthQuestionRepository;
   final ValueChanged<AppUser> onUserUpdated;
 
   @override
@@ -66,6 +71,18 @@ class _TodayScheduleScreenState extends State<TodayScheduleScreen> {
 
   void _reloadDoctors() {
     setState(() => _doctorsFuture = widget.doctorRepository.fetchAll());
+  }
+
+  void _openHealthTopics() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => HealthTopicsScreen(
+          patientId: widget.patientId,
+          questionRepository: widget.healthQuestionRepository,
+          doctorRepository: widget.doctorRepository,
+        ),
+      ),
+    );
   }
 
   Future<void> _openDoctorList() async {
@@ -256,6 +273,48 @@ class _TodayScheduleScreenState extends State<TodayScheduleScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     const Text(
+                      'คลินิกออนไลน์',
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+                    ),
+                    TextButton(
+                      onPressed: _openHealthTopics,
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text('ดูทั้งหมด', style: TextStyle(color: OnboardingColors.teal)),
+                          Icon(Icons.chevron_right, size: 18, color: OnboardingColors.teal),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                SizedBox(
+                  height: 96,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: healthTopics.length,
+                    separatorBuilder: (_, __) => const SizedBox(width: 12),
+                    itemBuilder: (context, index) {
+                      final topic = healthTopics[index];
+                      return _HealthTopicTile(
+                        topic: topic,
+                        onTap: () => openHealthTopic(
+                          context,
+                          topic: topic,
+                          patientId: widget.patientId,
+                          questionRepository: widget.healthQuestionRepository,
+                          doctorRepository: widget.doctorRepository,
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
                       'หมวดอาการ',
                       style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
                     ),
@@ -440,6 +499,48 @@ class _AddDoctorTile extends StatelessWidget {
             ),
             SizedBox(height: 6),
             Text('เพิ่มแพทย์', textAlign: TextAlign.center, style: TextStyle(fontSize: 12)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Circular, badge-free counterpart to [_CategoryTile]: a health topic is a
+/// subject to read about, so there is no per-user count to show on it.
+class _HealthTopicTile extends StatelessWidget {
+  const _HealthTopicTile({required this.topic, required this.onTap});
+
+  final HealthTopic topic;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: SizedBox(
+        width: 72,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 56,
+              height: 56,
+              decoration: const BoxDecoration(
+                color: Color(0xFFEAF5F3),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(topic.icon, color: OnboardingColors.teal, size: 28),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              topic.label,
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 11, height: 1.2),
+            ),
           ],
         ),
       ),
