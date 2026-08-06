@@ -1,21 +1,28 @@
 import 'package:flutter/material.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'onboarding/onboarding_theme.dart';
 
-/// Email/password against Supabase Auth — no external provider, no OAuth
-/// redirect, nothing to configure outside the Supabase dashboard.
+/// Email/password against Supabase Auth, plus Google when the build carries
+/// a GOOGLE_WEB_CLIENT_ID (see main.dart) — both against Supabase directly,
+/// no server of this app's own in between.
 ///
-/// Supabase requires confirming the address via an emailed link before a
-/// new account can sign in (see `_signUp`'s success message). That's what
-/// stands in for phone verification here: it isn't optional, and there is
-/// no server of this app's own to bypass it from.
+/// Supabase requires confirming the address via an emailed link before a new
+/// email/password account can sign in (see `_signUp`'s success message).
+/// That's what stands in for phone verification here: it isn't optional, and
+/// there is no server of this app's own to bypass it from. Google accounts
+/// skip this — Google has already verified the address.
 class SignInScreen extends StatefulWidget {
-  const SignInScreen({super.key, this.notice});
+  const SignInScreen({super.key, this.notice, this.googleWebClientId});
 
   /// Shown when the user was sent here rather than arriving on their own —
   /// e.g. their session expired mid-use.
   final String? notice;
+
+  /// Null when Google Sign-In hasn't been configured for this build — the
+  /// Google button is hidden rather than shown broken.
+  final String? googleWebClientId;
 
   @override
   State<SignInScreen> createState() => _SignInScreenState();
@@ -28,6 +35,7 @@ class _SignInScreenState extends State<SignInScreen> {
 
   bool _isSignUp = false;
   bool _loading = false;
+  bool _googleLoading = false;
   String? _error;
   String? _info;
 
@@ -83,6 +91,50 @@ class _SignInScreenState extends State<SignInScreen> {
       _isSignUp = false;
       _info = 'ส่งอีเมลยืนยันไปที่ $email แล้ว — เปิดอีเมลแล้วกดลิงก์ยืนยันก่อน จึงจะเข้าสู่ระบบได้';
     });
+  }
+
+  Future<void> _signInWithGoogle() async {
+    final clientId = widget.googleWebClientId;
+    if (clientId == null) return;
+
+    setState(() {
+      _googleLoading = true;
+      _error = null;
+      _info = null;
+    });
+
+    try {
+      // serverClientId (the "Web application" OAuth client, not the Android
+      // one) is what makes the returned idToken's audience match what
+      // Supabase's Google provider validates against — see README for setup.
+      final googleUser = await GoogleSignIn(serverClientId: clientId).signIn();
+      if (googleUser == null) {
+        // User closed the account picker — not an error worth showing.
+        if (mounted) setState(() => _googleLoading = false);
+        return;
+      }
+
+      final googleAuth = await googleUser.authentication;
+      final idToken = googleAuth.idToken;
+      if (idToken == null) {
+        throw StateError(
+          'Google ไม่ได้ส่ง idToken กลับมา — ตรวจสอบว่าตั้งค่า Web Client ID ถูกต้อง',
+        );
+      }
+
+      await Supabase.instance.client.auth.signInWithIdToken(
+        provider: OAuthProvider.google,
+        idToken: idToken,
+        accessToken: googleAuth.accessToken,
+      );
+      // Success updates app.dart's session listener — nothing more to do.
+    } on AuthException catch (e) {
+      setState(() => _error = _readableAuthError(e));
+    } catch (e) {
+      setState(() => _error = 'เข้าสู่ระบบด้วย Google ไม่สำเร็จ: $e');
+    } finally {
+      if (mounted) setState(() => _googleLoading = false);
+    }
   }
 
   String _readableAuthError(AuthException e) {
@@ -189,6 +241,45 @@ class _SignInScreenState extends State<SignInScreen> {
                           }),
                   child: Text(_isSignUp ? 'มีบัญชีอยู่แล้ว? เข้าสู่ระบบ' : 'ยังไม่มีบัญชี? สมัครสมาชิก'),
                 ),
+                if (widget.googleWebClientId != null) ...[
+                  const SizedBox(height: 8),
+                  const Row(
+                    children: [
+                      Expanded(child: Divider(color: OnboardingColors.border)),
+                      Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 12),
+                        child: Text(
+                          'หรือ',
+                          style: TextStyle(fontSize: 13, color: OnboardingColors.textMuted),
+                        ),
+                      ),
+                      Expanded(child: Divider(color: OnboardingColors.border)),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    height: 56,
+                    child: OutlinedButton.icon(
+                      onPressed: (_loading || _googleLoading) ? null : _signInWithGoogle,
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: OnboardingColors.border),
+                        foregroundColor: OnboardingColors.text,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      ),
+                      icon: _googleLoading
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const _GoogleMark(),
+                      label: const Text(
+                        'เข้าสู่ระบบด้วย Google',
+                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 8),
                 const Text(
                   'การเข้าสู่ระบบถือว่าคุณยอมรับให้แอปเก็บข้อมูลสุขภาพ\nเพื่อใช้ติดตามการรักษาของคุณ',
@@ -215,6 +306,35 @@ class _SignInScreenState extends State<SignInScreen> {
           borderSide: const BorderSide(color: OnboardingColors.border),
         ),
       );
+}
+
+/// Stand-in for Google's "G" mark — the project has no bundled brand asset,
+/// so this draws a plain letter rather than pulling in an image dependency.
+/// Swap for Google's official multi-color asset before shipping.
+class _GoogleMark extends StatelessWidget {
+  const _GoogleMark();
+
+  @override
+  Widget build(BuildContext context) {
+    return const SizedBox(
+      width: 20,
+      height: 20,
+      child: DecoratedBox(
+        decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.white),
+        child: Center(
+          child: Text(
+            'G',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              color: Color(0xFF4285F4),
+              height: 1,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class _Banner extends StatelessWidget {

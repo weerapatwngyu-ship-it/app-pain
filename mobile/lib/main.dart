@@ -12,6 +12,14 @@ import 'core/notification/notification_service.dart';
 const _supabaseUrl = String.fromEnvironment('SUPABASE_URL');
 const _supabaseAnonKey = String.fromEnvironment('SUPABASE_ANON_KEY');
 
+/// The OAuth 2.0 "Web application" client ID from Google Cloud Console — not
+/// a secret (it appears in every Google Sign-In request the app makes) but
+/// still build-time config, since which Google Cloud project the app talks
+/// to isn't something to hardcode. Left empty, sign-in still works with
+/// email/password; only the Google button stays hidden.
+///   --dart-define=GOOGLE_WEB_CLIENT_ID=<web client id>.apps.googleusercontent.com
+const _googleWebClientId = String.fromEnvironment('GOOGLE_WEB_CLIENT_ID');
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await NotificationService.instance.init();
@@ -25,7 +33,11 @@ Future<void> main() async {
   // is no server of this app's own to point at.
   await Supabase.initialize(url: _supabaseUrl, anonKey: _supabaseAnonKey);
 
-  runApp(const MedTrackApp());
+  runApp(
+    MedTrackApp(
+      googleWebClientId: _googleWebClientId.isEmpty ? null : _googleWebClientId,
+    ),
+  );
 }
 
 /// Signing in is impossible without Supabase credentials, so say exactly

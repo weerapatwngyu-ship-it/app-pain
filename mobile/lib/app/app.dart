@@ -18,7 +18,12 @@ import '../shared/theme/app_theme.dart';
 import 'patient_home_shell.dart';
 
 class MedTrackApp extends StatefulWidget {
-  const MedTrackApp({super.key});
+  const MedTrackApp({super.key, this.googleWebClientId});
+
+  /// Null when GOOGLE_WEB_CLIENT_ID wasn't passed at build time — the sign-in
+  /// screen hides the Google button rather than offering a flow that would
+  /// only fail.
+  final String? googleWebClientId;
 
   @override
   State<MedTrackApp> createState() => _MedTrackAppState();
@@ -47,8 +52,8 @@ class _MedTrackAppState extends State<MedTrackApp> {
     super.initState();
 
     // Supabase restores any saved session before emitting, and emits again
-    // when the Google redirect lands back in the app — so one listener
-    // covers both cold start and completing a sign-in.
+    // once signInWithIdToken (email/password or Google) resolves — so one
+    // listener covers both cold start and completing a sign-in.
     _authSubscription = Supabase.instance.client.auth.onAuthStateChange.listen((state) {
       _applySession(state.session);
     });
@@ -110,6 +115,7 @@ class _MedTrackAppState extends State<MedTrackApp> {
     if (user == null) {
       return SignInScreen(
         notice: _sessionExpiredNotice ? 'เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่' : null,
+        googleWebClientId: widget.googleWebClientId,
       );
     }
     return _buildSignedIn(user);

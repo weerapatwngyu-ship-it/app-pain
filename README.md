@@ -63,6 +63,72 @@ MedTrack แอปจ่ายยาและติดตามอาการ�
 `SUPABASE_ANON_KEY` เป็น key สาธารณะ ใส่ในแอปได้ปลอดภัย — สิทธิ์การเข้าถึงข้อมูล
 ถูกกำหนดด้วยกฎ RLS ในฐานข้อมูล ไม่ใช่ด้วยการซ่อน key
 
+## ตั้งค่า "เข้าสู่ระบบด้วย Google" (ไม่บังคับ)
+
+ข้ามส่วนนี้ได้ — แอปใช้อีเมล/รหัสผ่านได้สมบูรณ์อยู่แล้วโดยไม่ต้องตั้งค่าอะไรเพิ่ม
+ทำส่วนนี้เฉพาะตอนอยากได้ปุ่ม "เข้าสู่ระบบด้วย Google" เพิ่มมาอีกทาง
+
+ต้องตั้งค่า 2 ที่: **Google Cloud Console** (ขอ Client ID) และ **Supabase Dashboard**
+(เปิดใช้ Google เป็น provider) — ทำครั้งเดียว
+
+### 1. Google Cloud Console
+
+1. เข้า [console.cloud.google.com](https://console.cloud.google.com) → สร้างโปรเจกต์ใหม่
+   (หรือใช้โปรเจกต์เดิมถ้ามี)
+2. เมนูซ้าย → **APIs & Services** → **OAuth consent screen** → เลือก **External** →
+   กรอกชื่อแอปกับอีเมลติดต่อ → Save ไปเรื่อยๆ จนเสร็จ (ค่าเริ่มต้นพอสำหรับทดสอบ)
+3. เมนูซ้าย → **Credentials** → **+ Create Credentials** → **OAuth client ID**
+   - **Application type: Web application** — ตั้งชื่ออะไรก็ได้ เช่น `MedTrack Supabase`
+   - กด Create → จะได้ **Client ID** และ **Client Secret** คู่หนึ่ง เก็บไว้ทั้งคู่
+     (Client Secret ต้องเก็บเป็นความลับ — ใส่ตรงเข้า Supabase Dashboard เท่านั้น
+     **ห้ามใส่ในแอปหรือ commit ขึ้น git**)
+4. **+ Create Credentials** → **OAuth client ID** อีกครั้ง
+   - **Application type: Android**
+   - **Package name:** `com.example.medtrack`
+   - **SHA-1 certificate fingerprint:** เอามาจากคำสั่งนี้ (รันจากที่ไหนก็ได้ ไม่ต้องอยู่ในโปรเจกต์):
+
+     ```powershell
+     keytool -list -v -alias androiddebugkey -keystore "$env:USERPROFILE\.android\debug.keystore" -storepass android -keypass android
+     ```
+
+     หา `SHA1:` ในผลลัพธ์ แล้วก็อปค่าไปวาง (มีเครื่องหมาย `:` คั่นได้ ใส่ตามที่เห็นเลย)
+   - กด Create — ตัวนี้ไม่ต้องเก็บ Client ID ไว้ที่ไหน แค่ต้องมีอยู่ในระบบให้ตรงกับแอป
+
+   > SHA-1 นี้ใช้ได้เฉพาะตอนรันด้วย `flutter run` หรือ `flutter build apk --debug`
+   > ถ้าจะปล่อยแอปจริงด้วย release keystore ต้องมาเพิ่ม SHA-1 ของ release keystore
+   > เป็น Android client อีกตัวทีหลัง
+
+### 2. Supabase Dashboard
+
+1. เมนูซ้าย **Authentication** → **Providers** → หา **Google** → เปิดสวิตช์
+2. ใส่ **Client ID** และ **Client Secret** ของตัว **Web application** จากข้อ 1
+   (ไม่ใช่ตัว Android)
+3. Save
+
+### 3. ใส่ค่าในแอป
+
+เพิ่ม key `GOOGLE_WEB_CLIENT_ID` ใน `mobile/dart_defines.json` (ใช้ **Client ID ของ Web
+application** ตัวเดียวกับที่ใส่ใน Supabase):
+
+```json
+{
+  "SUPABASE_URL": "...",
+  "SUPABASE_ANON_KEY": "...",
+  "GOOGLE_WEB_CLIENT_ID": "xxxxxxxx.apps.googleusercontent.com"
+}
+```
+
+`GOOGLE_WEB_CLIENT_ID` ไม่ใช่ความลับ (เป็น public identifier ที่ปรากฏในทุก request
+ของ Google Sign-In อยู่แล้ว) — สิ่งเดียวที่ต้องปิดเป็นความลับคือ Client **Secret**
+ซึ่งไม่ได้เข้ามาอยู่ในแอปเลย
+
+รันแอปใหม่ (`flutter run --dart-define-from-file=dart_defines.json` หรือ
+`flutter build apk --dart-define-from-file=dart_defines.json`) — ปุ่ม "เข้าสู่ระบบด้วย
+Google" จะโผล่ในหน้าเข้าสู่ระบบ ถ้าไม่ใส่ค่านี้ ปุ่มจะไม่แสดง แต่ส่วนอื่นของแอปทำงานปกติ
+
+iOS ยังไม่ได้ตั้งค่าไว้ (ต้องมี Mac + Xcode จึง build iOS ได้ ซึ่งยังไม่ได้ทดสอบ) —
+ทำเฉพาะฝั่ง Android ตอนนี้
+
 ## สถานะการพัฒนา
 
 กำลังพัฒนา **Phase 1 (MVP)** ตาม roadmap ในเอกสารสถาปัตยกรรม §11: บัญชีผู้ใช้, ใบสั่งยา,
