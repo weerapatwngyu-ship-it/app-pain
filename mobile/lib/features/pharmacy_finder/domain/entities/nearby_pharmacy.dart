@@ -1,3 +1,14 @@
+/// Which kind of place a result is, and what the filter chips select on.
+enum PlaceKind {
+  pharmacy,
+  clinic;
+
+  static PlaceKind fromTag(String? amenity) =>
+      amenity == 'pharmacy' ? PlaceKind.pharmacy : PlaceKind.clinic;
+
+  String get label => this == PlaceKind.pharmacy ? 'ร้านขายยา' : 'คลินิก';
+}
+
 class NearbyPharmacy {
   const NearbyPharmacy({
     required this.placeId,
@@ -7,7 +18,10 @@ class NearbyPharmacy {
     required this.lng,
     required this.distanceMeters,
     required this.openNow,
-    required this.type,
+    required this.kind,
+    this.phone,
+    this.openingHours,
+    this.website,
   });
 
   final String placeId;
@@ -17,12 +31,17 @@ class NearbyPharmacy {
   final double lng;
   final int distanceMeters;
   final bool? openNow;
+  final PlaceKind kind;
 
-  /// 'pharmacy' or 'clinic' — which OSM amenity this result came from.
-  final String type;
+  /// From OpenStreetMap's `phone`/`opening_hours`/`website` tags — often
+  /// absent, since they are filled in by volunteers rather than the business.
+  final String? phone;
+  final String? openingHours;
+  final String? website;
 
-  bool get isPharmacy => type == 'pharmacy';
+  bool get isPharmacy => kind == PlaceKind.pharmacy;
 
-  String get formattedDistance =>
-      distanceMeters < 1000 ? '$distanceMeters ม.' : '${(distanceMeters / 1000).toStringAsFixed(1)} กม.';
+  String get formattedDistance => distanceMeters < 1000
+      ? '$distanceMeters ม.'
+      : '${(distanceMeters / 1000).toStringAsFixed(1)} กม.';
 }

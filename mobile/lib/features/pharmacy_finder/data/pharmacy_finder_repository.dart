@@ -68,14 +68,14 @@ out center tags;
     if (lat == null || lng == null) return null;
 
     final tags = (element['tags'] as Map<String, dynamic>?) ?? const {};
-    final isPharmacy = tags['amenity'] == 'pharmacy';
+    final kind = PlaceKind.fromTag(tags['amenity'] as String?);
     final address = [tags['addr:housenumber'], tags['addr:street'], tags['addr:city']]
         .whereType<String>()
         .join(' ');
 
     return NearbyPharmacy(
       placeId: '${element['type']}/${element['id']}',
-      name: tags['name'] as String? ?? (isPharmacy ? 'ร้านขายยา' : 'คลินิก'),
+      name: tags['name'] as String? ?? kind.label,
       address: address,
       lat: lat.toDouble(),
       lng: lng.toDouble(),
@@ -83,8 +83,21 @@ out center tags;
           _haversineMeters(originLat, originLng, lat.toDouble(), lng.toDouble()).round(),
       // OSM's opening_hours tag is free-form text, not reliably parseable.
       openNow: null,
-      type: isPharmacy ? 'pharmacy' : 'clinic',
+      kind: kind,
+      phone: _firstTag(tags, const ['phone', 'contact:phone', 'contact:mobile']),
+      openingHours: tags['opening_hours'] as String?,
+      website: _firstTag(tags, const ['website', 'contact:website']),
     );
+  }
+
+  /// OSM records the same fact under several tag spellings; take whichever is
+  /// present rather than showing nothing because a mapper picked the variant.
+  String? _firstTag(Map<String, dynamic> tags, List<String> keys) {
+    for (final key in keys) {
+      final value = tags[key];
+      if (value is String && value.trim().isNotEmpty) return value.trim();
+    }
+    return null;
   }
 
   double _haversineMeters(double lat1, double lng1, double lat2, double lng2) {

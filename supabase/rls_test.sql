@@ -1,0 +1,208 @@
+-- MedTrack RLS regression tests.
+--
+-- Every policy in schema.sql is the only thing separating one patient's
+-- medical records from every other signed-in user, so the holes fixed here
+-- get a test that actually attempts the exploit rather than a code comment.
+--
+-- These run against a plain local Postgres, NOT against your Supabase
+-- project — they create and roll back data, and the stubs below stand in for
+-- Supabase's auth/storage schemas. Do not run this in the Supabase SQL
+-- Editor.
+--
+-- Usage (needs a local postgres 14+ and a non-root user):
+--   initdb -D /tmp/medtrack-pg -U postgres -A trust
+--   pg_ctl -D /tmp/medtrack-pg -o "-p 55432" start
+--   psql -p 55432 -U postgres -f supabase/rls_test.sql          # stubs + tests
+--   psql -p 55432 -U postgres -f supabase/schema.sql            # (run between)
+--
+-- Expected result: every EXPLOIT block errors or returns no rows, and every
+-- POSITIVE/CONTROL block succeeds. An EXPLOIT block that succeeds is a
+-- regression.
+
+-- Minimal stand-ins for the Supabase-managed objects schema.sql builds on.
+create role authenticated;
+create role anon;
+create role service_role;
+
+create schema auth;
+create table auth.users (
+  id uuid primary key default gen_random_uuid(),
+  email text,
+  raw_user_meta_data jsonb default '{}'::jsonb
+);
+create or replace function auth.uid() returns uuid language sql stable as
+$$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
+
+create schema storage;
+create table storage.buckets (id text primary key, name text, public boolean);
+create table storage.objects (
+  id uuid primary key default gen_random_uuid(),
+  bucket_id text, name text, owner uuid
+);
+alter table storage.objects enable row level security;
+create or replace function storage.foldername(name text) returns text[]
+  language sql immutable as $$ select string_to_array(name, '/') $$;
+
+-- Load supabase/schema.sql now, then continue with the blocks below.
+\i schema.sql
+
+grant usage on schema public to authenticated;
+grant all on all tables in schema public to authenticated;
+grant usage on schema storage to authenticated;
+grant all on all tables in schema storage to authenticated;
+
+-- Two ordinary patients, provisioned by the real handle_new_user trigger.
+insert into auth.users (id, email) values
+  ('11111111-1111-1111-1111-111111111111','a@test.com'),
+  ('22222222-2222-2222-2222-222222222222','b@test.com');
+
+\echo '--- baseline: trigger provisioned both patients ---'
+select email, (select count(*) from public.patients p where p.owner_user_id = u.id) as patients,
+       (select role from public.profiles pr where pr.id = u.id) as role
+from auth.users u order by email;
+
+create or replace function public.as_user(uid text) returns void language plpgsql as $$
+begin
+  perform set_config('request.jwt.claim.sub', uid, true);
+  perform set_config('request.jwt.claims', json_build_object('role','authenticated','sub',uid)::text, true);
+end $$;
+
+\echo ''
+\echo '=== EXPLOIT 1: patient self-promotes to admin (must FAIL) ==='
+begin;
+  set local role authenticated;
+  select public.as_user('11111111-1111-1111-1111-111111111111');
+  update public.profiles set role = 'admin' where id = '11111111-1111-1111-1111-111111111111';
+rollback;
+
+\echo ''
+\echo '=== CONTROL 1: patient renames self (must SUCCEED, 1 row) ==='
+begin;
+  set local role authenticated;
+  select public.as_user('11111111-1111-1111-1111-111111111111');
+  update public.profiles set name = 'ชื่อใหม่' where id = '11111111-1111-1111-1111-111111111111';
+rollback;
+
+\echo ''
+\echo '=== EXPLOIT 2: read another patient rows (must be 0) ==='
+begin;
+  set local role authenticated;
+  select public.as_user('11111111-1111-1111-1111-111111111111');
+  select count(*) as visible_patients_total from public.patients;
+  select count(*) as visible_profiles_total from public.profiles;
+rollback;
+
+\echo ''
+\echo '=== EXPLOIT 3: hijack ownership of a linked patient (must FAIL) ==='
+begin;
+  -- B is an active caregiver on A's patient record.
+  insert into public.patient_links (patient_id, user_id, role, status)
+  values ((select id from public.patients where owner_user_id='11111111-1111-1111-1111-111111111111'),
+          '22222222-2222-2222-2222-222222222222','caregiver','active');
+  set local role authenticated;
+  select public.as_user('22222222-2222-2222-2222-222222222222');
+  update public.patients set owner_user_id = '22222222-2222-2222-2222-222222222222'
+   where id = (select id from public.patients where owner_user_id='11111111-1111-1111-1111-111111111111');
+rollback;
+
+\echo ''
+\echo '=== EXPLOIT 4: promoted-then-prescribe for unrelated patient (must be 0 rows) ==='
+begin;
+  -- Simulate the worst case: B really IS a provider, but has no link to A.
+  update public.profiles set role='provider' where id='22222222-2222-2222-2222-222222222222';
+  set local role authenticated;
+  select public.as_user('22222222-2222-2222-2222-222222222222');
+  insert into public.prescriptions (patient_id, medication_name, dosage, frequency, start_date)
+  values ((select id from public.patients where owner_user_id='11111111-1111-1111-1111-111111111111'),
+          'Fentanyl','100mg','hourly', current_date);
+rollback;
+
+\echo ''
+\echo '=== EXPLOIT 5: patient edits alert severity/message (status only must apply) ==='
+begin;
+  insert into public.alerts (patient_id, severity, message)
+  values ((select id from public.patients where owner_user_id='11111111-1111-1111-1111-111111111111'),
+          'critical','ค่าความปวดสูงผิดปกติ');
+  set local role authenticated;
+  select public.as_user('11111111-1111-1111-1111-111111111111');
+  update public.alerts set status='acknowledged', severity='normal', message='hacked';
+  reset role;
+  select status, severity, message from public.alerts;
+rollback;
+
+\echo '=== POSITIVE 1: patient updates own patient record (name/birth/gender) ==='
+begin;
+  set local role authenticated;
+  select public.as_user('11111111-1111-1111-1111-111111111111');
+  update public.patients set name='สมชาย', birth_date='1990-05-02', gender='male'
+   where owner_user_id='11111111-1111-1111-1111-111111111111';
+rollback;
+
+\echo ''
+\echo '=== POSITIVE 2: patient logs a dose + a symptom on own record ==='
+begin;
+  -- staff-created prescription/schedule, seeded as owner (service-role equivalent)
+  insert into public.prescriptions (id, patient_id, medication_name, dosage, frequency, start_date)
+  values ('aaaaaaaa-0000-0000-0000-000000000001',
+          (select id from public.patients where owner_user_id='11111111-1111-1111-1111-111111111111'),
+          'Paracetamol','500mg','วันละ 3 ครั้ง', current_date);
+  insert into public.dose_schedules (id, prescription_id, scheduled_time)
+  values ('bbbbbbbb-0000-0000-0000-000000000001','aaaaaaaa-0000-0000-0000-000000000001','08:00');
+
+  set local role authenticated;
+  select public.as_user('11111111-1111-1111-1111-111111111111');
+  select count(*) as prescriptions_visible from public.prescriptions;
+  select count(*) as schedules_visible from public.dose_schedules;
+  insert into public.dose_logs (schedule_id, scheduled_at, status)
+  values ('bbbbbbbb-0000-0000-0000-000000000001', now(), 'taken');
+  insert into public.symptom_logs (patient_id, pain_score, category)
+  values ((select id from public.patients where owner_user_id='11111111-1111-1111-1111-111111111111'), 7, 'head');
+rollback;
+
+\echo ''
+\echo '=== POSITIVE 3: properly LINKED provider CAN prescribe for that patient ==='
+begin;
+  update public.profiles set role='provider' where id='22222222-2222-2222-2222-222222222222';
+  insert into public.patient_links (patient_id, user_id, role, status)
+  values ((select id from public.patients where owner_user_id='11111111-1111-1111-1111-111111111111'),
+          '22222222-2222-2222-2222-222222222222','provider','active');
+  set local role authenticated;
+  select public.as_user('22222222-2222-2222-2222-222222222222');
+  insert into public.prescriptions (id, patient_id, medication_name, dosage, frequency, start_date)
+  values ('cccccccc-0000-0000-0000-000000000001',
+          (select id from public.patients where owner_user_id='11111111-1111-1111-1111-111111111111'),
+          'Ibuprofen','200mg','วันละ 2 ครั้ง', current_date);
+  insert into public.dose_schedules (prescription_id, scheduled_time)
+  values ('cccccccc-0000-0000-0000-000000000001','09:00');
+rollback;
+
+\echo ''
+\echo '=== POSITIVE 4: admin retains global prescribe access ==='
+-- The patient id is captured BEFORE switching role: patients_select does not
+-- give an admin global read (see can_manage_patient_care's note), so an
+-- inline subquery here would resolve to NULL and fail on NOT NULL instead of
+-- testing the policy.
+begin;
+  update public.profiles set role='admin' where id='22222222-2222-2222-2222-222222222222';
+  select id as target_patient from public.patients
+   where owner_user_id='11111111-1111-1111-1111-111111111111' \gset
+  set local role authenticated;
+  select public.as_user('22222222-2222-2222-2222-222222222222');
+  \echo '  -- expect INSERT 0 1:'
+  insert into public.prescriptions (patient_id, medication_name, dosage, frequency, start_date)
+  values (:'target_patient','Amoxicillin','250mg','วันละ 3 ครั้ง', current_date);
+  \echo '  -- expect 1 (own record only) — admin has no global patient read:'
+  select count(*) as admin_visible_patients from public.patients;
+rollback;
+
+\echo ''
+\echo '=== POSITIVE 5: avatar upload to own folder allowed, other folder denied ==='
+begin;
+  set local role authenticated;
+  select public.as_user('11111111-1111-1111-1111-111111111111');
+  insert into storage.objects (bucket_id, name)
+    values ('avatars','11111111-1111-1111-1111-111111111111/me.jpg');
+  \echo '  (next insert must FAIL)'
+  insert into storage.objects (bucket_id, name)
+    values ('avatars','22222222-2222-2222-2222-222222222222/steal.jpg');
+rollback;

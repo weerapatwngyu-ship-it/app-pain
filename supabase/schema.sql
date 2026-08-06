@@ -165,6 +165,76 @@ as $$
   );
 $$;
 
+-- The caller's stored role, read past RLS so an UPDATE policy on profiles can
+-- compare the incoming row against it without recursing into itself.
+create or replace function public.current_profile_role()
+returns text
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select role from public.profiles where id = auth.uid();
+$$;
+
+-- Same idea for ownership: lets patients_update pin owner_user_id to what is
+-- already stored instead of whatever the client sent.
+create or replace function public.patient_owner(target_patient_id uuid)
+returns uuid
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select owner_user_id from public.patients where id = target_patient_id;
+$$;
+
+-- A dose schedule names a prescription, not a patient. Unlike
+-- patient_id_for_schedule this resolves from the prescription_id column, so it
+-- also works on INSERT, when the schedule row does not exist yet.
+create or replace function public.patient_id_for_prescription(target_prescription_id uuid)
+returns uuid
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select patient_id from public.prescriptions where id = target_prescription_id;
+$$;
+
+-- Who may prescribe for a given patient. is_staff() alone is not enough: it
+-- says "this account is a provider somewhere", not "this account treats THIS
+-- patient", which would let any provider rewrite every patient's medication.
+-- Providers reach a patient only through an active provider link; admins are
+-- deliberately global, and cannot be self-assigned (see profiles_update_own).
+--
+-- Note the deliberate asymmetry: an admin may write care records for any
+-- patient, but patients_select still only exposes owned/linked rows, so an
+-- admin cannot browse the patient list. Any future admin console therefore
+-- needs its own read path (a service-role backend or an explicit policy)
+-- rather than assuming this function's reach applies to reads too.
+create or replace function public.can_manage_patient_care(target_patient_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select exists (
+    select 1 from public.profiles
+    where id = auth.uid() and role = 'admin'
+  ) or exists (
+    select 1
+    from public.patient_links l
+    join public.profiles pr on pr.id = l.user_id
+    where l.patient_id = target_patient_id
+      and l.user_id = auth.uid()
+      and l.status = 'active'
+      and l.role = 'provider'
+      and pr.role in ('provider', 'admin')
+  );
+$$;
+
 -- ---------------------------------------------------------------------------
 -- New-user provisioning
 --
@@ -235,9 +305,17 @@ drop policy if exists profiles_select_own on public.profiles;
 create policy profiles_select_own on public.profiles
   for select to authenticated using (id = auth.uid());
 
+-- Restricting the ROW is not enough here: `role` lives on this table, so a
+-- policy that only checked `id = auth.uid()` would let any patient run
+--   update profiles set role = 'admin' where id = <self>
+-- straight against PostgREST with their own anon key, and every is_staff()
+-- gate below would then open for them. Pinning role to its stored value keeps
+-- promotion a service-role/SQL-editor operation.
 drop policy if exists profiles_update_own on public.profiles;
 create policy profiles_update_own on public.profiles
-  for update to authenticated using (id = auth.uid()) with check (id = auth.uid());
+  for update to authenticated
+  using (id = auth.uid())
+  with check (id = auth.uid() and role = public.current_profile_role());
 
 -- patients: owned or actively linked.
 drop policy if exists patients_select on public.patients;
@@ -248,11 +326,20 @@ drop policy if exists patients_insert_own on public.patients;
 create policy patients_insert_own on public.patients
   for insert to authenticated with check (owner_user_id = auth.uid());
 
+-- can_access_patient() is satisfied by an active caregiver link as well as by
+-- ownership, so checking it alone on both sides would let a linked caregiver
+-- run `set owner_user_id = <self>`: the check would re-evaluate against the
+-- new row, pass because they are now the owner, and strand the real owner —
+-- who has no patient_links row — with no access at all. Ownership therefore
+-- has to stay pinned to its stored value.
 drop policy if exists patients_update on public.patients;
 create policy patients_update on public.patients
   for update to authenticated
   using (public.can_access_patient(id))
-  with check (public.can_access_patient(id));
+  with check (
+    public.can_access_patient(id)
+    and owner_user_id = public.patient_owner(id)
+  );
 
 -- patient_links: the caregiver named on it, or the patient's owner.
 drop policy if exists patient_links_select on public.patient_links;
@@ -290,16 +377,26 @@ create policy prescriptions_select on public.prescriptions
 
 drop policy if exists prescriptions_write_staff on public.prescriptions;
 create policy prescriptions_write_staff on public.prescriptions
-  for all to authenticated using (public.is_staff()) with check (public.is_staff());
+  for all to authenticated
+  using (public.can_manage_patient_care(patient_id))
+  with check (public.can_manage_patient_care(patient_id));
 
 drop policy if exists dose_schedules_select on public.dose_schedules;
 create policy dose_schedules_select on public.dose_schedules
   for select to authenticated
   using (public.can_access_patient(public.patient_id_for_schedule(id)));
 
+-- Resolved from prescription_id rather than patient_id_for_schedule(id) so
+-- the check also holds on INSERT, before the schedule row exists.
 drop policy if exists dose_schedules_write_staff on public.dose_schedules;
 create policy dose_schedules_write_staff on public.dose_schedules
-  for all to authenticated using (public.is_staff()) with check (public.is_staff());
+  for all to authenticated
+  using (
+    public.can_manage_patient_care(public.patient_id_for_prescription(prescription_id))
+  )
+  with check (
+    public.can_manage_patient_care(public.patient_id_for_prescription(prescription_id))
+  );
 
 -- dose_logs: patients record their own doses, so read and write both go
 -- through patient access rather than staff-only.
@@ -325,11 +422,43 @@ drop policy if exists alerts_select on public.alerts;
 create policy alerts_select on public.alerts
   for select to authenticated using (public.can_access_patient(patient_id));
 
+-- Acknowledging is the only thing the app does here, but the policy alone
+-- would also permit rewriting `severity` and `message` — i.e. a patient
+-- editing the clinical content of their own alert. RLS has no column-level
+-- grain, so the trigger below puts every other column back.
 drop policy if exists alerts_update on public.alerts;
 create policy alerts_update on public.alerts
   for update to authenticated
   using (public.can_access_patient(patient_id))
   with check (public.can_access_patient(patient_id));
+
+create or replace function public.alerts_allow_status_change_only()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  -- Only end-user sessions are constrained. Whatever raises alerts runs with
+  -- the service role (no 'authenticated' JWT) and still writes freely. Read
+  -- from the request claims directly rather than auth.role()/auth.jwt(), which
+  -- are unset outside a PostgREST request and vary across Supabase versions.
+  if coalesce(current_setting('request.jwt.claims', true)::jsonb ->> 'role', '')
+     = 'authenticated' then
+    new.id         := old.id;
+    new.patient_id := old.patient_id;
+    new.severity   := old.severity;
+    new.message    := old.message;
+    new.created_at := old.created_at;
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists alerts_status_only on public.alerts;
+create trigger alerts_status_only
+  before update on public.alerts
+  for each row execute function public.alerts_allow_status_change_only();
 
 -- doctors: a shared directory — everyone reads, only staff edit.
 drop policy if exists doctors_select on public.doctors;
