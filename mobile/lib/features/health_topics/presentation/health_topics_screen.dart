@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../auth/presentation/onboarding/onboarding_theme.dart';
+import '../../chat/data/chat_repository.dart';
 import '../../doctors/data/doctor_repository.dart';
 import '../data/health_question_repository.dart';
 import '../domain/entities/health_topic.dart';
@@ -14,11 +15,13 @@ class HealthTopicsScreen extends StatelessWidget {
     required this.patientId,
     required this.questionRepository,
     required this.doctorRepository,
+    required this.chatRepository,
   });
 
   final String? patientId;
   final HealthQuestionRepository questionRepository;
   final DoctorRepository doctorRepository;
+  final ChatRepository chatRepository;
 
   @override
   Widget build(BuildContext context) {
@@ -82,6 +85,7 @@ class HealthTopicsScreen extends StatelessWidget {
                       patientId: patientId,
                       questionRepository: questionRepository,
                       doctorRepository: doctorRepository,
+                      chatRepository: chatRepository,
                     ),
                   );
                 },
@@ -100,6 +104,7 @@ void openHealthTopic(
   required String? patientId,
   required HealthQuestionRepository questionRepository,
   required DoctorRepository doctorRepository,
+  required ChatRepository chatRepository,
 }) {
   Navigator.of(context).push(
     MaterialPageRoute(
@@ -108,6 +113,7 @@ void openHealthTopic(
         patientId: patientId,
         questionRepository: questionRepository,
         doctorRepository: doctorRepository,
+        chatRepository: chatRepository,
       ),
     ),
   );

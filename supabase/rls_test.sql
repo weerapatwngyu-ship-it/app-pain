@@ -288,3 +288,164 @@ begin;
      set answer='ควรวัดซ้ำและพบแพทย์', status='answered', answered_at=now()
    where patient_id=:'pid';
 rollback;
+
+-- ---------------------------------------------------------------------------
+-- Doctor accounts and patient↔doctor chat
+-- ---------------------------------------------------------------------------
+
+\echo ''
+\echo '=== EXPLOIT 10: patient publishes themselves as a doctor (must FAIL) ==='
+-- The app used to show every patient an "add doctor" button. Anyone listing
+-- themselves as a doctor is how unqualified advice reaches patients, so the
+-- directory is admin-write only.
+begin;
+  set local role authenticated;
+  select public.as_user('11111111-1111-1111-1111-111111111111');
+  insert into public.doctors (name, specialty) values ('หมอปลอม','อายุรกรรม');
+rollback;
+
+\echo ''
+\echo '=== EXPLOIT 11: a provider edits another doctor''s listing (must affect 0 rows) ==='
+begin;
+  insert into public.doctors (id, user_id, name, specialty)
+  values ('eeeeeeee-0000-0000-0000-000000000001', null, 'หมอสมชาย','หัวใจ');
+  update public.profiles set role='provider' where id='22222222-2222-2222-2222-222222222222';
+  set local role authenticated;
+  select public.as_user('22222222-2222-2222-2222-222222222222');
+  \echo '  -- expect UPDATE 0:'
+  update public.doctors set name='ชื่อที่ถูกแก้' where id='eeeeeeee-0000-0000-0000-000000000001';
+rollback;
+
+\echo ''
+\echo '=== POSITIVE 7: a doctor edits their OWN listing, but cannot reassign it ==='
+begin;
+  insert into public.doctors (id, user_id, name, specialty)
+  values ('eeeeeeee-0000-0000-0000-000000000002','22222222-2222-2222-2222-222222222222',
+          'หมอสมหญิง','ผิวหนัง');
+  set local role authenticated;
+  select public.as_user('22222222-2222-2222-2222-222222222222');
+  \echo '  -- own listing (expect UPDATE 1):'
+  update public.doctors set bio='รับปรึกษาผื่นแพ้' where id='eeeeeeee-0000-0000-0000-000000000002';
+  \echo '  -- hand listing to another account (expect ERROR):'
+  update public.doctors set user_id='11111111-1111-1111-1111-111111111111'
+   where id='eeeeeeee-0000-0000-0000-000000000002';
+rollback;
+
+\echo ''
+\echo '=== POSITIVE 8: patient opens a chat and both sides post ==='
+begin;
+  select id as pid from public.patients
+   where owner_user_id='11111111-1111-1111-1111-111111111111' \gset
+  insert into public.doctors (id, user_id, name, specialty)
+  values ('eeeeeeee-0000-0000-0000-000000000003','22222222-2222-2222-2222-222222222222',
+          'หมอสมหญิง','ผิวหนัง');
+
+  set local role authenticated;
+  select public.as_user('11111111-1111-1111-1111-111111111111');
+  \echo '  -- patient opens thread (expect INSERT 0 1):'
+  insert into public.conversations (id, patient_id, doctor_id)
+  values ('ffffffff-0000-0000-0000-000000000001', :'pid', 'eeeeeeee-0000-0000-0000-000000000003');
+  \echo '  -- patient posts (expect INSERT 0 1):'
+  insert into public.messages (conversation_id, sender_id, body)
+  values ('ffffffff-0000-0000-0000-000000000001','11111111-1111-1111-1111-111111111111','ผื่นคันมา 3 วันครับ');
+
+  select public.as_user('22222222-2222-2222-2222-222222222222');
+  \echo '  -- doctor sees the thread (expect 1):'
+  select count(*) as doctor_visible_threads from public.conversations;
+  \echo '  -- doctor replies (expect INSERT 0 1):'
+  insert into public.messages (conversation_id, sender_id, body)
+  values ('ffffffff-0000-0000-0000-000000000001','22222222-2222-2222-2222-222222222222','ลองถ่ายรูปผื่นมาให้ดูหน่อยครับ');
+  \echo '  -- both messages visible to doctor (expect 2):'
+  select count(*) as visible_messages from public.messages;
+rollback;
+
+\echo ''
+\echo '=== EXPLOIT 12: an unrelated doctor reads someone else''s thread (must be 0) ==='
+begin;
+  select id as pid from public.patients
+   where owner_user_id='11111111-1111-1111-1111-111111111111' \gset
+  -- Thread belongs to doctor A; doctor B is a different listing entirely.
+  insert into public.doctors (id, user_id, name, specialty) values
+    ('eeeeeeee-0000-0000-0000-000000000004', null, 'หมอ A','หัวใจ'),
+    ('eeeeeeee-0000-0000-0000-000000000005','22222222-2222-2222-2222-222222222222','หมอ B','ผิวหนัง');
+  insert into public.conversations (id, patient_id, doctor_id)
+  values ('ffffffff-0000-0000-0000-000000000002', :'pid','eeeeeeee-0000-0000-0000-000000000004');
+  insert into public.messages (conversation_id, sender_id, body)
+  values ('ffffffff-0000-0000-0000-000000000002','11111111-1111-1111-1111-111111111111','ความลับทางการแพทย์');
+
+  set local role authenticated;
+  select public.as_user('22222222-2222-2222-2222-222222222222');
+  \echo '  -- expect 0 threads and 0 messages:'
+  select count(*) as threads from public.conversations;
+  select count(*) as msgs from public.messages;
+rollback;
+
+\echo ''
+\echo '=== EXPLOIT 13: patient posts a message signed as the doctor (must FAIL) ==='
+begin;
+  select id as pid from public.patients
+   where owner_user_id='11111111-1111-1111-1111-111111111111' \gset
+  insert into public.doctors (id, user_id, name, specialty)
+  values ('eeeeeeee-0000-0000-0000-000000000006','22222222-2222-2222-2222-222222222222','หมอ B','ผิวหนัง');
+  insert into public.conversations (id, patient_id, doctor_id)
+  values ('ffffffff-0000-0000-0000-000000000003', :'pid','eeeeeeee-0000-0000-0000-000000000006');
+
+  set local role authenticated;
+  select public.as_user('11111111-1111-1111-1111-111111111111');
+  insert into public.messages (conversation_id, sender_id, body)
+  values ('ffffffff-0000-0000-0000-000000000003','22222222-2222-2222-2222-222222222222','คุณหายดีแล้ว หยุดยาได้');
+rollback;
+
+\echo ''
+\echo '=== EXPLOIT 14: patient rewrites a doctor''s message (must affect 0 rows) ==='
+begin;
+  select id as pid from public.patients
+   where owner_user_id='11111111-1111-1111-1111-111111111111' \gset
+  insert into public.doctors (id, user_id, name, specialty)
+  values ('eeeeeeee-0000-0000-0000-000000000007','22222222-2222-2222-2222-222222222222','หมอ B','ผิวหนัง');
+  insert into public.conversations (id, patient_id, doctor_id)
+  values ('ffffffff-0000-0000-0000-000000000004', :'pid','eeeeeeee-0000-0000-0000-000000000007');
+  insert into public.messages (id, conversation_id, sender_id, body)
+  values ('11111111-aaaa-0000-0000-000000000001','ffffffff-0000-0000-0000-000000000004',
+          '22222222-2222-2222-2222-222222222222','กินยาต่อตามเดิม');
+
+  set local role authenticated;
+  select public.as_user('11111111-1111-1111-1111-111111111111');
+  \echo '  -- expect UPDATE 0 and DELETE 0:'
+  update public.messages set body='หยุดยาได้' where id='11111111-aaaa-0000-0000-000000000001';
+  delete from public.messages where id='11111111-aaaa-0000-0000-000000000001';
+rollback;
+
+\echo ''
+\echo '=== EXPLOIT 15: doctor cold-opens a thread with a patient (must FAIL) ==='
+begin;
+  select id as pid from public.patients
+   where owner_user_id='11111111-1111-1111-1111-111111111111' \gset
+  insert into public.doctors (id, user_id, name, specialty)
+  values ('eeeeeeee-0000-0000-0000-000000000008','22222222-2222-2222-2222-222222222222','หมอ B','ผิวหนัง');
+  set local role authenticated;
+  select public.as_user('22222222-2222-2222-2222-222222222222');
+  insert into public.conversations (patient_id, doctor_id)
+  values (:'pid','eeeeeeee-0000-0000-0000-000000000008');
+rollback;
+
+\echo ''
+\echo '=== POSITIVE 9: admin manages the directory and sees accounts ==='
+begin;
+  update public.profiles set role='admin' where id='22222222-2222-2222-2222-222222222222';
+  set local role authenticated;
+  select public.as_user('22222222-2222-2222-2222-222222222222');
+  \echo '  -- admin adds a listing (expect INSERT 0 1):'
+  insert into public.doctors (user_id, name, specialty)
+  values ('11111111-1111-1111-1111-111111111111','หมอที่อนุมัติแล้ว','อายุรกรรม');
+  \echo '  -- admin sees all accounts, needed to pick who to promote (expect 2):'
+  select count(*) as visible_profiles from public.profiles;
+rollback;
+
+\echo ''
+\echo '=== EXPLOIT 16: ordinary patient reads the account list (must be 1 = self) ==='
+begin;
+  set local role authenticated;
+  select public.as_user('11111111-1111-1111-1111-111111111111');
+  select count(*) as visible_profiles from public.profiles;
+rollback;

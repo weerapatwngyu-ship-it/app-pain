@@ -14,17 +14,42 @@ class DoctorRepository {
     return Doctor.fromRow(row);
   }
 
-  Future<Doctor> create({required String name, required String specialty, String? bio}) async {
+  /// The listing the signed-in account is the doctor for, or null when the
+  /// account is not a doctor. This — not profiles.role — is what decides
+  /// whether the app can show a doctor their threads, since the threads hang
+  /// off the listing.
+  Future<Doctor?> fetchForCurrentUser() async {
+    final userId = currentUserId;
+    if (userId == null) return null;
+    final row = await db.from('doctors').select().eq('user_id', userId).maybeSingle();
+    return row == null ? null : Doctor.fromRow(row);
+  }
+
+  /// Admin-only (RLS enforces it): publish a doctor, optionally tied to the
+  /// account that will sign in as them.
+  Future<Doctor> create({
+    required String name,
+    required String specialty,
+    String? bio,
+    String? userId,
+  }) async {
     final row = await db
         .from('doctors')
         .insert({
           'name': name,
           'specialty': specialty,
           if (bio != null && bio.isNotEmpty) 'bio': bio,
+          if (userId != null) 'user_id': userId,
         })
         .select()
         .single();
     return Doctor.fromRow(row);
+  }
+
+  /// Admin-only: revoke a listing. Conversations cascade with it, so this is
+  /// removal rather than deactivation.
+  Future<void> delete(String id) async {
+    await db.from('doctors').delete().eq('id', id);
   }
 
   Future<Doctor> update(

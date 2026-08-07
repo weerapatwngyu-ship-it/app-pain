@@ -4,6 +4,10 @@ import '../../auth/domain/auth_repository.dart';
 import '../../auth/domain/entities/user.dart';
 import '../../auth/presentation/onboarding/onboarding_theme.dart';
 import '../../doctors/data/doctor_repository.dart';
+import '../../admin/data/admin_repository.dart';
+import '../../admin/presentation/admin_doctors_screen.dart';
+import '../../chat/data/chat_repository.dart';
+import '../../chat/presentation/conversation_list_screen.dart';
 import '../../doctors/presentation/doctor_list_screen.dart';
 import '../../health_topics/data/health_question_repository.dart';
 import '../../health_topics/presentation/health_topics_screen.dart';
@@ -31,6 +35,8 @@ class AllMenuScreen extends StatelessWidget {
     required this.doctorRepository,
     required this.pharmacyFinderRepository,
     required this.healthQuestionRepository,
+    required this.chatRepository,
+    required this.adminRepository,
     required this.onUserUpdated,
     required this.onLogout,
   });
@@ -43,6 +49,8 @@ class AllMenuScreen extends StatelessWidget {
   final DoctorRepository doctorRepository;
   final PharmacyFinderRepository pharmacyFinderRepository;
   final HealthQuestionRepository healthQuestionRepository;
+  final ChatRepository chatRepository;
+  final AdminRepository adminRepository;
   final ValueChanged<AppUser> onUserUpdated;
   final VoidCallback onLogout;
 
@@ -97,6 +105,8 @@ class AllMenuScreen extends StatelessWidget {
                 MaterialPageRoute(
                   builder: (_) => DoctorListScreen(
                     repository: doctorRepository,
+                    chatRepository: chatRepository,
+                    patientId: patientId,
                   ),
                 ),
               ),
@@ -124,6 +134,19 @@ class AllMenuScreen extends StatelessWidget {
               ),
             ),
             _MenuItem(
+              icon: Icons.chat_bubble_outline,
+              label: 'ข้อความของฉัน',
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => ConversationListScreen(
+                    repository: chatRepository,
+                    ownerId: patientId,
+                    isDoctorView: false,
+                  ),
+                ),
+              ),
+            ),
+            _MenuItem(
               icon: Icons.forum_outlined,
               label: 'คำถามของฉัน',
               onTap: () => Navigator.of(context).push(
@@ -136,6 +159,21 @@ class AllMenuScreen extends StatelessWidget {
               ),
             ),
           ]),
+          if (user.role == UserRole.admin) ...[
+            const SizedBox(height: 24),
+            const _SectionLabel('ผู้ดูแลระบบ'),
+            _MenuGrid(tiles: [
+              _MenuItem(
+                icon: Icons.verified_user_outlined,
+                label: 'จัดการบัญชีแพทย์',
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => AdminDoctorsScreen(repository: adminRepository),
+                  ),
+                ),
+              ),
+            ]),
+          ],
           const SizedBox(height: 24),
           const _SectionLabel('บัญชีของฉัน'),
           _MenuGrid(tiles: [

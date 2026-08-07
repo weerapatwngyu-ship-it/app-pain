@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../auth/presentation/onboarding/onboarding_theme.dart';
+import '../../chat/data/chat_repository.dart';
 import '../../doctors/data/doctor_repository.dart';
 import '../../doctors/domain/entities/doctor.dart';
 import '../../doctors/presentation/doctor_detail_screen.dart';
@@ -15,6 +16,7 @@ class HealthTopicDetailScreen extends StatefulWidget {
     required this.patientId,
     required this.questionRepository,
     required this.doctorRepository,
+    required this.chatRepository,
   });
 
   final HealthTopic topic;
@@ -24,6 +26,7 @@ class HealthTopicDetailScreen extends StatefulWidget {
   final String? patientId;
   final HealthQuestionRepository questionRepository;
   final DoctorRepository doctorRepository;
+  final ChatRepository chatRepository;
 
   @override
   State<HealthTopicDetailScreen> createState() => _HealthTopicDetailScreenState();
@@ -246,7 +249,8 @@ class _HealthTopicDetailScreenState extends State<HealthTopicDetailScreen> {
                   MaterialPageRoute(
                     builder: (_) => DoctorDetailScreen(
                       doctor: doctor,
-                      repository: widget.doctorRepository,
+                      chatRepository: widget.chatRepository,
+                      patientId: widget.patientId,
                     ),
                   ),
                 ),

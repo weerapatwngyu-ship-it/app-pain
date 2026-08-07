@@ -8,6 +8,7 @@ import '../../auth/presentation/onboarding/onboarding_theme.dart';
 import '../../doctors/data/doctor_repository.dart';
 import '../../doctors/domain/entities/doctor.dart';
 import '../../doctors/presentation/doctor_detail_screen.dart';
+import '../../chat/data/chat_repository.dart';
 import '../../doctors/presentation/doctor_list_screen.dart';
 import '../../health_topics/data/health_question_repository.dart';
 import '../../health_topics/domain/entities/health_topic.dart';
@@ -31,6 +32,7 @@ class TodayScheduleScreen extends StatefulWidget {
     required this.authRepository,
     required this.doctorRepository,
     required this.healthQuestionRepository,
+    required this.chatRepository,
     required this.onUserUpdated,
   });
 
@@ -42,6 +44,7 @@ class TodayScheduleScreen extends StatefulWidget {
   final AuthRepository authRepository;
   final DoctorRepository doctorRepository;
   final HealthQuestionRepository healthQuestionRepository;
+  final ChatRepository chatRepository;
   final ValueChanged<AppUser> onUserUpdated;
 
   @override
@@ -90,6 +93,8 @@ class _TodayScheduleScreenState extends State<TodayScheduleScreen> {
       MaterialPageRoute(
         builder: (_) => DoctorListScreen(
           repository: widget.doctorRepository,
+          chatRepository: widget.chatRepository,
+          patientId: widget.patientId,
         ),
       ),
     );
@@ -101,7 +106,8 @@ class _TodayScheduleScreenState extends State<TodayScheduleScreen> {
       MaterialPageRoute(
         builder: (_) => DoctorDetailScreen(
           doctor: doctor,
-          repository: widget.doctorRepository,
+          chatRepository: widget.chatRepository,
+          patientId: widget.patientId,
         ),
       ),
     );

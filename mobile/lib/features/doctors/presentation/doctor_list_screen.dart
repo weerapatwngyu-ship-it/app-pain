@@ -1,15 +1,25 @@
 import 'package:flutter/material.dart';
 
 import '../../auth/presentation/onboarding/onboarding_theme.dart';
+import '../../chat/data/chat_repository.dart';
 import '../data/doctor_repository.dart';
 import '../domain/entities/doctor.dart';
 import 'doctor_detail_screen.dart';
-import 'doctor_form_screen.dart';
 
+/// The directory as a patient sees it: browse and message only. Adding or
+/// editing a listing is an admin action — a patient publishing a doctor is how
+/// unverified advice would reach other patients.
 class DoctorListScreen extends StatefulWidget {
-  const DoctorListScreen({super.key, required this.repository});
+  const DoctorListScreen({
+    super.key,
+    required this.repository,
+    required this.chatRepository,
+    this.patientId,
+  });
 
   final DoctorRepository repository;
+  final ChatRepository chatRepository;
+  final String? patientId;
 
   @override
   State<DoctorListScreen> createState() => _DoctorListScreenState();
@@ -24,40 +34,23 @@ class _DoctorListScreenState extends State<DoctorListScreen> {
     _doctorsFuture = widget.repository.fetchAll();
   }
 
-  void _reload() {
-    setState(() => _doctorsFuture = widget.repository.fetchAll());
-  }
-
   Future<void> _openDoctor(Doctor doctor) async {
     await Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => DoctorDetailScreen(
           doctor: doctor,
-          repository: widget.repository,
+          chatRepository: widget.chatRepository,
+          patientId: widget.patientId,
         ),
       ),
     );
-    _reload();
-  }
-
-  Future<void> _addDoctor() async {
-    await Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => DoctorFormScreen(repository: widget.repository),
-      ),
-    );
-    _reload();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: AppBar(title: const Text('ปรึกษาแพทย์')),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _addDoctor,
-        backgroundColor: OnboardingColors.teal,
-        child: const Icon(Icons.add, color: Colors.white),
-      ),
       body: FutureBuilder<List<Doctor>>(
         future: _doctorsFuture,
         builder: (context, snapshot) {
@@ -67,9 +60,18 @@ class _DoctorListScreenState extends State<DoctorListScreen> {
           if (snapshot.hasError) {
             return const Center(child: Text('โหลดข้อมูลแพทย์ไม่สำเร็จ'));
           }
-          final doctors = snapshot.data ?? [];
+          final doctors = snapshot.data ?? const <Doctor>[];
           if (doctors.isEmpty) {
-            return const Center(child: Text('ยังไม่มีข้อมูลแพทย์ กด + เพื่อเพิ่ม'));
+            return const Center(
+              child: Padding(
+                padding: EdgeInsets.all(32),
+                child: Text(
+                  'ยังไม่มีแพทย์ในระบบ\nผู้ดูแลระบบจะเป็นผู้เพิ่มรายชื่อแพทย์',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: OnboardingColors.textMuted),
+                ),
+              ),
+            );
           }
           return ListView.separated(
             padding: const EdgeInsets.all(16),
@@ -77,19 +79,20 @@ class _DoctorListScreenState extends State<DoctorListScreen> {
             separatorBuilder: (_, __) => const Divider(color: OnboardingColors.border),
             itemBuilder: (context, index) {
               final doctor = doctors[index];
-              final photoUrl = doctor.photoUrl != null ? doctor.photoUrl! : null;
+              final photoUrl = doctor.photoUrl;
               return ListTile(
                 onTap: () => _openDoctor(doctor),
                 leading: CircleAvatar(
                   backgroundColor: OnboardingColors.teal,
                   backgroundImage: photoUrl != null ? NetworkImage(photoUrl) : null,
                   child: photoUrl == null
-                      ? const Icon(Icons.medical_services_outlined, color: Colors.white, size: 20)
+                      ? const Icon(Icons.medical_services_outlined,
+                          color: Colors.white, size: 20)
                       : null,
                 ),
                 title: Text(doctor.name),
                 subtitle: Text(doctor.specialty),
-                trailing: const Icon(Icons.chevron_right),
+                trailing: const Icon(Icons.chat_bubble_outline, size: 20),
               );
             },
           );

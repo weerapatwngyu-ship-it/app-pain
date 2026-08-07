@@ -102,14 +102,25 @@ create table if not exists public.alerts (
 create index if not exists alerts_patient_idx on public.alerts (patient_id, created_at desc);
 
 -- Shared directory, not per-patient data.
+--
+-- user_id links the listing to a real account so the doctor can sign in and
+-- answer. It stays nullable: a directory entry may exist before (or without)
+-- an account, and deleting the account leaves the listing rather than
+-- cascading away a doctor patients have already been messaging.
 create table if not exists public.doctors (
   id uuid primary key default gen_random_uuid(),
+  user_id uuid unique references auth.users (id) on delete set null,
   name text not null,
   specialty text not null,
   bio text,
   photo_url text,
   created_at timestamptz not null default now()
 );
+
+-- Existing installs predate user_id; adding it here keeps schema.sql the one
+-- file to run, rather than needing a separate migration.
+alter table public.doctors
+  add column if not exists user_id uuid unique references auth.users (id) on delete set null;
 
 -- A patient's question about a health topic, plus the reply once staff answer
 -- it. Deliberately not a chat: the doctors table above is a directory, not
@@ -133,6 +144,34 @@ create table if not exists public.health_questions (
 );
 create index if not exists health_questions_patient_idx
   on public.health_questions (patient_id, created_at desc);
+
+-- One ongoing thread between a patient and a doctor. Distinct from
+-- health_questions, which is a one-shot question about a topic that any staff
+-- member may answer — this is addressed to a specific doctor and stays open.
+create table if not exists public.conversations (
+  id uuid primary key default gen_random_uuid(),
+  patient_id uuid not null references public.patients (id) on delete cascade,
+  doctor_id uuid not null references public.doctors (id) on delete cascade,
+  created_at timestamptz not null default now(),
+  -- Denormalised so the thread list can sort without touching messages.
+  last_message_at timestamptz not null default now(),
+  -- One thread per pair: reopening a chat should continue it, not fork it.
+  unique (patient_id, doctor_id)
+);
+create index if not exists conversations_patient_idx
+  on public.conversations (patient_id, last_message_at desc);
+create index if not exists conversations_doctor_idx
+  on public.conversations (doctor_id, last_message_at desc);
+
+create table if not exists public.messages (
+  id uuid primary key default gen_random_uuid(),
+  conversation_id uuid not null references public.conversations (id) on delete cascade,
+  sender_id uuid not null references auth.users (id) on delete cascade,
+  body text not null check (length(trim(body)) > 0),
+  created_at timestamptz not null default now()
+);
+create index if not exists messages_conversation_idx
+  on public.messages (conversation_id, created_at);
 
 -- ---------------------------------------------------------------------------
 -- Helpers
@@ -185,6 +224,52 @@ as $$
   select exists (
     select 1 from public.profiles
     where id = auth.uid() and role in ('provider', 'admin')
+  );
+$$;
+
+create or replace function public.is_admin()
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select exists (
+    select 1 from public.profiles where id = auth.uid() and role = 'admin'
+  );
+$$;
+
+-- The doctor listing this account signs in as, or null for everyone else.
+-- Being listed in `doctors` is what makes an account a doctor for messaging
+-- purposes; profiles.role only decides which shell the app shows.
+create or replace function public.current_doctor_id()
+returns uuid
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select id from public.doctors where user_id = auth.uid();
+$$;
+
+-- A thread is readable by the patient side (owner or active caregiver link)
+-- and by the one doctor it is addressed to — nobody else, including other
+-- doctors.
+create or replace function public.can_access_conversation(target_conversation_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select exists (
+    select 1
+    from public.conversations c
+    where c.id = target_conversation_id
+      and (
+        public.can_access_patient(c.patient_id)
+        or c.doctor_id = public.current_doctor_id()
+      )
   );
 $$;
 
@@ -323,6 +408,8 @@ alter table public.symptom_logs   enable row level security;
 alter table public.alerts         enable row level security;
 alter table public.doctors        enable row level security;
 alter table public.health_questions enable row level security;
+alter table public.conversations  enable row level security;
+alter table public.messages       enable row level security;
 
 -- profiles: your own row only.
 drop policy if exists profiles_select_own on public.profiles;
@@ -512,14 +599,81 @@ create policy health_questions_answer_staff on public.health_questions
   using (public.can_manage_patient_care(patient_id))
   with check (public.can_manage_patient_care(patient_id));
 
--- doctors: a shared directory — everyone reads, only staff edit.
+-- doctors: a shared directory — everyone reads, only an admin adds or removes
+-- a listing. Patients used to be able to create these (the app showed them an
+-- "add doctor" button), which meant anyone could publish themselves to every
+-- patient as a doctor; in an app that carries medical advice that is the more
+-- dangerous hole, not a UI wart. is_staff() is not enough either: one provider
+-- should not be able to edit another's listing.
 drop policy if exists doctors_select on public.doctors;
 create policy doctors_select on public.doctors
   for select to authenticated using (true);
 
 drop policy if exists doctors_write_staff on public.doctors;
-create policy doctors_write_staff on public.doctors
-  for all to authenticated using (public.is_staff()) with check (public.is_staff());
+drop policy if exists doctors_write_admin on public.doctors;
+create policy doctors_write_admin on public.doctors
+  for all to authenticated using (public.is_admin()) with check (public.is_admin());
+
+-- A doctor maintains their own listing (name, specialty, bio, photo). The
+-- check pins user_id to the caller, so they cannot hand the listing — and the
+-- conversations attached to it — to another account.
+drop policy if exists doctors_update_self on public.doctors;
+create policy doctors_update_self on public.doctors
+  for update to authenticated
+  using (user_id = auth.uid())
+  with check (user_id = auth.uid());
+
+-- conversations: the patient side or the addressed doctor.
+drop policy if exists conversations_select on public.conversations;
+create policy conversations_select on public.conversations
+  for select to authenticated
+  using (
+    public.can_access_patient(patient_id)
+    or doctor_id = public.current_doctor_id()
+  );
+
+-- Only the patient side opens a thread — a doctor cannot cold-message someone.
+drop policy if exists conversations_insert_patient on public.conversations;
+create policy conversations_insert_patient on public.conversations
+  for insert to authenticated
+  with check (public.can_access_patient(patient_id));
+
+-- Both sides may touch last_message_at when they post.
+drop policy if exists conversations_update on public.conversations;
+create policy conversations_update on public.conversations
+  for update to authenticated
+  using (
+    public.can_access_patient(patient_id)
+    or doctor_id = public.current_doctor_id()
+  )
+  with check (
+    public.can_access_patient(patient_id)
+    or doctor_id = public.current_doctor_id()
+  );
+
+-- messages: readable by whoever may see the thread; sender is pinned to the
+-- caller so neither side can post words under the other's name. No UPDATE or
+-- DELETE policy at all — a sent message is part of a medical exchange and
+-- stays as sent.
+drop policy if exists messages_select on public.messages;
+create policy messages_select on public.messages
+  for select to authenticated
+  using (public.can_access_conversation(conversation_id));
+
+drop policy if exists messages_insert on public.messages;
+create policy messages_insert on public.messages
+  for insert to authenticated
+  with check (
+    public.can_access_conversation(conversation_id)
+    and sender_id = auth.uid()
+  );
+
+-- profiles: an admin needs to see accounts to promote one to a doctor. This
+-- is the only cross-user read in the schema, and it is limited to admins,
+-- which cannot be self-assigned (see profiles_update_own).
+drop policy if exists profiles_select_admin on public.profiles;
+create policy profiles_select_admin on public.profiles
+  for select to authenticated using (public.is_admin());
 
 -- ---------------------------------------------------------------------------
 -- Storage: avatars and doctor photos

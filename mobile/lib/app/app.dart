@@ -8,13 +8,17 @@ import '../features/alerts/data/alerts_repository.dart';
 import '../features/auth/data/auth_repository_impl.dart';
 import '../features/auth/domain/entities/user.dart';
 import '../features/auth/presentation/sign_in_screen.dart';
+import '../features/admin/data/admin_repository.dart';
+import '../features/chat/data/chat_repository.dart';
 import '../features/doctors/data/doctor_repository.dart';
+import '../features/doctors/domain/entities/doctor.dart';
 import '../features/health_topics/data/health_question_repository.dart';
 import '../features/medication/data/medication_repository_impl.dart';
 import '../features/pharmacy_finder/data/pharmacy_finder_repository.dart';
 import '../features/profile/data/patient_profile_repository.dart';
 import '../features/symptom_tracking/data/symptom_repository_impl.dart';
 import '../shared/theme/app_theme.dart';
+import 'doctor_home_shell.dart';
 import 'patient_home_shell.dart';
 
 class MedTrackApp extends StatefulWidget {
@@ -39,6 +43,12 @@ class _MedTrackAppState extends State<MedTrackApp> {
   final PharmacyFinderRepository _pharmacyFinderRepository = PharmacyFinderRepository();
   final DoctorRepository _doctorRepository = DoctorRepository();
   final HealthQuestionRepository _healthQuestionRepository = HealthQuestionRepository();
+  final ChatRepository _chatRepository = ChatRepository();
+  final AdminRepository _adminRepository = AdminRepository();
+
+  /// Cached so rebuilding the shell doesn't re-query the listing each frame;
+  /// cleared whenever the session changes.
+  Future<Doctor?>? _doctorListingFuture;
 
   StreamSubscription<AuthState>? _authSubscription;
 
@@ -69,6 +79,7 @@ class _MedTrackAppState extends State<MedTrackApp> {
   /// Mirrors the Supabase session onto the API client, then loads the
   /// app-side profile that carries role and patientId.
   Future<void> _applySession(Session? session) async {
+    _doctorListingFuture = null;
     if (session == null) {
       if (!mounted) return;
       setState(() {
@@ -150,9 +161,32 @@ class _MedTrackAppState extends State<MedTrackApp> {
   }
 
   Widget _buildSignedIn(AppUser user) {
-    // Phase 1 MVP is patient-only (see docs/architecture.md §11) — a
-    // caregiver/provider account has no owned patient profile yet, so
-    // there's nothing meaningful to show them here.
+    // A doctor gets the inbox, not a patient app with nobody's medication in
+    // it. The listing — not the role — is what decides: role says which shell
+    // to try, but threads hang off the `doctors` row, so an approved-but-
+    // unlisted account has nothing to show and is told why.
+    if (user.role == UserRole.provider) {
+      return FutureBuilder<Doctor?>(
+        future: _doctorListingFuture ??= _doctorRepository.fetchForCurrentUser(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Scaffold(body: Center(child: CircularProgressIndicator()));
+          }
+          final doctor = snapshot.data;
+          if (doctor == null) {
+            return DoctorPendingScreen(user: user, onLogout: _logout);
+          }
+          return DoctorHomeShell(
+            user: user,
+            doctor: doctor,
+            chatRepository: _chatRepository,
+            onLogout: _logout,
+          );
+        },
+      );
+    }
+
+    // Caregiver accounts have no owned patient record yet (Phase 2).
     if (user.patientId == null) {
       return Scaffold(
         appBar: AppBar(
@@ -184,6 +218,8 @@ class _MedTrackAppState extends State<MedTrackApp> {
       authRepository: _authRepository,
       doctorRepository: _doctorRepository,
       healthQuestionRepository: _healthQuestionRepository,
+      chatRepository: _chatRepository,
+      adminRepository: _adminRepository,
       onLogout: _logout,
       onUserUpdated: _handleUserUpdated,
     );
