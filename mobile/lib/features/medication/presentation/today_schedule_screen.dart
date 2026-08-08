@@ -255,16 +255,30 @@ class _TodayScheduleScreenState extends State<TodayScheduleScreen> {
                   future: _doctorsFuture,
                   builder: (context, snapshot) {
                     final doctors = snapshot.data ?? const <Doctor>[];
+                    // No "add doctor" affordance: the directory is maintained
+                    // by an admin, so an empty row means nobody has been
+                    // approved yet — not that the patient should add someone.
+                    if (doctors.isEmpty) {
+                      return const SizedBox(
+                        height: 72,
+                        child: Center(
+                          child: Text(
+                            'ยังไม่มีแพทย์ในระบบ',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: OnboardingColors.textMuted,
+                            ),
+                          ),
+                        ),
+                      );
+                    }
                     return SizedBox(
                       height: 132,
                       child: ListView.separated(
                         scrollDirection: Axis.horizontal,
-                        itemCount: doctors.length + 1,
+                        itemCount: doctors.length,
                         separatorBuilder: (_, __) => const SizedBox(width: 12),
                         itemBuilder: (context, index) {
-                          if (index == doctors.length) {
-                            return _AddDoctorTile(onTap: _openDoctorList);
-                          }
                           final doctor = doctors[index];
                           return _DoctorTile(
                             doctor: doctor,
@@ -473,40 +487,6 @@ class _DoctorTile extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(fontSize: 10, color: OnboardingColors.textMuted),
             ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _AddDoctorTile extends StatelessWidget {
-  const _AddDoctorTile({required this.onTap});
-
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        width: 96,
-        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
-        decoration: BoxDecoration(
-          border: Border.all(color: OnboardingColors.border, style: BorderStyle.solid),
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: const Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            CircleAvatar(
-              radius: 24,
-              backgroundColor: Color(0xFFF3FAF8),
-              child: Icon(Icons.add, color: OnboardingColors.teal),
-            ),
-            SizedBox(height: 6),
-            Text('เพิ่มแพทย์', textAlign: TextAlign.center, style: TextStyle(fontSize: 12)),
           ],
         ),
       ),
