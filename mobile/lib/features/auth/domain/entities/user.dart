@@ -7,6 +7,8 @@ class AppUser {
     required this.name,
     required this.role,
     this.patientId,
+    this.phone,
+    this.avatarUrl,
   });
 
   final String id;
@@ -14,19 +16,24 @@ class AppUser {
   final String name;
   final UserRole role;
 
-  /// The patient profile this account owns — set for `patient`-role
-  /// accounts (auto-created on register), null otherwise. Screens that
-  /// call `/patients/:id/...` need this, not [id] (the user id and the
-  /// patient id are different rows/tables on the backend).
+  /// The patient record this account owns — every `patients`-scoped screen
+  /// needs this, not [id]: the account and the patient are different rows.
   final String? patientId;
 
-  factory AppUser.fromJson(Map<String, dynamic> json) {
+  final String? phone;
+
+  /// Absolute URL into Supabase Storage, or null when no photo was uploaded.
+  final String? avatarUrl;
+
+  factory AppUser.fromProfile(Map<String, dynamic> row, {String? patientId}) {
     return AppUser(
-      id: json['id'] as String,
-      email: json['email'] as String,
-      name: json['name'] as String,
-      role: UserRole.values.byName(json['role'] as String),
-      patientId: json['patientId'] as String?,
+      id: row['id'] as String,
+      email: row['email'] as String? ?? '',
+      name: row['name'] as String? ?? '',
+      role: UserRole.values.byName(row['role'] as String? ?? 'patient'),
+      patientId: patientId,
+      phone: row['phone'] as String?,
+      avatarUrl: row['avatar_url'] as String?,
     );
   }
 }

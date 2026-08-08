@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../../../shared/widgets/pain_score_slider.dart';
+import '../../auth/presentation/onboarding/onboarding_theme.dart';
+import '../domain/entities/symptom_category.dart';
 import '../domain/entities/symptom_log.dart';
 import '../domain/usecases/record_symptom_usecase.dart';
 
@@ -19,19 +20,28 @@ class SymptomLogScreen extends StatefulWidget {
 }
 
 class _SymptomLogScreenState extends State<SymptomLogScreen> {
-  int _painScore = 0;
+  String? _category;
   bool _saving = false;
+  String? _error;
 
   Future<void> _save() async {
-    setState(() => _saving = true);
+    if (_category == null) {
+      setState(() => _error = 'กรุณาเลือกหมวดอาการก่อนบันทึก');
+      return;
+    }
+    setState(() {
+      _saving = true;
+      _error = null;
+    });
     try {
       await widget.recordSymptomUseCase(
-        SymptomLog(patientId: widget.patientId, painScore: _painScore),
+        SymptomLog(patientId: widget.patientId, category: _category),
       );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('บันทึกอาการแล้ว')),
         );
+        setState(() => _category = null);
       }
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -47,10 +57,34 @@ class _SymptomLogScreenState extends State<SymptomLogScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            PainScoreSlider(
-              value: _painScore,
-              onChanged: (v) => setState(() => _painScore = v),
+            const Text('หมวดอาการ*', style: TextStyle(fontWeight: FontWeight.w600)),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: symptomCategories.map((c) {
+                final selected = _category == c.key;
+                return ChoiceChip(
+                  label: Text(c.label),
+                  avatar: Icon(
+                    c.icon,
+                    size: 18,
+                    color: selected ? Colors.white : OnboardingColors.teal,
+                  ),
+                  selected: selected,
+                  onSelected: (_) => setState(() {
+                    _category = c.key;
+                    _error = null;
+                  }),
+                  selectedColor: OnboardingColors.teal,
+                  labelStyle: TextStyle(color: selected ? Colors.white : OnboardingColors.text),
+                );
+              }).toList(),
             ),
+            if (_error != null) ...[
+              const SizedBox(height: 12),
+              Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
+            ],
             const SizedBox(height: 24),
             FilledButton(
               onPressed: _saving ? null : _save,

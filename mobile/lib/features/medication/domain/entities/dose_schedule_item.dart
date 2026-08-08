@@ -13,13 +13,15 @@ class DoseScheduleItem {
   final String scheduledTime;
   final bool isPrn;
 
-  factory DoseScheduleItem.fromJson(Map<String, dynamic> json) {
+  /// Row from `dose_schedules` with its `prescriptions` relation embedded.
+  factory DoseScheduleItem.fromRow(Map<String, dynamic> row) {
+    final prescription = row['prescriptions'] as Map<String, dynamic>? ?? const {};
     return DoseScheduleItem(
-      scheduleId: json['scheduleId'] as String,
-      medicationName: json['medicationName'] as String? ?? '',
-      dosage: json['dosage'] as String? ?? '',
-      scheduledTime: json['scheduledTime'] as String,
-      isPrn: json['isPrn'] as bool? ?? false,
+      scheduleId: row['id'] as String,
+      medicationName: prescription['medication_name'] as String? ?? '',
+      dosage: prescription['dosage'] as String? ?? '',
+      scheduledTime: row['scheduled_time'] as String,
+      isPrn: row['is_prn'] as bool? ?? false,
     );
   }
 }

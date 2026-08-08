@@ -13,10 +13,10 @@ class DoseLog {
   final DateTime? actionedAt;
   final DoseLogStatus status;
 
-  Map<String, dynamic> toJson() => {
-        'scheduleId': scheduleId,
-        'scheduledAt': scheduledAt.toIso8601String(),
-        if (actionedAt != null) 'actionedAt': actionedAt!.toIso8601String(),
+  Map<String, dynamic> toRow() => {
+        'schedule_id': scheduleId,
+        'scheduled_at': scheduledAt.toIso8601String(),
+        if (actionedAt != null) 'actioned_at': actionedAt!.toIso8601String(),
         'status': status.name,
       };
 }

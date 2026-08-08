@@ -9,24 +9,173 @@ MedTrack แอปจ่ายยาและติดตามอาการ�
 
 | ไดเรกทอรี | รายละเอียด |
 |---|---|
-| [`backend/`](backend/README.md) | NestJS + TypeORM + PostgreSQL API (Phase 1 MVP) |
-| [`mobile/`](mobile/README.md) | Flutter mobile client (Phase 1 MVP) |
+| [`mobile/`](mobile/README.md) | Flutter mobile client |
+| `supabase/` | สคีมาฐานข้อมูลและกฎความปลอดภัย (RLS) — รันใน Supabase SQL Editor |
+| `supabase/rls_test.sql` | ชุดทดสอบว่ากฎ RLS กันการเข้าถึงข้อมูลข้ามผู้ป่วยได้จริง (รันบน Postgres ในเครื่อง **ไม่ใช่** ใน Supabase) |
 | `docs/` | เอกสารออกแบบสถาปัตยกรรมระบบ |
 
 ## เริ่มต้นใช้งาน
 
-```bash
-# Backend
-cd backend
-cp .env.example .env
-npm install
-npm run start:dev
+แอปคุยกับ Supabase โดยตรง ไม่มีเซิร์ฟเวอร์ของเราเองคั่นกลาง — ไม่ต้องเปิด backend
+ค้างไว้ และไม่ต้องอยู่ WiFi วงเดียวกัน
 
-# Mobile (ในอีก terminal)
-cd mobile
-flutter pub get
-flutter run   # เดา API host ให้อัตโนมัติตามแพลตฟอร์ม — ดู mobile/README.md
+1. สร้างโปรเจกต์ที่ [supabase.com](https://supabase.com)
+2. เปิด SQL Editor แล้วรัน [`supabase/schema.sql`](supabase/schema.sql) หนึ่งครั้ง
+   (สร้างตาราง + กฎความปลอดภัย + ที่เก็บรูป)
+
+   ไฟล์นี้รันซ้ำได้เสมอ ถ้าเคยรันเวอร์ชันก่อนหน้าไปแล้ว **ให้รันใหม่อีกครั้ง** เพื่ออัปเดต
+   กฎ RLS ที่รัดกุมขึ้น (เดิมผู้ใช้ทั่วไปแก้ `role` ของตัวเองเป็น `admin` ได้ ซึ่งเปิดทาง
+   ให้เข้าถึงข้อมูลยาของผู้ป่วยคนอื่นทั้งระบบ) และเพื่อสร้างตาราง `health_questions`
+   ที่ฟีเจอร์ "คลินิกออนไลน์" ใช้ การรันซ้ำไม่กระทบข้อมูลที่มีอยู่
+
+   หลังรันแล้ว ถ้าเคยเปิดใช้จริงมาก่อน ควรเช็คว่าไม่มีบัญชีไหนถูกเลื่อนสิทธิ์ไว้:
+
+   ```sql
+   select id, email, role from public.profiles where role <> 'patient';
+   ```
+3. เข้าสู่ระบบด้วยอีเมล/รหัสผ่านของ Supabase Auth เอง ไม่ต้องตั้งค่าอะไรเพิ่ม —
+   Supabase เปิดวิธีนี้ไว้เป็นค่าเริ่มต้นอยู่แล้ว (ผู้ใช้ใหม่ต้องกดลิงก์ยืนยันในอีเมล
+   ก่อนเข้าสู่ระบบครั้งแรกได้)
+4. รันแอป — แนะนำให้ใช้ไฟล์ `dart_defines.json` แทนการพิมพ์/แปะคำสั่งยาวๆ บรรทัดเดียว
+   (การแปะ URL/anon key ยาวๆ ลงเทอร์มินัลโดยตรง โดยเฉพาะจากมือถือหรือแอปเทอร์มินัลบางตัว
+   มีโอกาสแทรกอักขระแปลกปลอมหรือขึ้นบรรทัดใหม่กลางคีย์ ทำให้เจอ error ประมาณ
+   `FormatException: Invalid HTTP header field value`):
+
+   ```bash
+   cd mobile
+   cp dart_defines.example.json dart_defines.json
+   # แก้ dart_defines.json ใส่ SUPABASE_URL และ SUPABASE_ANON_KEY ของโปรเจกต์ตัวเอง
+   flutter pub get
+   flutter run --dart-define-from-file=dart_defines.json
+   ```
+
+   `dart_defines.json` ถูกใส่ไว้ใน `.gitignore` แล้ว จะไม่ถูก commit เข้า repo
+
+   หรือจะใส่ `--dart-define` ตรงๆ ในคำสั่งเดียวก็ได้ (ใช้ได้ถ้ารันจากเทอร์มินัลบนเครื่อง
+   คอมพิวเตอร์ปกติ ไม่ผ่านการแปะข้ามอุปกรณ์):
+
+   ```bash
+   flutter run \
+     --dart-define=SUPABASE_URL=https://<project-ref>.supabase.co \
+     --dart-define=SUPABASE_ANON_KEY=<anon key>
+   ```
+
+`SUPABASE_ANON_KEY` เป็น key สาธารณะ ใส่ในแอปได้ปลอดภัย — สิทธิ์การเข้าถึงข้อมูล
+ถูกกำหนดด้วยกฎ RLS ในฐานข้อมูล ไม่ใช่ด้วยการซ่อน key
+
+## บัญชีแพทย์และการแชท
+
+ผู้ป่วย **เพิ่มรายชื่อแพทย์เองไม่ได้** — เดิมแอปมีปุ่ม "เพิ่มแพทย์" ให้ผู้ป่วยทุกคน
+ซึ่งแปลว่าใครก็ประกาศตัวเองเป็นแพทย์ให้ผู้ป่วยคนอื่นเห็นได้ ตอนนี้การเพิ่มแพทย์
+เป็นสิทธิ์ของผู้ดูแลระบบ (admin) เท่านั้น บังคับด้วยกฎ RLS ไม่ใช่แค่ซ่อนปุ่ม
+
+### แต่งตั้งผู้ดูแลระบบคนแรก
+
+ยังไม่มีใครเป็น admin ตอนเริ่มต้น และ**ตั้งเองผ่านแอปไม่ได้** (กฎ RLS ปิดไว้)
+ต้องรันใน SQL Editor ครั้งเดียว โดยเปลี่ยนอีเมลเป็นของคุณ:
+
+```sql
+update public.profiles set role = 'admin' where email = 'you@example.com';
 ```
+
+### อนุมัติแพทย์
+
+1. หมอสมัครบัญชีเองในแอปตามปกติ (อีเมล/รหัสผ่าน หรือ Google)
+2. คุณเข้าแอปด้วยบัญชี admin → **โปรไฟล์ → เมนูทั้งหมด → จัดการบัญชีแพทย์**
+3. หาบัญชีของหมอในรายการ → กด **อนุมัติเป็นแพทย์** → กรอกชื่อที่จะแสดงกับผู้ป่วย
+   และความเชี่ยวชาญ
+
+หลังอนุมัติ หมอจะเห็นกล่องข้อความจากผู้ป่วยแทนหน้าจอผู้ป่วยเมื่อเข้าสู่ระบบ
+
+**ตรวจสอบว่าเป็นบุคลากรทางการแพทย์จริงก่อนอนุมัติเสมอ** — แอปไม่มีทางตรวจสอบให้ได้
+และเมื่ออนุมัติแล้ว บัญชีนั้นจะให้คำแนะนำกับผู้ป่วยได้ทันที
+
+### แพทย์เห็นข้อมูลผู้ป่วยแค่ไหน
+
+แพทย์ที่ได้รับอนุมัติแล้ว **อ่านเวชระเบียนของผู้ป่วยทุกคนในระบบได้** (แท็บ "ผู้ป่วย"
+ในแอปฝั่งแพทย์) — ทั้งรายชื่อยา บันทึกอาการ และการแจ้งเตือน ไม่ใช่แค่ผู้ป่วยที่ทักแชท
+มาหาตัวเอง
+
+นี่เป็นการตั้งใจเลือกให้เหมาะกับคลินิกเล็กที่แพทย์ทุกคนเชื่อใจกันได้ **ไม่ใช่ค่าเริ่มต้น
+ที่ปลอดภัยที่สุด** — การอนุมัติแพทย์ 1 คนเท่ากับมอบประวัติการรักษาของผู้ป่วยทุกคนให้เขา
+ถ้าจะขยายเป็นหลายคลินิกหรือมีแพทย์จำนวนมาก ควรกลับมาจำกัดให้เห็นเฉพาะผู้ป่วยที่ผูกกัน
+ผ่าน `patient_links` แทน
+
+**สิทธิ์นี้เป็นแบบอ่านอย่างเดียว** — การแก้ใบสั่งยายังต้องเป็นแพทย์ที่ผูกกับผู้ป่วยรายนั้น
+จริงๆ (`can_manage_patient_care`) แพทย์ที่ไม่ได้ดูแลจะสั่งยาให้ไม่ได้ ทดสอบไว้แล้วใน
+`rls_test.sql`
+
+### แชท
+
+ผู้ป่วยเปิดแชทได้จาก **ปรึกษาแพทย์ → เลือกแพทย์ → ส่งข้อความหาแพทย์**
+หนึ่งคู่ผู้ป่วย–แพทย์มีหนึ่งห้องสนทนา และข้อความที่ส่งแล้วแก้ไขหรือลบไม่ได้ทั้งสองฝ่าย
+(เป็นบันทึกการปรึกษาทางการแพทย์) หมอที่ไม่ได้อยู่ในห้องนั้นอ่านไม่ได้เลย
+
+## ตั้งค่า "เข้าสู่ระบบด้วย Google" (ไม่บังคับ)
+
+ข้ามส่วนนี้ได้ — แอปใช้อีเมล/รหัสผ่านได้สมบูรณ์อยู่แล้วโดยไม่ต้องตั้งค่าอะไรเพิ่ม
+ทำส่วนนี้เฉพาะตอนอยากได้ปุ่ม "เข้าสู่ระบบด้วย Google" เพิ่มมาอีกทาง
+
+ต้องตั้งค่า 2 ที่: **Google Cloud Console** (ขอ Client ID) และ **Supabase Dashboard**
+(เปิดใช้ Google เป็น provider) — ทำครั้งเดียว
+
+### 1. Google Cloud Console
+
+1. เข้า [console.cloud.google.com](https://console.cloud.google.com) → สร้างโปรเจกต์ใหม่
+   (หรือใช้โปรเจกต์เดิมถ้ามี)
+2. เมนูซ้าย → **APIs & Services** → **OAuth consent screen** → เลือก **External** →
+   กรอกชื่อแอปกับอีเมลติดต่อ → Save ไปเรื่อยๆ จนเสร็จ (ค่าเริ่มต้นพอสำหรับทดสอบ)
+3. เมนูซ้าย → **Credentials** → **+ Create Credentials** → **OAuth client ID**
+   - **Application type: Web application** — ตั้งชื่ออะไรก็ได้ เช่น `MedTrack Supabase`
+   - กด Create → จะได้ **Client ID** และ **Client Secret** คู่หนึ่ง เก็บไว้ทั้งคู่
+     (Client Secret ต้องเก็บเป็นความลับ — ใส่ตรงเข้า Supabase Dashboard เท่านั้น
+     **ห้ามใส่ในแอปหรือ commit ขึ้น git**)
+4. **+ Create Credentials** → **OAuth client ID** อีกครั้ง
+   - **Application type: Android**
+   - **Package name:** `com.example.medtrack`
+   - **SHA-1 certificate fingerprint:** เอามาจากคำสั่งนี้ (รันจากที่ไหนก็ได้ ไม่ต้องอยู่ในโปรเจกต์):
+
+     ```powershell
+     keytool -list -v -alias androiddebugkey -keystore "$env:USERPROFILE\.android\debug.keystore" -storepass android -keypass android
+     ```
+
+     หา `SHA1:` ในผลลัพธ์ แล้วก็อปค่าไปวาง (มีเครื่องหมาย `:` คั่นได้ ใส่ตามที่เห็นเลย)
+   - กด Create — ตัวนี้ไม่ต้องเก็บ Client ID ไว้ที่ไหน แค่ต้องมีอยู่ในระบบให้ตรงกับแอป
+
+   > SHA-1 นี้ใช้ได้เฉพาะตอนรันด้วย `flutter run` หรือ `flutter build apk --debug`
+   > ถ้าจะปล่อยแอปจริงด้วย release keystore ต้องมาเพิ่ม SHA-1 ของ release keystore
+   > เป็น Android client อีกตัวทีหลัง
+
+### 2. Supabase Dashboard
+
+1. เมนูซ้าย **Authentication** → **Providers** → หา **Google** → เปิดสวิตช์
+2. ใส่ **Client ID** และ **Client Secret** ของตัว **Web application** จากข้อ 1
+   (ไม่ใช่ตัว Android)
+3. Save
+
+### 3. ใส่ค่าในแอป
+
+เพิ่ม key `GOOGLE_WEB_CLIENT_ID` ใน `mobile/dart_defines.json` (ใช้ **Client ID ของ Web
+application** ตัวเดียวกับที่ใส่ใน Supabase):
+
+```json
+{
+  "SUPABASE_URL": "...",
+  "SUPABASE_ANON_KEY": "...",
+  "GOOGLE_WEB_CLIENT_ID": "xxxxxxxx.apps.googleusercontent.com"
+}
+```
+
+`GOOGLE_WEB_CLIENT_ID` ไม่ใช่ความลับ (เป็น public identifier ที่ปรากฏในทุก request
+ของ Google Sign-In อยู่แล้ว) — สิ่งเดียวที่ต้องปิดเป็นความลับคือ Client **Secret**
+ซึ่งไม่ได้เข้ามาอยู่ในแอปเลย
+
+รันแอปใหม่ (`flutter run --dart-define-from-file=dart_defines.json` หรือ
+`flutter build apk --dart-define-from-file=dart_defines.json`) — ปุ่ม "เข้าสู่ระบบด้วย
+Google" จะโผล่ในหน้าเข้าสู่ระบบ ถ้าไม่ใส่ค่านี้ ปุ่มจะไม่แสดง แต่ส่วนอื่นของแอปทำงานปกติ
+
+iOS ยังไม่ได้ตั้งค่าไว้ (ต้องมี Mac + Xcode จึง build iOS ได้ ซึ่งยังไม่ได้ทดสอบ) —
+ทำเฉพาะฝั่ง Android ตอนนี้
 
 ## สถานะการพัฒนา
 

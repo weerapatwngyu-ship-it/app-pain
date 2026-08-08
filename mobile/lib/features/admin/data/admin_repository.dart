@@ -1,22 +1,131 @@
-import '../../../core/network/api_client.dart';
-import '../domain/entities/admin_summaries.dart';
+import '../../../core/supabase/supabase_refs.dart';
+import '../../doctors/domain/entities/doctor.dart';
 
+/// One account as an admin sees it while deciding who to approve as a doctor.
+class AccountSummary {
+  const AccountSummary({
+    required this.id,
+    required this.name,
+    required this.email,
+    required this.role,
+    this.doctorId,
+    this.doctorName,
+  });
+
+  final String id;
+  final String name;
+  final String email;
+  final String role;
+
+  /// Set when this account already has a doctor listing attached.
+  final String? doctorId;
+  final String? doctorName;
+
+  bool get isDoctor => doctorId != null;
+
+  factory AccountSummary.fromRow(
+    Map<String, dynamic> row, {
+    Map<String, dynamic>? doctor,
+  }) {
+    return AccountSummary(
+      id: row['id'] as String,
+      name: row['name'] as String? ?? '',
+      email: row['email'] as String? ?? '',
+      role: row['role'] as String? ?? 'patient',
+      doctorId: doctor?['id'] as String?,
+      doctorName: doctor?['name'] as String?,
+    );
+  }
+}
+
+/// Everything here depends on the caller being an admin — RLS enforces it, so
+/// a non-admin sees an empty list rather than an error.
 class AdminRepository {
-  AdminRepository(this._client);
+  /// Two queries joined in Dart rather than one embedded select: PostgREST can
+  /// only embed across a foreign key it can see, and doctors.user_id points at
+  /// auth.users, not public.profiles — asking for `profiles(..., doctors(...))`
+  /// fails with PGRST200 "could not find a relationship".
+  Future<List<AccountSummary>> accounts() async {
+    final profiles = await db
+        .from('profiles')
+        .select('id, name, email, role')
+        .order('created_at', ascending: false);
 
-  final ApiClient _client;
+    final doctors = await db.from('doctors').select('id, name, user_id');
+    final byUser = <String, Map<String, dynamic>>{
+      for (final d in doctors)
+        if (d['user_id'] != null) d['user_id'] as String: d,
+    };
 
-  Future<List<AdminUserSummary>> listUsers() async {
-    final json = await _client.get('/admin/users');
-    return (json as List)
-        .map((item) => AdminUserSummary.fromJson(item as Map<String, dynamic>))
+    return profiles
+        .map<AccountSummary>(
+          (row) => AccountSummary.fromRow(row, doctor: byUser[row['id'] as String]),
+        )
         .toList();
   }
 
-  Future<List<AdminPatientSummary>> listPatients() async {
-    final json = await _client.get('/admin/patients');
-    return (json as List)
-        .map((item) => AdminPatientSummary.fromJson(item as Map<String, dynamic>))
-        .toList();
+  /// Every listing, including ones with no account behind them yet.
+  Future<List<Doctor>> doctors() async {
+    final rows = await db.from('doctors').select().order('name');
+    return rows.map<Doctor>(Doctor.fromRow).toList();
+  }
+
+  /// Publish a doctor without waiting for them to sign up. They appear to
+  /// patients straight away; until an account is linked nobody can read the
+  /// messages patients send, which is why the UI says so.
+  Future<void> createDoctor({
+    required String name,
+    required String specialty,
+    String? bio,
+    String? userId,
+  }) async {
+    await db.from('doctors').insert({
+      'name': name,
+      'specialty': specialty,
+      if (bio != null && bio.trim().isNotEmpty) 'bio': bio.trim(),
+      if (userId != null) 'user_id': userId,
+    });
+    if (userId != null) {
+      await db.from('profiles').update({'role': 'provider'}).eq('id', userId);
+    }
+  }
+
+  /// Attach an account to a listing that was created without one, so that
+  /// doctor can finally sign in and read their threads.
+  Future<void> linkAccount({required String doctorId, required String userId}) async {
+    await db.from('doctors').update({'user_id': userId}).eq('id', doctorId);
+    await db.from('profiles').update({'role': 'provider'}).eq('id', userId);
+  }
+
+  Future<void> deleteDoctor({required String doctorId, String? userId}) async {
+    await db.from('doctors').delete().eq('id', doctorId);
+    if (userId != null) {
+      await db.from('profiles').update({'role': 'patient'}).eq('id', userId);
+    }
+  }
+
+  /// Approve an account as a doctor: give it the provider role and publish the
+  /// listing patients will see and message. Both steps matter — the role
+  /// decides which shell the app shows, the listing is what threads hang off.
+  Future<void> approveDoctor({
+    required String userId,
+    required String name,
+    required String specialty,
+    String? bio,
+  }) async {
+    await db.from('doctors').insert({
+      'user_id': userId,
+      'name': name,
+      'specialty': specialty,
+      if (bio != null && bio.trim().isNotEmpty) 'bio': bio.trim(),
+    });
+    await db.from('profiles').update({'role': 'provider'}).eq('id', userId);
+  }
+
+  /// Withdraw approval. Deleting the listing cascades its conversations away,
+  /// so this is a real revocation rather than hiding the doctor.
+  Future<void> revokeDoctor({required String userId, required String doctorId}) async {
+    await db.from('doctors').delete().eq('id', doctorId);
+    await db.from('profiles').update({'role': 'patient'}).eq('id', userId);
   }
 }

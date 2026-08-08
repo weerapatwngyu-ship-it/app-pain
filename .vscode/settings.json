@@ -1,0 +1,7 @@
+{
+  // Applies to every `flutter run` the Dart extension starts — including the
+  // Run button and the "Run | Debug" codelens above main(), which ignore
+  // launch.json entirely. Without this, those paths start the app with no
+  // Supabase credentials and it stops at the "ยังไม่ได้ตั้งค่า Supabase" screen.
+  "dart.flutterRunAdditionalArgs": ["--dart-define-from-file=dart_defines.json"]
+}

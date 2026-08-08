@@ -15,12 +15,12 @@ class PatientAlert {
   final AlertStatus status;
   final String? message;
 
-  factory PatientAlert.fromJson(Map<String, dynamic> json) {
+  factory PatientAlert.fromRow(Map<String, dynamic> row) {
     return PatientAlert(
-      id: json['id'] as String,
-      severity: AlertSeverity.values.byName(json['severity'] as String),
-      status: AlertStatus.values.byName(json['status'] as String),
-      message: json['message'] as String?,
+      id: row['id'] as String,
+      severity: AlertSeverity.values.byName(row['severity'] as String),
+      status: AlertStatus.values.byName(row['status'] as String),
+      message: row['message'] as String?,
     );
   }
 }
