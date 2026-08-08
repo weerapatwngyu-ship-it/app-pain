@@ -2,30 +2,51 @@ import 'package:flutter/material.dart';
 
 import '../features/auth/domain/entities/user.dart';
 import '../features/auth/presentation/onboarding/onboarding_theme.dart';
+import '../features/admin/data/caseload_repository.dart';
+import '../features/admin/presentation/caseload_screen.dart';
 import '../features/chat/data/chat_repository.dart';
 import '../features/chat/presentation/conversation_list_screen.dart';
 import '../features/doctors/domain/entities/doctor.dart';
 
-/// What a signed-in doctor sees. Phase 1 gives them the one thing patients
-/// can reach them through — the message threads — rather than a cut-down copy
-/// of the patient app, which would show them medication and symptom screens
-/// belonging to nobody.
-class DoctorHomeShell extends StatelessWidget {
+/// What a signed-in doctor sees: the threads patients opened with them, and
+/// the full caseload. Not a cut-down copy of the patient app — a doctor has no
+/// medication schedule or symptom log of their own to show.
+class DoctorHomeShell extends StatefulWidget {
   const DoctorHomeShell({
     super.key,
     required this.user,
     required this.doctor,
     required this.chatRepository,
+    required this.caseloadRepository,
     required this.onLogout,
   });
 
   final AppUser user;
   final Doctor doctor;
   final ChatRepository chatRepository;
+  final CaseloadRepository caseloadRepository;
   final VoidCallback onLogout;
 
   @override
+  State<DoctorHomeShell> createState() => _DoctorHomeShellState();
+}
+
+class _DoctorHomeShellState extends State<DoctorHomeShell> {
+  int _index = 0;
+
+  @override
   Widget build(BuildContext context) {
+    final doctor = widget.doctor;
+    final tabs = [
+      ConversationListScreen(
+        repository: widget.chatRepository,
+        ownerId: doctor.id,
+        isDoctorView: true,
+        showBackButton: false,
+      ),
+      CaseloadScreen(repository: widget.caseloadRepository),
+    ];
+
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -41,17 +62,28 @@ class DoctorHomeShell extends StatelessWidget {
         ),
         actions: [
           IconButton(
-            onPressed: onLogout,
+            onPressed: widget.onLogout,
             icon: const Icon(Icons.logout),
             tooltip: 'ออกจากระบบ',
           ),
         ],
       ),
-      body: ConversationListScreen(
-        repository: chatRepository,
-        ownerId: doctor.id,
-        isDoctorView: true,
-        showBackButton: false,
+      body: IndexedStack(index: _index, children: tabs),
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: _index,
+        onDestinationSelected: (i) => setState(() => _index = i),
+        destinations: const [
+          NavigationDestination(
+            icon: Icon(Icons.chat_bubble_outline),
+            selectedIcon: Icon(Icons.chat_bubble),
+            label: 'ข้อความ',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.people_outline),
+            selectedIcon: Icon(Icons.people),
+            label: 'ผู้ป่วย',
+          ),
+        ],
       ),
     );
   }

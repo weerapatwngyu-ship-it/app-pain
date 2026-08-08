@@ -449,3 +449,56 @@ begin;
   select public.as_user('11111111-1111-1111-1111-111111111111');
   select count(*) as visible_profiles from public.profiles;
 rollback;
+
+\echo ''
+\echo '=== POSITIVE 10: an approved doctor READS every patient''s records ==='
+-- Deliberately broader than can_access_patient(): a small clinic wants all
+-- approved doctors to see the whole caseload. Read only — see EXPLOIT 17.
+begin;
+  select id as pid from public.patients
+   where owner_user_id='11111111-1111-1111-1111-111111111111' \gset
+  insert into public.prescriptions (id, patient_id, medication_name, dosage, frequency, start_date)
+  values ('aaaaaaaa-0000-0000-0000-000000000009', :'pid','Metformin','500mg','วันละ 2 ครั้ง', current_date);
+  insert into public.symptom_logs (patient_id, pain_score, category)
+  values (:'pid', 6, 'head');
+  update public.profiles set role='provider' where id='22222222-2222-2222-2222-222222222222';
+
+  set local role authenticated;
+  select public.as_user('22222222-2222-2222-2222-222222222222');
+  \echo '  -- sees both patients, not just own (expect 2):'
+  select count(*) as patients_visible from public.patients;
+  \echo '  -- sees the other patient''s prescription (expect 1):'
+  select count(*) as prescriptions_visible from public.prescriptions;
+  \echo '  -- sees the other patient''s symptom log (expect 1):'
+  select count(*) as symptoms_visible from public.symptom_logs;
+rollback;
+
+\echo ''
+\echo '=== EXPLOIT 17: that doctor tries to WRITE for an unassigned patient (must FAIL) ==='
+-- Widening reads must not widen writes: prescribing for someone else's
+-- patient stays blocked by can_manage_patient_care().
+begin;
+  select id as pid from public.patients
+   where owner_user_id='11111111-1111-1111-1111-111111111111' \gset
+  update public.profiles set role='provider' where id='22222222-2222-2222-2222-222222222222';
+  set local role authenticated;
+  select public.as_user('22222222-2222-2222-2222-222222222222');
+  insert into public.prescriptions (patient_id, medication_name, dosage, frequency, start_date)
+  values (:'pid','Fentanyl','100mg','hourly', current_date);
+rollback;
+
+\echo ''
+\echo '=== EXPLOIT 18: an ordinary patient still sees only themselves (must be 1) ==='
+-- The widened read is scoped to provider/admin; a patient must not inherit it.
+begin;
+  select id as pid from public.patients
+   where owner_user_id='11111111-1111-1111-1111-111111111111' \gset
+  insert into public.prescriptions (patient_id, medication_name, dosage, frequency, start_date)
+  values (:'pid','Metformin','500mg','วันละ 2 ครั้ง', current_date);
+  set local role authenticated;
+  select public.as_user('22222222-2222-2222-2222-222222222222');
+  \echo '  -- expect 1 (own patient row only):'
+  select count(*) as patients_visible from public.patients;
+  \echo '  -- expect 0 (someone else''s prescription):'
+  select count(*) as prescriptions_visible from public.prescriptions;
+rollback;

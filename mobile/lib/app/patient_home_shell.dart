@@ -6,6 +6,7 @@ import '../features/auth/domain/auth_repository.dart';
 import '../features/auth/domain/entities/user.dart';
 import '../features/auth/presentation/onboarding/onboarding_theme.dart';
 import '../features/admin/data/admin_repository.dart';
+import '../features/admin/data/caseload_repository.dart';
 import '../features/chat/data/chat_repository.dart';
 import '../features/doctors/data/doctor_repository.dart';
 import '../features/health_topics/data/health_question_repository.dart';
@@ -38,6 +39,7 @@ class PatientHomeShell extends StatefulWidget {
     required this.healthQuestionRepository,
     required this.chatRepository,
     required this.adminRepository,
+    required this.caseloadRepository,
     required this.onLogout,
     required this.onUserUpdated,
   });
@@ -54,6 +56,7 @@ class PatientHomeShell extends StatefulWidget {
   final HealthQuestionRepository healthQuestionRepository;
   final ChatRepository chatRepository;
   final AdminRepository adminRepository;
+  final CaseloadRepository caseloadRepository;
 
   final VoidCallback onLogout;
   final ValueChanged<AppUser> onUserUpdated;
@@ -105,6 +108,7 @@ class _PatientHomeShellState extends State<PatientHomeShell> {
         healthQuestionRepository: widget.healthQuestionRepository,
         chatRepository: widget.chatRepository,
         adminRepository: widget.adminRepository,
+        caseloadRepository: widget.caseloadRepository,
         onUserUpdated: widget.onUserUpdated,
       ),
     ];

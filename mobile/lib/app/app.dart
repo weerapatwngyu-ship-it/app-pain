@@ -9,6 +9,7 @@ import '../features/auth/data/auth_repository_impl.dart';
 import '../features/auth/domain/entities/user.dart';
 import '../features/auth/presentation/sign_in_screen.dart';
 import '../features/admin/data/admin_repository.dart';
+import '../features/admin/data/caseload_repository.dart';
 import '../features/chat/data/chat_repository.dart';
 import '../features/doctors/data/doctor_repository.dart';
 import '../features/doctors/domain/entities/doctor.dart';
@@ -45,6 +46,7 @@ class _MedTrackAppState extends State<MedTrackApp> {
   final HealthQuestionRepository _healthQuestionRepository = HealthQuestionRepository();
   final ChatRepository _chatRepository = ChatRepository();
   final AdminRepository _adminRepository = AdminRepository();
+  final CaseloadRepository _caseloadRepository = CaseloadRepository();
 
   /// Cached so rebuilding the shell doesn't re-query the listing each frame;
   /// cleared whenever the session changes.
@@ -180,6 +182,7 @@ class _MedTrackAppState extends State<MedTrackApp> {
             user: user,
             doctor: doctor,
             chatRepository: _chatRepository,
+            caseloadRepository: _caseloadRepository,
             onLogout: _logout,
           );
         },
@@ -220,6 +223,7 @@ class _MedTrackAppState extends State<MedTrackApp> {
       healthQuestionRepository: _healthQuestionRepository,
       chatRepository: _chatRepository,
       adminRepository: _adminRepository,
+      caseloadRepository: _caseloadRepository,
       onLogout: _logout,
       onUserUpdated: _handleUserUpdated,
     );

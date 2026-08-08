@@ -5,7 +5,9 @@ import '../../auth/domain/entities/user.dart';
 import '../../auth/presentation/onboarding/onboarding_theme.dart';
 import '../../doctors/data/doctor_repository.dart';
 import '../../admin/data/admin_repository.dart';
+import '../../admin/data/caseload_repository.dart';
 import '../../admin/presentation/admin_doctors_screen.dart';
+import '../../admin/presentation/caseload_screen.dart';
 import '../../chat/data/chat_repository.dart';
 import '../../chat/presentation/conversation_list_screen.dart';
 import '../../doctors/presentation/doctor_list_screen.dart';
@@ -37,6 +39,7 @@ class AllMenuScreen extends StatelessWidget {
     required this.healthQuestionRepository,
     required this.chatRepository,
     required this.adminRepository,
+    required this.caseloadRepository,
     required this.onUserUpdated,
     required this.onLogout,
   });
@@ -51,6 +54,7 @@ class AllMenuScreen extends StatelessWidget {
   final HealthQuestionRepository healthQuestionRepository;
   final ChatRepository chatRepository;
   final AdminRepository adminRepository;
+  final CaseloadRepository caseloadRepository;
   final ValueChanged<AppUser> onUserUpdated;
   final VoidCallback onLogout;
 
@@ -169,6 +173,15 @@ class AllMenuScreen extends StatelessWidget {
                 onTap: () => Navigator.of(context).push(
                   MaterialPageRoute(
                     builder: (_) => AdminDoctorsScreen(repository: adminRepository),
+                  ),
+                ),
+              ),
+              _MenuItem(
+                icon: Icons.people_outline,
+                label: 'ผู้ป่วยทั้งหมด',
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => CaseloadScreen(repository: caseloadRepository),
                   ),
                 ),
               ),

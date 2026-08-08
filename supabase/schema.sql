@@ -343,6 +343,30 @@ as $$
   );
 $$;
 
+-- Read access to the whole caseload, for approved clinical staff.
+--
+-- This is deliberately broader than can_access_patient(): a doctor here sees
+-- every patient's records, not only the ones who messaged them. That is a
+-- product decision for a small clinic where all approved doctors are trusted
+-- with the full caseload — it is not the safe default, and it means approving
+-- a doctor hands over every patient's medical history. Approval stays
+-- admin-only and manual for exactly this reason.
+--
+-- Read only. Writing still goes through can_manage_patient_care(), so a
+-- doctor cannot change medication for a patient who isn't theirs.
+create or replace function public.can_view_all_patients()
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select exists (
+    select 1 from public.profiles
+    where id = auth.uid() and role in ('provider', 'admin')
+  );
+$$;
+
 -- ---------------------------------------------------------------------------
 -- New-user provisioning
 --
@@ -431,7 +455,8 @@ create policy profiles_update_own on public.profiles
 -- patients: owned or actively linked.
 drop policy if exists patients_select on public.patients;
 create policy patients_select on public.patients
-  for select to authenticated using (public.can_access_patient(id));
+  for select to authenticated
+  using (public.can_access_patient(id) or public.can_view_all_patients());
 
 drop policy if exists patients_insert_own on public.patients;
 create policy patients_insert_own on public.patients
@@ -484,7 +509,8 @@ create policy patient_links_write_owner on public.patient_links
 -- prescriptions: readable by anyone with patient access; only staff prescribe.
 drop policy if exists prescriptions_select on public.prescriptions;
 create policy prescriptions_select on public.prescriptions
-  for select to authenticated using (public.can_access_patient(patient_id));
+  for select to authenticated
+  using (public.can_access_patient(patient_id) or public.can_view_all_patients());
 
 drop policy if exists prescriptions_write_staff on public.prescriptions;
 create policy prescriptions_write_staff on public.prescriptions
@@ -495,7 +521,10 @@ create policy prescriptions_write_staff on public.prescriptions
 drop policy if exists dose_schedules_select on public.dose_schedules;
 create policy dose_schedules_select on public.dose_schedules
   for select to authenticated
-  using (public.can_access_patient(public.patient_id_for_schedule(id)));
+  using (
+    public.can_access_patient(public.patient_id_for_schedule(id))
+    or public.can_view_all_patients()
+  );
 
 -- Resolved from prescription_id rather than patient_id_for_schedule(id) so
 -- the check also holds on INSERT, before the schedule row exists.
@@ -514,7 +543,10 @@ create policy dose_schedules_write_staff on public.dose_schedules
 drop policy if exists dose_logs_select on public.dose_logs;
 create policy dose_logs_select on public.dose_logs
   for select to authenticated
-  using (public.can_access_patient(public.patient_id_for_schedule(schedule_id)));
+  using (
+    public.can_access_patient(public.patient_id_for_schedule(schedule_id))
+    or public.can_view_all_patients()
+  );
 
 drop policy if exists dose_logs_insert on public.dose_logs;
 create policy dose_logs_insert on public.dose_logs
@@ -523,7 +555,8 @@ create policy dose_logs_insert on public.dose_logs
 
 drop policy if exists symptom_logs_select on public.symptom_logs;
 create policy symptom_logs_select on public.symptom_logs
-  for select to authenticated using (public.can_access_patient(patient_id));
+  for select to authenticated
+  using (public.can_access_patient(patient_id) or public.can_view_all_patients());
 
 drop policy if exists symptom_logs_insert on public.symptom_logs;
 create policy symptom_logs_insert on public.symptom_logs
@@ -531,7 +564,8 @@ create policy symptom_logs_insert on public.symptom_logs
 
 drop policy if exists alerts_select on public.alerts;
 create policy alerts_select on public.alerts
-  for select to authenticated using (public.can_access_patient(patient_id));
+  for select to authenticated
+  using (public.can_access_patient(patient_id) or public.can_view_all_patients());
 
 -- Acknowledging is the only thing the app does here, but the policy alone
 -- would also permit rewriting `severity` and `message` — i.e. a patient
