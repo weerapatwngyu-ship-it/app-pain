@@ -47,6 +47,9 @@ create or replace function storage.foldername(name text) returns text[]
 \i schema.sql
 
 grant usage on schema public to authenticated;
+-- Supabase grants this itself; the stub must too, or auth.uid() in a query
+-- (not just inside a SECURITY DEFINER policy) fails with "permission denied".
+grant usage on schema auth to authenticated;
 grant all on all tables in schema public to authenticated;
 grant usage on schema storage to authenticated;
 grant all on all tables in schema storage to authenticated;
@@ -501,4 +504,44 @@ begin;
   select count(*) as patients_visible from public.patients;
   \echo '  -- expect 0 (someone else''s prescription):'
   select count(*) as prescriptions_visible from public.prescriptions;
+rollback;
+
+\echo ''
+\echo '=== POSITIVE 11: admin approves a doctor end to end (listing + role) ==='
+-- The whole point of approval: without profiles_update_admin the role update
+-- silently matched no rows and the doctor never reached their inbox.
+begin;
+  update public.profiles set role='admin' where id='11111111-1111-1111-1111-111111111111';
+  set local role authenticated;
+  select public.as_user('11111111-1111-1111-1111-111111111111');
+  \echo '  -- admin publishes the listing (expect INSERT 0 1):'
+  insert into public.doctors (id, user_id, name, specialty)
+  values ('eeeeeeee-0000-0000-0000-00000000000a',
+          '22222222-2222-2222-2222-222222222222','นพ.ทดสอบ','อายุรกรรม');
+  \echo '  -- admin grants the role (expect UPDATE 1):'
+  update public.profiles set role='provider'
+   where id='22222222-2222-2222-2222-222222222222';
+  reset role;
+  \echo '  -- role actually stuck (expect provider):'
+  select role as doctor_role from public.profiles
+   where id='22222222-2222-2222-2222-222222222222';
+
+  \echo '  -- and that account now resolves to its listing (expect 1):'
+  set local role authenticated;
+  select public.as_user('22222222-2222-2222-2222-222222222222');
+  select count(*) as my_listing from public.doctors where user_id = auth.uid();
+rollback;
+
+\echo ''
+\echo '=== EXPLOIT 19: a non-admin changes someone else''s role (must affect 0 rows) ==='
+begin;
+  update public.profiles set role='provider' where id='22222222-2222-2222-2222-222222222222';
+  set local role authenticated;
+  select public.as_user('22222222-2222-2222-2222-222222222222');
+  \echo '  -- a provider promoting another account (expect UPDATE 0):'
+  update public.profiles set role='admin'
+   where id='11111111-1111-1111-1111-111111111111';
+  \echo '  -- and promoting themselves (expect ERROR: role pin in profiles_update_own):'
+  update public.profiles set role='admin'
+   where id='22222222-2222-2222-2222-222222222222';
 rollback;

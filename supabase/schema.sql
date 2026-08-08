@@ -709,6 +709,23 @@ drop policy if exists profiles_select_admin on public.profiles;
 create policy profiles_select_admin on public.profiles
   for select to authenticated using (public.is_admin());
 
+-- Approving a doctor has to set that account's role to 'provider', and
+-- profiles_update_own only ever matches the caller's own row — without this
+-- the approval updated nothing at all, silently: the doctor got a listing but
+-- kept role 'patient', so the app sent them to the patient screens and their
+-- inbox was unreachable.
+--
+-- Permissive policies are OR'd, so this bypasses the role pin in
+-- profiles_update_own. That is the intent — granting roles is what an admin
+-- is for — and it is why becoming an admin is not something the app can do
+-- to itself: the first one is set in SQL, and only an existing admin can
+-- make another.
+drop policy if exists profiles_update_admin on public.profiles;
+create policy profiles_update_admin on public.profiles
+  for update to authenticated
+  using (public.is_admin())
+  with check (public.is_admin());
+
 -- ---------------------------------------------------------------------------
 -- Storage: avatars and doctor photos
 --
