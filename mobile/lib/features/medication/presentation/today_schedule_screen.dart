@@ -24,6 +24,7 @@ import '../domain/usecases/log_dose_usecase.dart';
 class TodayScheduleScreen extends StatefulWidget {
   const TodayScheduleScreen({
     super.key,
+    required this.refreshToken,
     required this.user,
     required this.patientId,
     required this.medicationRepository,
@@ -35,6 +36,10 @@ class TodayScheduleScreen extends StatefulWidget {
     required this.chatRepository,
     required this.onUserUpdated,
   });
+
+  /// Changes when the shell wants this screen to re-read data it caches —
+  /// the tabs sit in an IndexedStack, so initState runs only once.
+  final int refreshToken;
 
   final AppUser user;
   final String patientId;
@@ -70,6 +75,12 @@ class _TodayScheduleScreenState extends State<TodayScheduleScreen> {
     _scheduleFuture = widget.medicationRepository.todaySchedule(widget.patientId);
     _categoryCountsFuture = widget.symptomRepository.categoryCounts(widget.patientId);
     _doctorsFuture = widget.doctorRepository.fetchAll();
+  }
+
+  @override
+  void didUpdateWidget(TodayScheduleScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.refreshToken != widget.refreshToken) _reloadDoctors();
   }
 
   void _reloadDoctors() {

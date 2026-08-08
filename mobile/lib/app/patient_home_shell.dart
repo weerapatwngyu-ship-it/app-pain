@@ -68,6 +68,11 @@ class PatientHomeShell extends StatefulWidget {
 class _PatientHomeShellState extends State<PatientHomeShell> {
   int _index = 0;
 
+  /// Bumped whenever the home tab is re-selected. The tabs live in an
+  /// IndexedStack and keep their state, so a doctor added from the admin
+  /// screen would otherwise not appear until the app restarted.
+  int _homeRefreshToken = 0;
+
   void _openPharmacyFinder() {
     Navigator.of(context).push(
       MaterialPageRoute(
@@ -80,6 +85,7 @@ class _PatientHomeShellState extends State<PatientHomeShell> {
   Widget build(BuildContext context) {
     final tabs = [
       TodayScheduleScreen(
+        refreshToken: _homeRefreshToken,
         user: widget.user,
         patientId: widget.patientId,
         medicationRepository: widget.medicationRepository,
@@ -128,7 +134,14 @@ class _PatientHomeShellState extends State<PatientHomeShell> {
                 icon: Icons.home_outlined,
                 label: 'หน้าหลัก',
                 selected: _index == 0,
-                onTap: () => setState(() => _index = 0),
+                onTap: () => setState(() {
+                  // Every tap on home re-reads the doctor row — including
+                  // arriving from the profile tab, which is where an admin
+                  // adds a doctor. Without this the listing would not appear
+                  // until the app restarted.
+                  _homeRefreshToken++;
+                  _index = 0;
+                }),
               ),
               _NavItem(
                 icon: Icons.event_note_outlined,
