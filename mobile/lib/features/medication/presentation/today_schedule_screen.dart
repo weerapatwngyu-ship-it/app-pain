@@ -83,6 +83,7 @@ class _TodayScheduleScreenState extends State<TodayScheduleScreen> {
           patientId: widget.patientId,
           questionRepository: widget.healthQuestionRepository,
           doctorRepository: widget.doctorRepository,
+          chatRepository: widget.chatRepository,
         ),
       ),
     );
@@ -311,6 +312,7 @@ class _TodayScheduleScreenState extends State<TodayScheduleScreen> {
                           patientId: widget.patientId,
                           questionRepository: widget.healthQuestionRepository,
                           doctorRepository: widget.doctorRepository,
+                          chatRepository: widget.chatRepository,
                         ),
                       );
                     },

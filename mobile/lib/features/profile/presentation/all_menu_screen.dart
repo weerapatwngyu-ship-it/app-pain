@@ -133,6 +133,7 @@ class AllMenuScreen extends StatelessWidget {
                     patientId: patientId,
                     questionRepository: healthQuestionRepository,
                     doctorRepository: doctorRepository,
+                    chatRepository: chatRepository,
                   ),
                 ),
               ),
