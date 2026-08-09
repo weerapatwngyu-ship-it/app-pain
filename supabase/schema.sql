@@ -750,3 +750,273 @@ drop policy if exists avatars_update_own on storage.objects;
 create policy avatars_update_own on storage.objects
   for update to authenticated
   using (bucket_id = 'avatars' and (storage.foldername(name))[1] = auth.uid()::text);
+
+-- ---------------------------------------------------------------------------
+-- Peer chat: patient <-> patient direct messages
+--
+-- Kept in its own pair of tables rather than widening conversations/messages.
+-- That pair models a clinical exchange with a named doctor, and relaxing its
+-- doctor_id to nullable would drop both the NOT NULL and the
+-- unique (patient_id, doctor_id) that keep one thread per patient/doctor pair
+-- honest. Two tables cost a little duplication and keep that guarantee.
+--
+-- Visibility here is deliberately narrower than everywhere else in the schema:
+-- can_access_patient() is satisfied only by ownership or an active caregiver
+-- link, so a doctor or admin reading the whole caseload still cannot open a
+-- patient's private conversation with another patient.
+-- ---------------------------------------------------------------------------
+
+-- Opt-in. A patient is neither listed in the directory nor able to browse it
+-- until they turn this on, so the default install exposes no patient to any
+-- other patient.
+alter table public.patients
+  add column if not exists peer_chat_enabled boolean not null default false;
+
+create table if not exists public.peer_conversations (
+  id uuid primary key default gen_random_uuid(),
+  -- Stored as an ordered pair so (a,b) and (b,a) cannot both exist and race
+  -- into two threads for the same two people.
+  patient_low uuid not null references public.patients (id) on delete cascade,
+  patient_high uuid not null references public.patients (id) on delete cascade,
+  created_at timestamptz not null default now(),
+  last_message_at timestamptz not null default now(),
+  constraint peer_conversations_ordered check (patient_low < patient_high),
+  unique (patient_low, patient_high)
+);
+create index if not exists peer_conversations_low_idx
+  on public.peer_conversations (patient_low, last_message_at desc);
+create index if not exists peer_conversations_high_idx
+  on public.peer_conversations (patient_high, last_message_at desc);
+
+create table if not exists public.peer_messages (
+  id uuid primary key default gen_random_uuid(),
+  conversation_id uuid not null references public.peer_conversations (id) on delete cascade,
+  sender_id uuid not null references auth.users (id) on delete cascade,
+  body text not null check (length(trim(body)) > 0 and length(body) <= 2000),
+  created_at timestamptz not null default now()
+);
+create index if not exists peer_messages_conversation_idx
+  on public.peer_messages (conversation_id, created_at);
+
+-- The patient record this account owns, or null for staff and admins — they
+-- have no patient row, and so no peer chat.
+create or replace function public.current_patient_id()
+returns uuid
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select id from public.patients where owner_user_id = auth.uid() limit 1;
+$$;
+
+create or replace function public.peer_chat_open(target_patient_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select coalesce(
+    (select peer_chat_enabled from public.patients where id = target_patient_id),
+    false
+  );
+$$;
+
+create or replace function public.can_access_peer_conversation(target_conversation_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select exists (
+    select 1
+    from public.peer_conversations c
+    where c.id = target_conversation_id
+      and (
+        public.can_access_patient(c.patient_low)
+        or public.can_access_patient(c.patient_high)
+      )
+  );
+$$;
+
+alter table public.peer_conversations enable row level security;
+alter table public.peer_messages      enable row level security;
+
+drop policy if exists peer_conversations_select on public.peer_conversations;
+create policy peer_conversations_select on public.peer_conversations
+  for select to authenticated
+  using (
+    public.can_access_patient(patient_low)
+    or public.can_access_patient(patient_high)
+  );
+
+-- No INSERT, UPDATE or DELETE policy on purpose. Threads are created only
+-- through open_peer_conversation(), which enforces the mutual opt-in, and
+-- last_message_at is maintained by a trigger — so there is nothing a client
+-- may write directly, and no policy for a direct write to satisfy. This also
+-- closes the hijack an UPDATE policy would open: a participant could
+-- otherwise repoint the other side of the pair at a third patient and keep
+-- the thread's history.
+
+drop policy if exists peer_messages_select on public.peer_messages;
+create policy peer_messages_select on public.peer_messages
+  for select to authenticated
+  using (public.can_access_peer_conversation(conversation_id));
+
+-- sender_id is pinned to the caller, so neither participant can post words
+-- under the other's name. No UPDATE or DELETE policy: a sent message stays
+-- as sent, matching the doctor threads.
+drop policy if exists peer_messages_insert on public.peer_messages;
+create policy peer_messages_insert on public.peer_messages
+  for insert to authenticated
+  with check (
+    public.can_access_peer_conversation(conversation_id)
+    and sender_id = auth.uid()
+  );
+
+-- Keeps the thread list sorted by activity without granting clients UPDATE on
+-- the conversation row.
+create or replace function public.peer_touch_conversation()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  update public.peer_conversations
+     set last_message_at = new.created_at
+   where id = new.conversation_id;
+  return new;
+end;
+$$;
+
+drop trigger if exists peer_messages_touch on public.peer_messages;
+create trigger peer_messages_touch
+  after insert on public.peer_messages
+  for each row execute function public.peer_touch_conversation();
+
+-- Directory of people who may be messaged. Both sides must have opted in:
+-- turning peer chat on is what makes you visible AND what lets you look, so a
+-- patient cannot lurk over the directory while staying unlisted themselves.
+-- Returns names only — never a condition, a prescription or a symptom.
+create or replace function public.peer_directory(search text default '')
+returns table (patient_id uuid, display_name text)
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select p.id, p.name
+  from public.patients p
+  where p.peer_chat_enabled
+    and public.peer_chat_open(public.current_patient_id())
+    and p.id is distinct from public.current_patient_id()
+    and (
+      coalesce(search, '') = ''
+      or p.name ilike '%' || search || '%'
+    )
+  order by p.name
+  limit 50;
+$$;
+
+-- The caller's threads with the counterpart's name resolved. Goes through a
+-- definer so the list can name the other participant without opening
+-- patients_select up to every patient row.
+create or replace function public.peer_threads()
+returns table (
+  conversation_id uuid,
+  other_patient_id uuid,
+  other_name text,
+  last_message_at timestamptz
+)
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  with me as (select public.current_patient_id() as pid)
+  select c.id,
+         other.id,
+         other.name,
+         c.last_message_at
+  from public.peer_conversations c
+  cross join me
+  join public.patients other
+    on other.id = case when c.patient_low = me.pid
+                       then c.patient_high
+                       else c.patient_low
+                  end
+  where me.pid is not null
+    and me.pid in (c.patient_low, c.patient_high)
+  order by c.last_message_at desc;
+$$;
+
+-- Opens (or reuses) the thread between the caller and one other patient.
+-- Definer because the tables carry no INSERT policy: this function is the
+-- only way in, and it re-derives the caller's own patient id rather than
+-- trusting one passed from the client.
+create or replace function public.open_peer_conversation(target_patient_id uuid)
+returns uuid
+language plpgsql
+volatile
+security definer
+set search_path = ''
+as $$
+declare
+  me uuid := public.current_patient_id();
+  lo uuid;
+  hi uuid;
+  cid uuid;
+begin
+  if me is null or target_patient_id is null or me = target_patient_id then
+    raise exception 'peer chat: invalid participants';
+  end if;
+  if not public.peer_chat_open(me) or not public.peer_chat_open(target_patient_id) then
+    raise exception 'peer chat: both participants must enable peer chat';
+  end if;
+
+  lo := least(me, target_patient_id);
+  hi := greatest(me, target_patient_id);
+
+  insert into public.peer_conversations (patient_low, patient_high)
+  values (lo, hi)
+  on conflict (patient_low, patient_high) do nothing;
+
+  select id into cid
+  from public.peer_conversations
+  where patient_low = lo and patient_high = hi;
+
+  return cid;
+end;
+$$;
+
+-- ---------------------------------------------------------------------------
+-- Realtime
+--
+-- The chat screens subscribe to INSERTs over Supabase Realtime. Supabase
+-- creates the supabase_realtime publication empty, so a table that is not
+-- added to it never emits and a reply only shows up on a manual refresh.
+-- Guarded so re-running this file is a no-op, and so the whole block skips on
+-- a plain Postgres instance that has no such publication.
+-- ---------------------------------------------------------------------------
+
+do $$
+declare
+  t text;
+begin
+  if not exists (select 1 from pg_publication where pubname = 'supabase_realtime') then
+    return;
+  end if;
+  foreach t in array array['messages', 'peer_messages'] loop
+    if not exists (
+      select 1 from pg_publication_tables
+      where pubname = 'supabase_realtime'
+        and schemaname = 'public'
+        and tablename = t
+    ) then
+      execute format('alter publication supabase_realtime add table public.%I', t);
+    end if;
+  end loop;
+end $$;

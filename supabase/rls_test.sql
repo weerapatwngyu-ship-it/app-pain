@@ -545,3 +545,197 @@ begin;
   update public.profiles set role='admin'
    where id='22222222-2222-2222-2222-222222222222';
 rollback;
+
+\echo ''
+\echo '=== POSITIVE 12: two opted-in patients open a thread and both read it ==='
+begin;
+  select id as pa from public.patients
+   where owner_user_id='11111111-1111-1111-1111-111111111111' \gset
+  select id as pb from public.patients
+   where owner_user_id='22222222-2222-2222-2222-222222222222' \gset
+  update public.patients set peer_chat_enabled = true where id in (:'pa', :'pb');
+
+  set local role authenticated;
+  select public.as_user('11111111-1111-1111-1111-111111111111');
+  select public.open_peer_conversation(:'pb') as cid \gset
+  insert into public.peer_messages (conversation_id, sender_id, body)
+  values (:'cid','11111111-1111-1111-1111-111111111111','สวัสดีครับ เป็นยังไงบ้าง');
+
+  \echo '  -- opening it again continues the same thread (expect 1 row total):'
+  select public.open_peer_conversation(:'pb') as reopened \gset
+  select count(*) as threads from public.peer_conversations;
+
+  \echo '  -- the other side sees the thread and the message (expect 1 and 1):'
+  select public.as_user('22222222-2222-2222-2222-222222222222');
+  select count(*) as their_threads from public.peer_threads();
+  select count(*) as their_msgs from public.peer_messages where conversation_id = :'cid';
+
+  \echo '  -- and the thread names the counterpart, not themselves:'
+  select other_name from public.peer_threads();
+
+  \echo '  -- last_message_at is bumped by the trigger, not by the client.'
+  \echo '  -- Timestamped explicitly: now() is frozen for the whole'
+  \echo '  -- transaction, so a default-timestamped row cannot show movement.'
+  select public.as_user('11111111-1111-1111-1111-111111111111');
+  insert into public.peer_messages (conversation_id, sender_id, body, created_at)
+  values (:'cid','11111111-1111-1111-1111-111111111111','ตอบกลับ', now() + interval '5 min');
+  reset role;
+  \echo '  -- expect t:'
+  select (last_message_at = now() + interval '5 min') as touched
+    from public.peer_conversations where id = :'cid';
+
+  \echo '  -- and the client still cannot write it directly (expect UPDATE 0):'
+  set local role authenticated;
+  select public.as_user('11111111-1111-1111-1111-111111111111');
+  update public.peer_conversations set last_message_at = now() + interval '99 days'
+   where id = :'cid';
+rollback;
+
+\echo ''
+\echo '=== EXPLOIT 20: an uninvolved patient reads a peer thread (must return 0) ==='
+begin;
+  insert into auth.users (id, email)
+  values ('99999999-9999-9999-9999-999999999999','nosy@test.com');
+  select id as pa from public.patients
+   where owner_user_id='11111111-1111-1111-1111-111111111111' \gset
+  select id as pb from public.patients
+   where owner_user_id='22222222-2222-2222-2222-222222222222' \gset
+  update public.patients set peer_chat_enabled = true where id in (:'pa', :'pb');
+
+  set local role authenticated;
+  select public.as_user('11111111-1111-1111-1111-111111111111');
+  select public.open_peer_conversation(:'pb') as cid \gset
+  insert into public.peer_messages (conversation_id, sender_id, body)
+  values (:'cid','11111111-1111-1111-1111-111111111111','เรื่องส่วนตัว');
+
+  \echo '  -- a third patient (expect 0 threads, 0 messages):'
+  select public.as_user('99999999-9999-9999-9999-999999999999');
+  select count(*) as threads from public.peer_conversations;
+  select count(*) as msgs from public.peer_messages;
+rollback;
+
+\echo ''
+\echo '=== EXPLOIT 21: a doctor reads their patient''s private peer thread (must return 0) ==='
+begin;
+  select id as pa from public.patients
+   where owner_user_id='11111111-1111-1111-1111-111111111111' \gset
+  select id as pb from public.patients
+   where owner_user_id='22222222-2222-2222-2222-222222222222' \gset
+  update public.patients set peer_chat_enabled = true where id in (:'pa', :'pb');
+  -- A fully privileged clinician: provider role AND a linked doctor listing,
+  -- i.e. someone who can read the whole caseload.
+  insert into auth.users (id, email)
+  values ('88888888-8888-8888-8888-888888888888','doc@test.com');
+  update public.profiles set role='provider'
+   where id='88888888-8888-8888-8888-888888888888';
+  insert into public.doctors (id, user_id, name, specialty)
+  values ('eeeeeeee-0000-0000-0000-000000000009',
+          '88888888-8888-8888-8888-888888888888','หมอ C','อายุรกรรม');
+
+  set local role authenticated;
+  select public.as_user('11111111-1111-1111-1111-111111111111');
+  select public.open_peer_conversation(:'pb') as cid \gset
+  insert into public.peer_messages (conversation_id, sender_id, body)
+  values (:'cid','11111111-1111-1111-1111-111111111111','ไม่อยากให้หมอเห็น');
+
+  \echo '  -- can_view_all_patients() is true for them (expect t):'
+  select public.as_user('88888888-8888-8888-8888-888888888888');
+  select public.can_view_all_patients() as sees_caseload;
+  \echo '  -- yet the peer thread stays private (expect 0 threads, 0 messages):'
+  select count(*) as threads from public.peer_conversations;
+  select count(*) as msgs from public.peer_messages;
+rollback;
+
+\echo ''
+\echo '=== EXPLOIT 22: messaging someone who never opted in (must ERROR) ==='
+begin;
+  select id as pa from public.patients
+   where owner_user_id='11111111-1111-1111-1111-111111111111' \gset
+  select id as pb from public.patients
+   where owner_user_id='22222222-2222-2222-2222-222222222222' \gset
+  -- Only the caller opts in; the target never did.
+  update public.patients set peer_chat_enabled = true where id = :'pa';
+
+  set local role authenticated;
+  select public.as_user('11111111-1111-1111-1111-111111111111');
+  \echo '  -- expect ERROR: both participants must enable peer chat';
+  select public.open_peer_conversation(:'pb');
+rollback;
+
+\echo ''
+\echo '=== EXPLOIT 23: bypassing the RPC by inserting a thread directly (must FAIL) ==='
+begin;
+  select id as pa from public.patients
+   where owner_user_id='11111111-1111-1111-1111-111111111111' \gset
+  select id as pb from public.patients
+   where owner_user_id='22222222-2222-2222-2222-222222222222' \gset
+  update public.patients set peer_chat_enabled = true where id = :'pa';
+
+  set local role authenticated;
+  select public.as_user('11111111-1111-1111-1111-111111111111');
+  \echo '  -- no INSERT policy on peer_conversations, so this cannot pass:'
+  insert into public.peer_conversations (patient_low, patient_high)
+  values (least(:'pa'::uuid, :'pb'::uuid), greatest(:'pa'::uuid, :'pb'::uuid));
+rollback;
+
+\echo ''
+\echo '=== EXPLOIT 24: the directory is closed to a patient who has not opted in ==='
+begin;
+  select id as pa from public.patients
+   where owner_user_id='11111111-1111-1111-1111-111111111111' \gset
+  select id as pb from public.patients
+   where owner_user_id='22222222-2222-2222-2222-222222222222' \gset
+  update public.patients set peer_chat_enabled = true where id = :'pb';
+
+  set local role authenticated;
+  \echo '  -- lurker has not opted in, so sees nobody (expect 0):'
+  select public.as_user('11111111-1111-1111-1111-111111111111');
+  select count(*) as listed from public.peer_directory();
+
+  \echo '  -- after opting in they see the other opted-in patient (expect 1):'
+  reset role;
+  update public.patients set peer_chat_enabled = true where id = :'pa';
+  set local role authenticated;
+  select public.as_user('11111111-1111-1111-1111-111111111111');
+  select count(*) as listed from public.peer_directory();
+
+  \echo '  -- and never themselves:'
+  select count(*) as self_listed from public.peer_directory()
+   where patient_id = :'pa';
+rollback;
+
+\echo ''
+\echo '=== EXPLOIT 25: posting into a peer thread under the other person''s name (must FAIL) ==='
+begin;
+  select id as pa from public.patients
+   where owner_user_id='11111111-1111-1111-1111-111111111111' \gset
+  select id as pb from public.patients
+   where owner_user_id='22222222-2222-2222-2222-222222222222' \gset
+  update public.patients set peer_chat_enabled = true where id in (:'pa', :'pb');
+
+  set local role authenticated;
+  select public.as_user('11111111-1111-1111-1111-111111111111');
+  select public.open_peer_conversation(:'pb') as cid \gset
+  \echo '  -- sender_id is pinned to auth.uid():'
+  insert into public.peer_messages (conversation_id, sender_id, body)
+  values (:'cid','22222222-2222-2222-2222-222222222222','ฉันบอกเองว่าหยุดยาได้');
+rollback;
+
+\echo ''
+\echo '=== EXPLOIT 26: editing or deleting a sent peer message (must affect 0 rows) ==='
+begin;
+  select id as pa from public.patients
+   where owner_user_id='11111111-1111-1111-1111-111111111111' \gset
+  select id as pb from public.patients
+   where owner_user_id='22222222-2222-2222-2222-222222222222' \gset
+  update public.patients set peer_chat_enabled = true where id in (:'pa', :'pb');
+
+  set local role authenticated;
+  select public.as_user('11111111-1111-1111-1111-111111111111');
+  select public.open_peer_conversation(:'pb') as cid \gset
+  insert into public.peer_messages (conversation_id, sender_id, body)
+  values (:'cid','11111111-1111-1111-1111-111111111111','ข้อความเดิม');
+  \echo '  -- expect UPDATE 0 then DELETE 0:'
+  update public.peer_messages set body='ข้อความที่ถูกแก้' where conversation_id = :'cid';
+  delete from public.peer_messages where conversation_id = :'cid';
+rollback;

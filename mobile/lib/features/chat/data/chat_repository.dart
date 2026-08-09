@@ -4,8 +4,9 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/supabase/supabase_refs.dart';
 import '../domain/entities/conversation.dart';
+import '../domain/message_thread.dart';
 
-class ChatRepository {
+class ChatRepository implements MessageThread {
   /// Threads for a patient, newest activity first, with the doctor joined in
   /// so the list can render without a second round trip.
   Future<List<Conversation>> conversationsForPatient(String patientId) async {
@@ -57,6 +58,7 @@ class ChatRepository {
     return Conversation.fromRow(created);
   }
 
+  @override
   Future<List<ChatMessage>> messages(String conversationId) async {
     final rows = await db
         .from('messages')
@@ -66,6 +68,7 @@ class ChatRepository {
     return rows.map<ChatMessage>(ChatMessage.fromRow).toList();
   }
 
+  @override
   Future<void> send({required String conversationId, required String body}) async {
     final userId = currentUserId;
     if (userId == null) throw StateError('ยังไม่ได้เข้าสู่ระบบ');
@@ -87,6 +90,7 @@ class ChatRepository {
 
   /// Live updates for an open thread. Postgres changes arrive over Supabase
   /// Realtime, so a reply lands without the reader pulling to refresh.
+  @override
   RealtimeChannel subscribeToMessages(
     String conversationId,
     void Function(ChatMessage message) onMessage,

@@ -29,6 +29,7 @@ class ProfileScreen extends StatelessWidget {
     required this.pharmacyFinderRepository,
     required this.healthQuestionRepository,
     required this.chatRepository,
+    required this.peerChatRepository,
     required this.adminRepository,
     required this.caseloadRepository,
     required this.onUserUpdated,
@@ -44,6 +45,7 @@ class ProfileScreen extends StatelessWidget {
   final PharmacyFinderRepository pharmacyFinderRepository;
   final HealthQuestionRepository healthQuestionRepository;
   final ChatRepository chatRepository;
+  final PeerChatRepository peerChatRepository;
   final AdminRepository adminRepository;
   final CaseloadRepository caseloadRepository;
   final ValueChanged<AppUser> onUserUpdated;
@@ -105,6 +107,7 @@ class ProfileScreen extends StatelessWidget {
                         pharmacyFinderRepository: pharmacyFinderRepository,
                         healthQuestionRepository: healthQuestionRepository,
                         chatRepository: chatRepository,
+                        peerChatRepository: peerChatRepository,
                         adminRepository: adminRepository,
                         caseloadRepository: caseloadRepository,
                         onUserUpdated: onUserUpdated,

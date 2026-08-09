@@ -15,6 +15,7 @@ import '../features/doctors/data/doctor_repository.dart';
 import '../features/doctors/domain/entities/doctor.dart';
 import '../features/health_topics/data/health_question_repository.dart';
 import '../features/medication/data/medication_repository_impl.dart';
+import '../features/peer_chat/data/peer_chat_repository.dart';
 import '../features/pharmacy_finder/data/pharmacy_finder_repository.dart';
 import '../features/profile/data/patient_profile_repository.dart';
 import '../features/symptom_tracking/data/symptom_repository_impl.dart';
@@ -45,6 +46,7 @@ class _MedTrackAppState extends State<MedTrackApp> {
   final DoctorRepository _doctorRepository = DoctorRepository();
   final HealthQuestionRepository _healthQuestionRepository = HealthQuestionRepository();
   final ChatRepository _chatRepository = ChatRepository();
+  final PeerChatRepository _peerChatRepository = PeerChatRepository();
   final AdminRepository _adminRepository = AdminRepository();
   final CaseloadRepository _caseloadRepository = CaseloadRepository();
 
@@ -222,6 +224,7 @@ class _MedTrackAppState extends State<MedTrackApp> {
       doctorRepository: _doctorRepository,
       healthQuestionRepository: _healthQuestionRepository,
       chatRepository: _chatRepository,
+      peerChatRepository: _peerChatRepository,
       adminRepository: _adminRepository,
       caseloadRepository: _caseloadRepository,
       onLogout: _logout,

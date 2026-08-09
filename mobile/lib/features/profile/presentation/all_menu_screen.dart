@@ -14,6 +14,8 @@ import '../../doctors/presentation/doctor_list_screen.dart';
 import '../../health_topics/data/health_question_repository.dart';
 import '../../health_topics/presentation/health_topics_screen.dart';
 import '../../health_topics/presentation/my_questions_screen.dart';
+import '../../peer_chat/data/peer_chat_repository.dart';
+import '../../peer_chat/presentation/peer_chat_screen.dart';
 import '../../pharmacy_finder/data/pharmacy_finder_repository.dart';
 import '../../pharmacy_finder/presentation/pharmacy_finder_screen.dart';
 import '../../symptom_tracking/data/symptom_repository_impl.dart';
@@ -38,6 +40,7 @@ class AllMenuScreen extends StatelessWidget {
     required this.pharmacyFinderRepository,
     required this.healthQuestionRepository,
     required this.chatRepository,
+    required this.peerChatRepository,
     required this.adminRepository,
     required this.caseloadRepository,
     required this.onUserUpdated,
@@ -53,6 +56,7 @@ class AllMenuScreen extends StatelessWidget {
   final PharmacyFinderRepository pharmacyFinderRepository;
   final HealthQuestionRepository healthQuestionRepository;
   final ChatRepository chatRepository;
+  final PeerChatRepository peerChatRepository;
   final AdminRepository adminRepository;
   final CaseloadRepository caseloadRepository;
   final ValueChanged<AppUser> onUserUpdated;
@@ -147,6 +151,18 @@ class AllMenuScreen extends StatelessWidget {
                     repository: chatRepository,
                     ownerId: patientId,
                     isDoctorView: false,
+                  ),
+                ),
+              ),
+            ),
+            _MenuItem(
+              icon: Icons.groups_outlined,
+              label: 'คุยกับผู้ป่วยด้วยกัน',
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => PeerChatScreen(
+                    patientId: patientId,
+                    repository: peerChatRepository,
                   ),
                 ),
               ),

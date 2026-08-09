@@ -3,8 +3,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/supabase/supabase_refs.dart';
 import '../../auth/presentation/onboarding/onboarding_theme.dart';
-import '../data/chat_repository.dart';
 import '../domain/entities/conversation.dart';
+import '../domain/message_thread.dart';
 
 /// One thread, used by both sides — a message renders the same whether the
 /// reader is the patient or the doctor; only which bubble is "mine" differs.
@@ -20,7 +20,7 @@ class ChatScreen extends StatefulWidget {
   final String conversationId;
   final String title;
   final String? subtitle;
-  final ChatRepository repository;
+  final MessageThread repository;
 
   @override
   State<ChatScreen> createState() => _ChatScreenState();

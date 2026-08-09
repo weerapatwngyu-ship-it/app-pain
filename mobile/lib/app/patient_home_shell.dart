@@ -13,6 +13,7 @@ import '../features/health_topics/data/health_question_repository.dart';
 import '../features/medication/data/medication_repository_impl.dart';
 import '../features/medication/domain/usecases/log_dose_usecase.dart';
 import '../features/medication/presentation/today_schedule_screen.dart';
+import '../features/peer_chat/data/peer_chat_repository.dart';
 import '../features/pharmacy_finder/data/pharmacy_finder_repository.dart';
 import '../features/pharmacy_finder/presentation/pharmacy_finder_screen.dart';
 import '../features/profile/data/patient_profile_repository.dart';
@@ -38,6 +39,7 @@ class PatientHomeShell extends StatefulWidget {
     required this.doctorRepository,
     required this.healthQuestionRepository,
     required this.chatRepository,
+    required this.peerChatRepository,
     required this.adminRepository,
     required this.caseloadRepository,
     required this.onLogout,
@@ -55,6 +57,7 @@ class PatientHomeShell extends StatefulWidget {
   final DoctorRepository doctorRepository;
   final HealthQuestionRepository healthQuestionRepository;
   final ChatRepository chatRepository;
+  final PeerChatRepository peerChatRepository;
   final AdminRepository adminRepository;
   final CaseloadRepository caseloadRepository;
 
@@ -113,6 +116,7 @@ class _PatientHomeShellState extends State<PatientHomeShell> {
         pharmacyFinderRepository: widget.pharmacyFinderRepository,
         healthQuestionRepository: widget.healthQuestionRepository,
         chatRepository: widget.chatRepository,
+        peerChatRepository: widget.peerChatRepository,
         adminRepository: widget.adminRepository,
         caseloadRepository: widget.caseloadRepository,
         onUserUpdated: widget.onUserUpdated,
