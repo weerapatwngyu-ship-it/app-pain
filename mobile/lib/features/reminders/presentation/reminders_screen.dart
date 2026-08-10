@@ -63,21 +63,70 @@ class _RemindersScreenState extends State<RemindersScreen> {
     }
   }
 
+  /// Two tests, because they fail for different reasons and the fixes are
+  /// nothing alike: one posts immediately, the other goes through the alarm
+  /// scheduler exactly as a reminder does.
   Future<void> _test() async {
-    try {
-      await NotificationService.instance.showTestNotification();
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('ส่งแล้ว — ถ้าไม่เห็นการแจ้งเตือน แปลว่าระบบปิดกั้นอยู่'),
-          duration: Duration(seconds: 5),
+    final choice = await showModalBottomSheet<String>(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Padding(
+              padding: EdgeInsets.fromLTRB(20, 20, 20, 4),
+              child: Text(
+                'ทดสอบการแจ้งเตือน',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+              ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.notifications_active_outlined),
+              title: const Text('แจ้งเตือนทันที'),
+              subtitle: const Text('ตรวจว่าระบบยอมให้แอปแจ้งเตือนหรือไม่'),
+              onTap: () => Navigator.of(context).pop('now'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.timer_outlined),
+              title: const Text('ตั้งเวลา 15 วินาที'),
+              subtitle: const Text('ตรวจว่าการตั้งเวลาล่วงหน้าทำงานหรือไม่'),
+              onTap: () => Navigator.of(context).pop('scheduled'),
+            ),
+            const SizedBox(height: 8),
+          ],
         ),
-      );
+      ),
+    );
+    if (choice == null) return;
+
+    try {
+      if (choice == 'now') {
+        await NotificationService.instance.showTestNotification();
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('ส่งแล้ว — ถ้าไม่เห็น แปลว่าระบบปิดกั้นการแจ้งเตือนอยู่'),
+            duration: Duration(seconds: 5),
+          ),
+        );
+      } else {
+        await NotificationService.instance.scheduleTestIn();
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('ตั้งไว้แล้ว — เปิดหน้านี้ค้างไว้ รอ 15 วินาที'),
+            duration: Duration(seconds: 8),
+          ),
+        );
+      }
       await _load();
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('ส่งไม่สำเร็จ: $e')));
+          .showSnackBar(SnackBar(content: Text('ทดสอบไม่สำเร็จ: $e')));
     }
   }
 

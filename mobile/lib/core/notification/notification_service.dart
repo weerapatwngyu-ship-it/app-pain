@@ -142,6 +142,30 @@ class NotificationService {
   /// cannot collide with a real alarm.
   static const _testNotificationId = 999000;
 
+  /// Schedules a notification [seconds] from now through the same path a real
+  /// reminder takes.
+  ///
+  /// showTestNotification() posts directly and proves only that notifications
+  /// are allowed. This goes through AlarmManager, so if it arrives the whole
+  /// scheduling pipeline works and a reminder that still fails is being
+  /// stopped by the OS between the alarm and the app — which on MIUI means
+  /// the app was killed and not allowed to restart.
+  Future<void> scheduleTestIn({int seconds = 15}) async {
+    await init();
+    final when = tz.TZDateTime.now(tz.local).add(Duration(seconds: seconds));
+    await _plugin.zonedSchedule(
+      _testScheduledId,
+      'ทดสอบการตั้งเวลา',
+      'ตั้งไว้ $seconds วินาทีที่แล้ว — ถ้าเห็นข้อความนี้ การตั้งเวลาทำงานปกติ',
+      when,
+      _details,
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      uiLocalNotificationDateInterpretation: _dateInterpretation,
+    );
+  }
+
+  static const _testScheduledId = 999001;
+
   Future<void> showDoseReminder({
     required int id,
     required String medicationName,
