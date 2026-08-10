@@ -96,7 +96,12 @@ class _RemindersScreenState extends State<RemindersScreen> {
       if (result.delete) {
         await widget.repository.delete(existing!.id);
       } else {
-        await widget.repository.save(result.reminder!);
+        final saved = await widget.repository.save(result.reminder!);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(saved.countdownLabel())),
+          );
+        }
       }
       await _load();
     } catch (e) {
@@ -269,6 +274,17 @@ class _ReminderCard extends StatelessWidget {
                         color: OnboardingColors.textMuted,
                       ),
                     ),
+                    if (reminder.enabled) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        reminder.countdownLabel(),
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: OnboardingColors.teal,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -331,6 +347,27 @@ class _ReminderSheetState extends State<_ReminderSheet> {
   void dispose() {
     _label.dispose();
     super.dispose();
+  }
+
+  /// Same reminder the user is about to save, asked when it would next fire.
+  /// Built from the live form rather than the saved row, so choosing a time
+  /// that has already passed today immediately reads "อีก 23 ชั่วโมง ..."
+  /// instead of looking like nothing happened.
+  String _previewCountdown() {
+    final days = switch (_repeat) {
+      _Repeat.once => <int>{},
+      _Repeat.everyDay => {1, 2, 3, 4, 5, 6, 7},
+      _Repeat.custom => _days,
+    };
+    if (_repeat == _Repeat.custom && days.isEmpty) return 'เลือกวันที่ต้องการเตือน';
+    return MedicationReminder(
+      id: 0,
+      label: '',
+      hour: _time.hour,
+      minute: _time.minute,
+      days: days,
+      enabled: true,
+    ).countdownLabel();
   }
 
   Future<void> _pickTime() async {
@@ -424,6 +461,15 @@ class _ReminderSheetState extends State<_ReminderSheet> {
                           fontSize: 40, fontWeight: FontWeight.w700, height: 1.1),
                     ),
                     const SizedBox(height: 4),
+                    Text(
+                      _previewCountdown(),
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: OnboardingColors.teal,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
                     const Text(
                       'แตะเพื่อเปลี่ยนเวลา',
                       style: TextStyle(

@@ -40,6 +40,45 @@ class MedicationReminder {
     return sorted.map((d) => names[d]).join(' ');
   }
 
+  /// When this will next go off.
+  ///
+  /// Deliberately mirrors NotificationService._nextInstanceOf: that one works
+  /// in the pinned Asia/Bangkok zone and this one in device-local time, which
+  /// agree for a phone in Thailand. They have to stay in step — a countdown
+  /// that disagrees with the alarm is worse than no countdown, so change both
+  /// together.
+  DateTime nextOccurrence([DateTime? from]) {
+    final now = from ?? DateTime.now();
+    var next = DateTime(now.year, now.month, now.day, hour, minute);
+
+    if (isOneOff || isEveryDay) {
+      if (!next.isAfter(now)) next = next.add(const Duration(days: 1));
+      return next;
+    }
+    while (!days.contains(next.weekday) || !next.isAfter(now)) {
+      next = next.add(const Duration(days: 1));
+    }
+    return next;
+  }
+
+  /// "อีก 2 ชั่วโมง 15 นาที" — the phone's own clock app says this when an
+  /// alarm is set, and without it a time entered for the current minute looks
+  /// broken rather than scheduled for tomorrow.
+  String countdownLabel([DateTime? from]) {
+    final now = from ?? DateTime.now();
+    final left = nextOccurrence(now).difference(now);
+    // Not `days` — that is the weekday set on this class, and shadowing it
+    // here would read as if the countdown depended on it.
+    final daysLeft = left.inDays;
+    final hours = left.inHours % 24;
+    final minutes = left.inMinutes % 60;
+
+    if (daysLeft > 0) return 'จะเตือนในอีก $daysLeft วัน $hours ชั่วโมง';
+    if (hours > 0) return 'จะเตือนในอีก $hours ชั่วโมง $minutes นาที';
+    if (minutes > 0) return 'จะเตือนในอีก $minutes นาที';
+    return 'จะเตือนในไม่ถึง 1 นาที';
+  }
+
   MedicationReminder copyWith({
     int? id,
     String? label,
