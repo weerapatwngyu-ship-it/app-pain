@@ -2,6 +2,26 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest_all.dart' as tz_data;
 import 'package:timezone/timezone.dart' as tz;
 
+/// What the OS currently allows, and what it is actually holding for us.
+///
+/// Worth surfacing rather than assuming: the app asks for permission and, if
+/// refused, still saves reminders and schedules alarms that silently never
+/// arrive. Without this the screen looks identical whether it works or not.
+class NotificationStatus {
+  const NotificationStatus({
+    required this.notificationsEnabled,
+    required this.scheduledCount,
+  });
+
+  /// null when the platform cannot report it.
+  final bool? notificationsEnabled;
+
+  /// Alarms the OS is holding for this app. Reminders on screen but zero
+  /// here means scheduling failed, which is a different fault from the OS
+  /// muting a notification that did fire.
+  final int scheduledCount;
+}
+
 /// Local notifications are the primary reminder channel (docs/architecture.md
 /// §10) so dose reminders keep firing without depending on push connectivity.
 class NotificationService {
@@ -70,6 +90,35 @@ class NotificationService {
         IOSFlutterLocalNotificationsPlugin>();
     await ios?.requestPermissions(alert: true, badge: true, sound: true);
   }
+
+  Future<NotificationStatus> status() async {
+    await init();
+    final android = _plugin.resolvePlatformSpecificImplementation<
+        AndroidFlutterLocalNotificationsPlugin>();
+    final enabled = await android?.areNotificationsEnabled();
+    final pending = await _plugin.pendingNotificationRequests();
+    return NotificationStatus(
+      notificationsEnabled: enabled,
+      scheduledCount: pending.length,
+    );
+  }
+
+  /// Fires immediately, to separate "notifications are blocked" from
+  /// "scheduling is broken" — two failures that look the same from the
+  /// reminders list.
+  Future<void> showTestNotification() async {
+    await init();
+    await _plugin.show(
+      _testNotificationId,
+      'ทดสอบการแจ้งเตือน',
+      'ถ้าเห็นข้อความนี้ แปลว่าการแจ้งเตือนของแอปทำงานปกติ',
+      _details,
+    );
+  }
+
+  /// Well above the ids reminders use (reminderId * 10 + weekday), so a test
+  /// cannot collide with a real alarm.
+  static const _testNotificationId = 999000;
 
   Future<void> showDoseReminder({
     required int id,

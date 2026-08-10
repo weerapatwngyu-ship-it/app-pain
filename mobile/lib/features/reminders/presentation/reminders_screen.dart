@@ -25,6 +25,7 @@ class RemindersScreen extends StatefulWidget {
 
 class _RemindersScreenState extends State<RemindersScreen> {
   List<MedicationReminder> _reminders = const [];
+  NotificationStatus? _status;
   bool _loading = true;
   String? _error;
 
@@ -43,9 +44,13 @@ class _RemindersScreenState extends State<RemindersScreen> {
       // Alarms do not survive a reboot, so re-apply them whenever this opens.
       await widget.repository.rescheduleAll();
       final reminders = await widget.repository.all();
+      // Read after rescheduling, so the count reflects what the OS is
+      // actually holding rather than what we hoped it would take.
+      final status = await NotificationService.instance.status();
       if (!mounted) return;
       setState(() {
         _reminders = reminders;
+        _status = status;
         _loading = false;
         _error = null;
       });
@@ -55,6 +60,24 @@ class _RemindersScreenState extends State<RemindersScreen> {
         _error = 'โหลดการเตือนไม่สำเร็จ: $e';
         _loading = false;
       });
+    }
+  }
+
+  Future<void> _test() async {
+    try {
+      await NotificationService.instance.showTestNotification();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('ส่งแล้ว — ถ้าไม่เห็นการแจ้งเตือน แปลว่าระบบปิดกั้นอยู่'),
+          duration: Duration(seconds: 5),
+        ),
+      );
+      await _load();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('ส่งไม่สำเร็จ: $e')));
     }
   }
 
@@ -109,6 +132,11 @@ class _RemindersScreenState extends State<RemindersScreen> {
         title: const Text('เตือนกินยา'),
         actions: [
           IconButton(
+            tooltip: 'ทดสอบการแจ้งเตือน',
+            icon: const Icon(Icons.notifications_active_outlined),
+            onPressed: _test,
+          ),
+          IconButton(
             tooltip: 'การแจ้งเตือนจากระบบ',
             icon: const Icon(Icons.notifications_none),
             onPressed: () => Navigator.of(context).push(
@@ -153,31 +181,35 @@ class _RemindersScreenState extends State<RemindersScreen> {
       );
     }
     if (_reminders.isEmpty) {
-      return const Center(
-        child: Padding(
-          padding: EdgeInsets.all(32),
-          child: Text(
-            'ยังไม่มีการเตือน\nกดปุ่ม + เพื่อตั้งเวลากินยา',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: OnboardingColors.textMuted, height: 1.6),
+      return ListView(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
+        children: [
+          _StatusBanner(status: _status, reminderCount: 0),
+          const Padding(
+            padding: EdgeInsets.all(32),
+            child: Text(
+              'ยังไม่มีการเตือน\nกดปุ่ม + เพื่อตั้งเวลากินยา',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: OnboardingColors.textMuted, height: 1.6),
+            ),
           ),
-        ),
+        ],
       );
     }
 
     return RefreshIndicator(
       onRefresh: _load,
-      child: ListView.builder(
+      child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
-        itemCount: _reminders.length,
-        itemBuilder: (context, index) {
-          final reminder = _reminders[index];
-          return _ReminderCard(
-            reminder: reminder,
-            onTap: () => _edit(reminder),
-            onToggle: (value) => _toggle(reminder, value),
-          );
-        },
+        children: [
+          _StatusBanner(status: _status, reminderCount: _reminders.length),
+          for (final reminder in _reminders)
+            _ReminderCard(
+              reminder: reminder,
+              onTap: () => _edit(reminder),
+              onToggle: (value) => _toggle(reminder, value),
+            ),
+        ],
       ),
     );
   }
@@ -473,4 +505,60 @@ enum _Repeat {
 
   const _Repeat(this.label);
   final String label;
+}
+
+/// Says out loud what the OS is doing with our reminders.
+///
+/// Only appears when something is actually wrong, so a working setup stays
+/// uncluttered — but when nothing fires, this is the difference between
+/// "permission refused" and "the alarm was never registered", which need
+/// completely different fixes.
+class _StatusBanner extends StatelessWidget {
+  const _StatusBanner({required this.status, required this.reminderCount});
+
+  final NotificationStatus? status;
+  final int reminderCount;
+
+  @override
+  Widget build(BuildContext context) {
+    final status = this.status;
+    if (status == null) return const SizedBox.shrink();
+
+    final blocked = status.notificationsEnabled == false;
+    final enabledButUnscheduled = !blocked &&
+        reminderCount > 0 &&
+        status.scheduledCount == 0;
+
+    if (!blocked && !enabledButUnscheduled) return const SizedBox.shrink();
+
+    final message = blocked
+        ? 'ระบบปิดกั้นการแจ้งเตือนของแอปนี้อยู่ จึงจะไม่มีเสียงเตือนแม้ตั้งเวลาไว้\n\n'
+            'เปิดที่ ตั้งค่า > แอป > MediGo > การแจ้งเตือน'
+        : 'ตั้งเวลาไว้ $reminderCount รายการ แต่ระบบไม่ได้รับนาฬิกาไว้เลย\n\n'
+            'มักเกิดจากสิทธิ์ "การปลุกและการเตือนความจำ" ยังไม่ได้เปิด '
+            'หรือเครื่องปิดการทำงานเบื้องหลังของแอปไว้';
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF4E5),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFF0D6A8)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.warning_amber_rounded, color: Color(0xFFB26A00), size: 20),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              message,
+              style: const TextStyle(fontSize: 12.5, height: 1.5, color: Color(0xFF7A4A00)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
