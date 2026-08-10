@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest_all.dart' as tz_data;
 import 'package:timezone/timezone.dart' as tz;
@@ -40,13 +42,31 @@ class NotificationService {
   /// arguably the right behaviour anyway.
   static const _timeZone = 'Asia/Bangkok';
 
-  static const _doseReminderChannel = AndroidNotificationDetails(
-    'dose_reminders',
-    'Dose Reminders',
-    channelDescription: 'เตือนเวลากินยา',
+  /// Note the "_v2": Android creates a notification channel the first time an
+  /// id is used and then treats its importance, sound and vibration as the
+  /// user's to change, not the app's. Anything set here is ignored for a
+  /// channel that already exists — which is why reminders arrived silently
+  /// after the first build created the channel. Bumping the id is the only
+  /// way to hand the OS a channel with these settings.
+  ///
+  /// If these ever change again, bump the suffix again.
+  static final _doseReminderChannel = AndroidNotificationDetails(
+    'dose_reminders_v2',
+    'เตือนกินยา',
+    channelDescription: 'แจ้งเตือนเมื่อถึงเวลากินยา',
     importance: Importance.max,
     priority: Priority.high,
     category: AndroidNotificationCategory.alarm,
+    // Spelled out rather than left to the defaults, so the channel is created
+    // with them and a later reading of this code does not have to guess.
+    playSound: true,
+    enableVibration: true,
+    vibrationPattern: Int64List.fromList(<int>[0, 500, 250, 500, 250, 500]),
+    // Routes the sound to the alarm stream. A dose reminder that loses to a
+    // lowered notification volume, or to a Do Not Disturb rule that still
+    // lets alarms through, is not doing its job.
+    audioAttributesUsage: AudioAttributesUsage.alarm,
+    enableLights: true,
   );
 
   /// iOS-only: how a scheduled date is read against the device clock.
@@ -55,9 +75,11 @@ class NotificationService {
   static const _dateInterpretation =
       UILocalNotificationDateInterpretation.absoluteTime;
 
-  static const _details = NotificationDetails(
+  // Not const: the channel carries a vibration pattern, which is a runtime
+  // list.
+  static final _details = NotificationDetails(
     android: _doseReminderChannel,
-    iOS: DarwinNotificationDetails(),
+    iOS: const DarwinNotificationDetails(),
   );
 
   Future<void> init() async {
