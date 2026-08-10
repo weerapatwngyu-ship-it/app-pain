@@ -166,7 +166,7 @@ class _SignInScreenState extends State<SignInScreen> {
                 const Icon(Icons.medical_services, size: 64, color: OnboardingColors.teal),
                 const SizedBox(height: 16),
                 const Text(
-                  'MedTrack',
+                  'MediGo',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 32,

@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:medtrack/features/auth/presentation/sign_in_screen.dart';
 
 void main() {
-  // MedTrackApp itself needs an initialized Supabase client, so the sign-in
+  // MediGoApp itself needs an initialized Supabase client, so the sign-in
   // screen is exercised directly — it only reaches Supabase on submit.
   testWidgets('offers email/password sign-in by default', (tester) async {
     await tester.pumpWidget(const MaterialApp(home: SignInScreen()));

@@ -18,7 +18,7 @@ const _overpassEndpoints = [
 /// and the instances refuse an unidentified client outright rather than
 /// throttling it — the default `Dart/3.x (dart:io)` agent came back HTTP 406
 /// from a real device.
-const _userAgent = 'MedTrack/0.1 (https://github.com/weerapatwngyu-ship-it/app-pain)';
+const _userAgent = 'MediGo/0.1 (https://github.com/weerapatwngyu-ship-it/app-pain)';
 
 const _earthRadiusMeters = 6371000.0;
 

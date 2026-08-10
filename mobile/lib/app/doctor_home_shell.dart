@@ -122,7 +122,7 @@ class DoctorPendingScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text('MedTrack'),
+        title: const Text('MediGo'),
         actions: [
           IconButton(
             onPressed: onLogout,

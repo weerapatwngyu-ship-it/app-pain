@@ -7,7 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Medtrack</string>
+	<string>MediGo</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -15,7 +15,7 @@
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>medtrack</string>
+	<string>MediGo</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
@@ -48,11 +48,11 @@
 		</dict>
 	</dict>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>MedTrack ใช้ตำแหน่งของคุณเพื่อค้นหาร้านขายยาที่อยู่ใกล้เคียง</string>
+	<string>MediGo ใช้ตำแหน่งของคุณเพื่อค้นหาร้านขายยาที่อยู่ใกล้เคียง</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>MedTrack ใช้คลังภาพของคุณเพื่อเปลี่ยนรูปโปรไฟล์</string>
+	<string>MediGo ใช้คลังภาพของคุณเพื่อเปลี่ยนรูปโปรไฟล์</string>
 	<key>NSCameraUsageDescription</key>
-	<string>MedTrack ใช้กล้องเพื่อถ่ายรูปโปรไฟล์</string>
+	<string>MediGo ใช้กล้องเพื่อถ่ายรูปโปรไฟล์</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>UILaunchStoryboardName</key>

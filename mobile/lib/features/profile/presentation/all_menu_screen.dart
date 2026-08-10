@@ -27,7 +27,7 @@ import 'settings_screen.dart';
 /// Grid menu of every real feature in the app, grouped like the reference
 /// design's "เมนูทั้งหมด" — every tile here opens a screen that actually
 /// exists and does something (no NHSO/insurance/shopping items, since
-/// MedTrack doesn't have those).
+/// MediGo doesn't have those).
 class AllMenuScreen extends StatelessWidget {
   const AllMenuScreen({
     super.key,

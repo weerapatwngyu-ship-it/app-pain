@@ -23,8 +23,8 @@ import '../shared/theme/app_theme.dart';
 import 'doctor_home_shell.dart';
 import 'patient_home_shell.dart';
 
-class MedTrackApp extends StatefulWidget {
-  const MedTrackApp({super.key, this.googleWebClientId});
+class MediGoApp extends StatefulWidget {
+  const MediGoApp({super.key, this.googleWebClientId});
 
   /// Null when GOOGLE_WEB_CLIENT_ID wasn't passed at build time — the sign-in
   /// screen hides the Google button rather than offering a flow that would
@@ -32,10 +32,10 @@ class MedTrackApp extends StatefulWidget {
   final String? googleWebClientId;
 
   @override
-  State<MedTrackApp> createState() => _MedTrackAppState();
+  State<MediGoApp> createState() => _MediGoAppState();
 }
 
-class _MedTrackAppState extends State<MedTrackApp> {
+class _MediGoAppState extends State<MediGoApp> {
   final AuthRepositoryImpl _authRepository = AuthRepositoryImpl();
   final MedicationRepositoryImpl _medicationRepository =
       MedicationRepositoryImpl(LocalDatabase.instance);
@@ -115,7 +115,7 @@ class _MedTrackAppState extends State<MedTrackApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'MedTrack',
+      title: 'MediGo',
       theme: AppTheme.light(),
       home: _buildHome(),
     );
@@ -196,7 +196,7 @@ class _MedTrackAppState extends State<MedTrackApp> {
     if (user.patientId == null) {
       return Scaffold(
         appBar: AppBar(
-          title: const Text('MedTrack'),
+          title: const Text('MediGo'),
           actions: [
             IconButton(onPressed: _logout, icon: const Icon(Icons.logout), tooltip: 'ออกจากระบบ'),
           ],

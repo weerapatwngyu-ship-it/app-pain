@@ -1,5 +1,5 @@
 name: medtrack
-description: MedTrack — แอปจ่ายยาและติดตามอาการผู้ป่วย (Phase 1 MVP client)
+description: MediGo — แอปจ่ายยาและติดตามอาการผู้ป่วย (Phase 1 MVP client)
 publish_to: "none"
 version: 0.1.0
 
@@ -27,6 +27,20 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^4.0.0
+  flutter_launcher_icons: ^0.14.1
 
 flutter:
   uses-material-design: true
+
+# Regenerates the launcher icons for both platforms from one source image:
+#   dart run flutter_launcher_icons
+#
+# No adaptive_icon_* on purpose. An adaptive icon crops to a circular safe
+# zone, which would cut the wordmark off the bottom of this logo; the plain
+# launcher icon keeps the whole image and simply gets masked by the launcher.
+flutter_launcher_icons:
+  image_path: assets/icon/app_icon.png
+  android: true
+  ios: true
+  # iOS rejects icons with an alpha channel.
+  remove_alpha_ios: true

@@ -34,7 +34,7 @@ Future<void> main() async {
   await Supabase.initialize(url: _supabaseUrl, anonKey: _supabaseAnonKey);
 
   runApp(
-    MedTrackApp(
+    MediGoApp(
       googleWebClientId: _googleWebClientId.isEmpty ? null : _googleWebClientId,
     ),
   );
