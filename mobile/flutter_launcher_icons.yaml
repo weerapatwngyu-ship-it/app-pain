@@ -1,0 +1,16 @@
+# Launcher icon config for both platforms. Regenerate with:
+#   dart run flutter_launcher_icons
+#
+# Kept in its own file rather than inside pubspec.yaml: the tool looks here
+# first, and a standalone file cannot be thrown off by anything else in the
+# pubspec.
+#
+# No adaptive_icon_* on purpose. An adaptive icon crops to a circular safe
+# zone, which would cut the wordmark off the bottom of this logo; the plain
+# launcher icon keeps the whole image and gets masked by the launcher instead.
+flutter_launcher_icons:
+  image_path: assets/icon/app_icon.png
+  android: true
+  ios: true
+  # iOS rejects an icon that carries an alpha channel.
+  remove_alpha_ios: true

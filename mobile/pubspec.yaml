@@ -32,15 +32,4 @@ dev_dependencies:
 flutter:
   uses-material-design: true
 
-# Regenerates the launcher icons for both platforms from one source image:
-#   dart run flutter_launcher_icons
-#
-# No adaptive_icon_* on purpose. An adaptive icon crops to a circular safe
-# zone, which would cut the wordmark off the bottom of this logo; the plain
-# launcher icon keeps the whole image and simply gets masked by the launcher.
-flutter_launcher_icons:
-  image_path: assets/icon/app_icon.png
-  android: true
-  ios: true
-  # iOS rejects icons with an alpha channel.
-  remove_alpha_ios: true
+# Launcher icon settings live in flutter_launcher_icons.yaml next to this file.
