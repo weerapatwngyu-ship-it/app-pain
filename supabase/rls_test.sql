@@ -797,3 +797,96 @@ begin;
   insert into public.conversations (patient_id, doctor_id)
   values (:'other','eeeeeeee-0000-0000-0000-00000000000c');
 rollback;
+
+\echo ''
+\echo '=== POSITIVE 14: a doctor reads the question queue and answers one ==='
+begin;
+  select id as pid from public.patients
+   where owner_user_id='11111111-1111-1111-1111-111111111111' \gset
+  insert into auth.users (id, email)
+  values ('66666666-6666-6666-6666-666666666666','answerer@test.com');
+  insert into public.doctors (id, user_id, name, specialty)
+  values ('eeeeeeee-0000-0000-0000-00000000000d',
+          '66666666-6666-6666-6666-666666666666','หมอ G','อายุรกรรม');
+
+  set local role authenticated;
+  select public.as_user('11111111-1111-1111-1111-111111111111');
+  insert into public.health_questions (id, patient_id, asked_by, topic_key, question)
+  values ('cccccccc-0000-0000-0000-000000000001', :'pid',
+          '11111111-1111-1111-1111-111111111111','diabetes','กินยาก่อนหรือหลังอาหารครับ');
+
+  \echo '  -- the doctor sees it even with no link to this patient (expect 1):'
+  select public.as_user('66666666-6666-6666-6666-666666666666');
+  select count(*) as in_queue from public.health_questions where status='pending';
+
+  \echo '  -- and answers it (expect UPDATE 1):'
+  update public.health_questions
+     set answer='หลังอาหารครับ', status='answered'
+   where id='cccccccc-0000-0000-0000-000000000001';
+
+  \echo '  -- the trigger signed it with their own listing, and stamped a time:'
+  reset role;
+  select answered_by = 'eeeeeeee-0000-0000-0000-00000000000d' as signed_correctly,
+         answered_at is not null as stamped,
+         question = 'กินยาก่อนหรือหลังอาหารครับ' as question_intact
+    from public.health_questions where id='cccccccc-0000-0000-0000-000000000001';
+
+  \echo '  -- and the patient can read the answer (expect 1):'
+  set local role authenticated;
+  select public.as_user('11111111-1111-1111-1111-111111111111');
+  select count(*) as answered_visible from public.health_questions
+   where id='cccccccc-0000-0000-0000-000000000001' and status='answered';
+rollback;
+
+\echo ''
+\echo '=== EXPLOIT 29: a doctor rewrites the question or signs it as someone else ==='
+begin;
+  select id as pid from public.patients
+   where owner_user_id='11111111-1111-1111-1111-111111111111' \gset
+  insert into auth.users (id, email)
+  values ('66666666-6666-6666-6666-666666666666','answerer@test.com');
+  insert into public.doctors (id, user_id, name, specialty) values
+    ('eeeeeeee-0000-0000-0000-00000000000d',
+     '66666666-6666-6666-6666-666666666666','หมอ G','อายุรกรรม'),
+    ('eeeeeeee-0000-0000-0000-00000000000e', null,'หมอ H','ผิวหนัง');
+  insert into public.health_questions (id, patient_id, asked_by, topic_key, question)
+  values ('cccccccc-0000-0000-0000-000000000002', :'pid',
+          '11111111-1111-1111-1111-111111111111','diabetes','คำถามเดิม');
+
+  set local role authenticated;
+  select public.as_user('66666666-6666-6666-6666-666666666666');
+  update public.health_questions
+     set question='คำถามที่ถูกแก้',
+         answer='ตอบแล้ว',
+         answered_by='eeeeeeee-0000-0000-0000-00000000000e'
+   where id='cccccccc-0000-0000-0000-000000000002';
+
+  reset role;
+  \echo '  -- expect the original question, and their own id not หมอ H''s:'
+  select question,
+         answered_by = 'eeeeeeee-0000-0000-0000-00000000000d' as signed_as_self
+    from public.health_questions where id='cccccccc-0000-0000-0000-000000000002';
+rollback;
+
+\echo ''
+\echo '=== EXPLOIT 30: an ordinary patient reads the whole question queue (must be 1) ==='
+begin;
+  select id as pa from public.patients
+   where owner_user_id='11111111-1111-1111-1111-111111111111' \gset
+  select id as pb from public.patients
+   where owner_user_id='22222222-2222-2222-2222-222222222222' \gset
+  insert into public.health_questions (patient_id, asked_by, topic_key, question) values
+    (:'pa','11111111-1111-1111-1111-111111111111','diabetes','ของ A'),
+    (:'pb','22222222-2222-2222-2222-222222222222','kidney','ของ B');
+
+  set local role authenticated;
+  select public.as_user('11111111-1111-1111-1111-111111111111');
+  \echo '  -- only their own (expect 1):'
+  select count(*) as visible from public.health_questions;
+  \echo '  -- and answering their own is refused by the trigger (answer stays null):'
+  update public.health_questions set answer='ฉันตอบเอง', status='answered'
+   where patient_id = :'pa';
+  reset role;
+  select count(*) as self_answered from public.health_questions
+   where patient_id = :'pa' and answer is not null;
+rollback;

@@ -3,6 +3,11 @@ import 'package:flutter/material.dart';
 import '../../../shared/widgets/user_avatar.dart';
 import '../../auth/domain/entities/user.dart';
 import '../../auth/presentation/onboarding/onboarding_theme.dart';
+import '../../chat/data/chat_repository.dart';
+import '../../doctors/data/doctor_repository.dart';
+import '../../health_topics/data/health_question_repository.dart';
+import '../../health_topics/presentation/health_topics_screen.dart';
+import '../../health_topics/presentation/question_queue_screen.dart';
 import '../../pharmacy_finder/data/pharmacy_finder_repository.dart';
 import '../../pharmacy_finder/presentation/pharmacy_finder_screen.dart';
 import '../../profile/presentation/settings_screen.dart';
@@ -20,12 +25,18 @@ class DoctorProfileScreen extends StatelessWidget {
     required this.user,
     required this.doctor,
     required this.pharmacyFinderRepository,
+    required this.healthQuestionRepository,
+    required this.doctorRepository,
+    required this.chatRepository,
     required this.onLogout,
   });
 
   final AppUser user;
   final Doctor doctor;
   final PharmacyFinderRepository pharmacyFinderRepository;
+  final HealthQuestionRepository healthQuestionRepository;
+  final DoctorRepository doctorRepository;
+  final ChatRepository chatRepository;
   final VoidCallback onLogout;
 
   Future<void> _confirmLogout(BuildContext context) async {
@@ -107,6 +118,32 @@ class DoctorProfileScreen extends StatelessWidget {
           ),
         ),
         const Divider(height: 32),
+        _MenuTile(
+          icon: Icons.forum_outlined,
+          label: 'คำถามจากผู้ป่วย',
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => QuestionQueueScreen(repository: healthQuestionRepository),
+            ),
+          ),
+        ),
+        _MenuTile(
+          icon: Icons.local_hospital_outlined,
+          label: 'คลินิกออนไลน์',
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute(
+              // No patientId: a doctor browses the catalogue for reference and
+              // has no questions of their own to ask, so the "ask" affordances
+              // stay hidden.
+              builder: (_) => HealthTopicsScreen(
+                patientId: null,
+                questionRepository: healthQuestionRepository,
+                doctorRepository: doctorRepository,
+                chatRepository: chatRepository,
+              ),
+            ),
+          ),
+        ),
         _MenuTile(
           icon: Icons.local_pharmacy_outlined,
           label: 'ร้านยาและคลินิกใกล้ฉัน',

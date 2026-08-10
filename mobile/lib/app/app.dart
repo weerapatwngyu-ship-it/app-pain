@@ -186,6 +186,8 @@ class _MediGoAppState extends State<MediGoApp> {
             chatRepository: _chatRepository,
             caseloadRepository: _caseloadRepository,
             pharmacyFinderRepository: _pharmacyFinderRepository,
+            healthQuestionRepository: _healthQuestionRepository,
+            doctorRepository: _doctorRepository,
             onLogout: _logout,
           );
         },

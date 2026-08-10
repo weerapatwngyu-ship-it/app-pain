@@ -45,4 +45,61 @@ class HealthQuestionRepository {
         .single();
     return HealthQuestion.fromRow(row);
   }
+
+  /// The queue a doctor works through: every question, newest first, with the
+  /// asking patient's name joined in. RLS returns nothing here unless the
+  /// caller holds a doctor listing, so a patient calling this still sees only
+  /// their own rows.
+  Future<List<QueuedQuestion>> queue({bool pendingOnly = true}) async {
+    // Spelled out both ways rather than reassigning one builder: the filter
+    // and transform builders are different types, so holding them in a single
+    // `var` depends on inference details that shift between postgrest
+    // versions.
+    final rows = pendingOnly
+        ? await db
+            .from('health_questions')
+            .select('*, patients(name)')
+            .eq('status', 'pending')
+            .order('created_at', ascending: false)
+        : await db
+            .from('health_questions')
+            .select('*, patients(name)')
+            .order('created_at', ascending: false);
+    return rows.map<QueuedQuestion>(QueuedQuestion.fromRow).toList();
+  }
+
+  /// Posts an answer. answered_by and answered_at are deliberately not sent:
+  /// a trigger stamps them from the caller's own listing, so an answer cannot
+  /// be signed with someone else's name.
+  Future<void> answer({required String questionId, required String answer}) async {
+    final updated = await db
+        .from('health_questions')
+        .update({'answer': answer, 'status': 'answered'})
+        .eq('id', questionId)
+        .select('id');
+    if (updated.isEmpty) {
+      throw StateError(
+        'ตอบคำถามไม่สำเร็จ — บัญชีนี้อาจไม่ได้เป็นแพทย์ในระบบ '
+        'หรือยังไม่ได้รัน supabase/schema.sql เวอร์ชันล่าสุด',
+      );
+    }
+  }
+}
+
+/// A queued question plus who asked it. Separate from [HealthQuestion] because
+/// only the doctor-facing queue carries a patient name — a patient reading
+/// their own questions already knows whose they are.
+class QueuedQuestion {
+  const QueuedQuestion({required this.question, required this.patientName});
+
+  final HealthQuestion question;
+  final String patientName;
+
+  factory QueuedQuestion.fromRow(Map<String, dynamic> row) {
+    final patient = row['patients'] as Map<String, dynamic>?;
+    return QueuedQuestion(
+      question: HealthQuestion.fromRow(row),
+      patientName: (patient?['name'] as String?) ?? 'ผู้ป่วย',
+    );
+  }
 }

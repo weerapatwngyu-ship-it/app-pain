@@ -633,6 +633,62 @@ create policy health_questions_answer_staff on public.health_questions
   using (public.can_manage_patient_care(patient_id))
   with check (public.can_manage_patient_care(patient_id));
 
+-- The two policies above between them left the feature dead: a patient could
+-- post a question, but can_access_patient() hid it from every doctor, and
+-- can_manage_patient_care() needs an active provider patient_links row, which
+-- nothing in this app ever creates. Questions went in and no one could read or
+-- answer them.
+--
+-- A doctor is anyone holding a listing, which only an admin can grant, so the
+-- queue is visible to approved doctors and to nobody else.
+drop policy if exists health_questions_select_doctor on public.health_questions;
+create policy health_questions_select_doctor on public.health_questions
+  for select to authenticated
+  using (public.current_doctor_id() is not null);
+
+drop policy if exists health_questions_answer_doctor on public.health_questions;
+create policy health_questions_answer_doctor on public.health_questions
+  for update to authenticated
+  using (public.current_doctor_id() is not null)
+  with check (public.current_doctor_id() is not null);
+
+-- The UPDATE policy above is broad by necessity — a doctor answers questions
+-- for patients they have no link to. This narrows what that update may touch:
+-- everything the patient wrote stays as written, and the answer is signed by
+-- whoever actually typed it rather than by whatever the client sent.
+create or replace function public.health_questions_answer_only()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if coalesce(current_setting('request.jwt.claims', true)::jsonb ->> 'role', '')
+       = 'authenticated' then
+    new.id         := old.id;
+    new.patient_id := old.patient_id;
+    new.asked_by   := old.asked_by;
+    new.topic_key  := old.topic_key;
+    new.question   := old.question;
+    new.created_at := old.created_at;
+
+    if new.answer is distinct from old.answer then
+      new.answered_by := public.current_doctor_id();
+      new.answered_at := now();
+    else
+      new.answered_by := old.answered_by;
+      new.answered_at := old.answered_at;
+    end if;
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists health_questions_answer_guard on public.health_questions;
+create trigger health_questions_answer_guard
+  before update on public.health_questions
+  for each row execute function public.health_questions_answer_only();
+
 -- doctors: a shared directory — everyone reads, only an admin adds or removes
 -- a listing. Patients used to be able to create these (the app showed them an
 -- "add doctor" button), which meant anyone could publish themselves to every

@@ -6,7 +6,9 @@ import '../features/admin/data/caseload_repository.dart';
 import '../features/admin/presentation/caseload_screen.dart';
 import '../features/chat/data/chat_repository.dart';
 import '../features/chat/presentation/conversation_list_screen.dart';
+import '../features/doctors/data/doctor_repository.dart';
 import '../features/doctors/domain/entities/doctor.dart';
+import '../features/health_topics/data/health_question_repository.dart';
 import '../features/doctors/presentation/doctor_profile_screen.dart';
 import '../features/pharmacy_finder/data/pharmacy_finder_repository.dart';
 
@@ -21,6 +23,8 @@ class DoctorHomeShell extends StatefulWidget {
     required this.chatRepository,
     required this.caseloadRepository,
     required this.pharmacyFinderRepository,
+    required this.healthQuestionRepository,
+    required this.doctorRepository,
     required this.onLogout,
   });
 
@@ -29,6 +33,8 @@ class DoctorHomeShell extends StatefulWidget {
   final ChatRepository chatRepository;
   final CaseloadRepository caseloadRepository;
   final PharmacyFinderRepository pharmacyFinderRepository;
+  final HealthQuestionRepository healthQuestionRepository;
+  final DoctorRepository doctorRepository;
   final VoidCallback onLogout;
 
   @override
@@ -57,6 +63,9 @@ class _DoctorHomeShellState extends State<DoctorHomeShell> {
         user: widget.user,
         doctor: doctor,
         pharmacyFinderRepository: widget.pharmacyFinderRepository,
+        healthQuestionRepository: widget.healthQuestionRepository,
+        doctorRepository: widget.doctorRepository,
+        chatRepository: widget.chatRepository,
         onLogout: widget.onLogout,
       ),
     ];
