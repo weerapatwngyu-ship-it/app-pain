@@ -9,6 +9,7 @@ import '../../admin/data/admin_repository.dart';
 import '../../admin/data/caseload_repository.dart';
 import '../../chat/data/chat_repository.dart';
 import '../../health_topics/data/health_question_repository.dart';
+import '../../peer_chat/data/peer_chat_repository.dart';
 import '../../pharmacy_finder/data/pharmacy_finder_repository.dart';
 import '../../symptom_tracking/data/symptom_repository_impl.dart';
 import '../data/patient_profile_repository.dart';
