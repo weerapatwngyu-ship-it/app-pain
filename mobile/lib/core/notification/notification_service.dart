@@ -42,31 +42,48 @@ class NotificationService {
   /// arguably the right behaviour anyway.
   static const _timeZone = 'Asia/Bangkok';
 
-  /// Note the "_v2": Android creates a notification channel the first time an
-  /// id is used and then treats its importance, sound and vibration as the
-  /// user's to change, not the app's. Anything set here is ignored for a
-  /// channel that already exists — which is why reminders arrived silently
-  /// after the first build created the channel. Bumping the id is the only
-  /// way to hand the OS a channel with these settings.
+  /// Bumped to _v3 with the alarm behaviour below.
   ///
-  /// If these ever change again, bump the suffix again.
+  /// Android creates a notification channel the first time an id is used and
+  /// from then on treats its importance, sound and vibration as the user's to
+  /// change, not the app's — anything set here is ignored for a channel that
+  /// already exists. Changing how a reminder behaves therefore means a new id.
   static final _doseReminderChannel = AndroidNotificationDetails(
-    'dose_reminders_v2',
+    'dose_reminders_v3',
     'เตือนกินยา',
-    channelDescription: 'แจ้งเตือนเมื่อถึงเวลากินยา',
+    channelDescription: 'ปลุกเมื่อถึงเวลากินยา',
     importance: Importance.max,
     priority: Priority.high,
     category: AndroidNotificationCategory.alarm,
-    // Spelled out rather than left to the defaults, so the channel is created
-    // with them and a later reading of this code does not have to guess.
+
+    // A silhouette drawable, not the launcher icon — see
+    // res/drawable/ic_notification.xml.
+    icon: '@drawable/ic_notification',
+
     playSound: true,
     enableVibration: true,
-    vibrationPattern: Int64List.fromList(<int>[0, 500, 250, 500, 250, 500]),
-    // Routes the sound to the alarm stream. A dose reminder that loses to a
-    // lowered notification volume, or to a Do Not Disturb rule that still
-    // lets alarms through, is not doing its job.
-    audioAttributesUsage: AudioAttributesUsage.alarm,
     enableLights: true,
+    // Long pattern, but a pattern alone still runs once and stops. What makes
+    // it repeat is the insistent flag below.
+    vibrationPattern: Int64List.fromList(<int>[0, 800, 400, 800, 400, 800, 400]),
+
+    // FLAG_INSISTENT (0x00000004). Android repeats the sound and vibration
+    // until the notification is dismissed or opened, which is the difference
+    // between a reminder that buzzes once while the phone is in a bag and an
+    // alarm that keeps going until someone deals with it. There is no
+    // higher-level flutter_local_notifications option for this — the flag is
+    // passed through as a raw int.
+    additionalFlags: Int32List.fromList(<int>[4]),
+
+    // Presents it as an alarm: on a locked screen it takes over the display
+    // instead of arriving as a banner that can be missed.
+    fullScreenIntent: true,
+
+    // Tapping it stops the ringing. Without this it keeps insisting even
+    // after the patient has acknowledged it.
+    autoCancel: true,
+
+    audioAttributesUsage: AudioAttributesUsage.alarm,
   );
 
   /// iOS-only: how a scheduled date is read against the device clock.
@@ -88,7 +105,7 @@ class NotificationService {
     tz_data.initializeTimeZones();
     tz.setLocalLocation(tz.getLocation(_timeZone));
 
-    const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const androidInit = AndroidInitializationSettings('@drawable/ic_notification');
     const iosInit = DarwinInitializationSettings();
     await _plugin.initialize(
       const InitializationSettings(android: androidInit, iOS: iosInit),
