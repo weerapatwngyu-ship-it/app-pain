@@ -22,7 +22,17 @@ const _googleWebClientId = String.fromEnvironment('GOOGLE_WEB_CLIENT_ID');
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await NotificationService.instance.init();
+
+  // Never let notification setup stop the app from starting. It already did
+  // once: an icon name that failed to resolve threw here, main() ended before
+  // runApp(), and the app sat on its splash screen forever. Reminders are
+  // important, but not more important than being able to open the app and
+  // read a prescription.
+  try {
+    await NotificationService.instance.init();
+  } catch (error, stack) {
+    debugPrint('NotificationService.init failed: $error\n$stack');
+  }
 
   if (_supabaseUrl.isEmpty || _supabaseAnonKey.isEmpty) {
     runApp(const _MissingSupabaseConfigApp());

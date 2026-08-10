@@ -105,7 +105,13 @@ class NotificationService {
     tz_data.initializeTimeZones();
     tz.setLocalLocation(tz.getLocation(_timeZone));
 
-    const androidInit = AndroidInitializationSettings('@drawable/ic_notification');
+    // Back to the launcher icon here. AndroidInitializationSettings resolves
+    // this name while the app is starting, and a name it cannot resolve
+    // throws — which took down main() before runApp() and left the app stuck
+    // on the splash screen. The silhouette icon is still used, but as the
+    // per-notification `icon:` on the channel, where it is resolved at post
+    // time and a failure costs at most one notification.
+    const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
     const iosInit = DarwinInitializationSettings();
     await _plugin.initialize(
       const InitializationSettings(android: androidInit, iOS: iosInit),
