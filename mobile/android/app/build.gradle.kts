@@ -31,6 +31,15 @@ android {
             // TODO: Add your own signing config for the release build.
             // Signing with the debug keys for now, so `flutter run --release` works.
             signingConfig = signingConfigs.getByName("debug")
+
+            // R8 shrinking stays on — it is what keeps the APK at a sane size —
+            // but flutter_local_notifications needs generic signatures kept or
+            // it throws "Missing type parameter." the first time a reminder is
+            // saved. See proguard-rules.pro.
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro",
+            )
         }
     }
 }
