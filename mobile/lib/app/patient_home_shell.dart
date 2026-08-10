@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../features/alerts/data/alerts_repository.dart';
-import '../features/alerts/presentation/alerts_screen.dart';
+import '../features/reminders/data/reminder_repository.dart';
+import '../features/reminders/presentation/reminders_screen.dart';
 import '../features/auth/domain/auth_repository.dart';
 import '../features/auth/domain/entities/user.dart';
 import '../features/auth/presentation/onboarding/onboarding_theme.dart';
@@ -71,6 +72,10 @@ class PatientHomeShell extends StatefulWidget {
 class _PatientHomeShellState extends State<PatientHomeShell> {
   int _index = 0;
 
+  /// Local-only, so it is built here rather than threaded down from app.dart
+  /// like the Supabase-backed repositories.
+  final ReminderRepository _reminderRepository = ReminderRepository();
+
   /// Bumped whenever the home tab is re-selected. The tabs live in an
   /// IndexedStack and keep their state, so a doctor added from the admin
   /// screen would otherwise not appear until the app restarted.
@@ -104,7 +109,10 @@ class _PatientHomeShellState extends State<PatientHomeShell> {
         patientId: widget.patientId,
         recordSymptomUseCase: RecordSymptomUseCase(widget.symptomRepository),
       ),
-      AlertsScreen(alertsRepository: widget.alertsRepository),
+      RemindersScreen(
+        repository: _reminderRepository,
+        alertsRepository: widget.alertsRepository,
+      ),
       ProfileScreen(
         user: widget.user,
         patientId: widget.patientId,
@@ -160,8 +168,8 @@ class _PatientHomeShellState extends State<PatientHomeShell> {
                 onTap: _openPharmacyFinder,
               ),
               _NavItem(
-                icon: Icons.mail_outline,
-                label: 'แจ้งเตือน',
+                icon: Icons.alarm,
+                label: 'เตือนกินยา',
                 selected: _index == 2,
                 onTap: () => setState(() => _index = 2),
               ),

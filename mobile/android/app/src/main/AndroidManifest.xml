@@ -2,6 +2,17 @@
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
     <uses-permission android:name="android.permission.CAMERA"/>
+    <!-- Timed medication reminders. POST_NOTIFICATIONS is required from
+         Android 13, and without an exact-alarm permission the system is free
+         to defer a reminder by minutes or more, which defeats the point of a
+         dose schedule. SCHEDULE_EXACT_ALARM is the one the user can grant;
+         USE_EXACT_ALARM covers Android 14+, where an alarm clock style app
+         may hold it outright. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"/>
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM"/>
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
+    <uses-permission android:name="android.permission.VIBRATE"/>
     <application
         android:label="MediGo"
         android:name="${applicationName}"

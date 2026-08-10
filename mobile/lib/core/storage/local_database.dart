@@ -19,7 +19,14 @@ class LocalDatabase {
     final path = join(await getDatabasesPath(), 'medtrack.db');
     return openDatabase(
       path,
-      version: 1,
+      version: 2,
+      // Existing installs already carry a v1 database, so the reminders table
+      // has to arrive through an upgrade as well as through a fresh create —
+      // otherwise anyone who had the app before this feature would hit
+      // "no such table" instead of an empty list.
+      onUpgrade: (db, oldVersion, newVersion) async {
+        if (oldVersion < 2) await _createReminders(db);
+      },
       onCreate: (db, version) async {
         await db.execute('''
           CREATE TABLE cached_schedule (
@@ -39,8 +46,24 @@ class LocalDatabase {
             synced INTEGER NOT NULL DEFAULT 0
           )
         ''');
+        await _createReminders(db);
       },
     );
+  }
+
+  /// Medication reminders — local alarms, see MedicationReminder for why they
+  /// do not live in Supabase.
+  static Future<void> _createReminders(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS medication_reminders (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        label TEXT NOT NULL,
+        hour INTEGER NOT NULL,
+        minute INTEGER NOT NULL,
+        days TEXT NOT NULL DEFAULT '',
+        enabled INTEGER NOT NULL DEFAULT 1
+      )
+    ''');
   }
 
   Future<void> enqueue(String id, String entityType, String jsonPayload) async {
