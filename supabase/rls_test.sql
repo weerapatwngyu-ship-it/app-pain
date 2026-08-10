@@ -419,18 +419,13 @@ begin;
   delete from public.messages where id='11111111-aaaa-0000-0000-000000000001';
 rollback;
 
-\echo ''
-\echo '=== EXPLOIT 15: doctor cold-opens a thread with a patient (must FAIL) ==='
-begin;
-  select id as pid from public.patients
-   where owner_user_id='11111111-1111-1111-1111-111111111111' \gset
-  insert into public.doctors (id, user_id, name, specialty)
-  values ('eeeeeeee-0000-0000-0000-000000000008','22222222-2222-2222-2222-222222222222','หมอ B','ผิวหนัง');
-  set local role authenticated;
-  select public.as_user('22222222-2222-2222-2222-222222222222');
-  insert into public.conversations (patient_id, doctor_id)
-  values (:'pid','eeeeeeee-0000-0000-0000-000000000008');
-rollback;
+-- EXPLOIT 15 used to assert that a doctor could not open a thread first.
+-- That rule was deliberately reversed: a doctor now starts conversations too,
+-- so they can follow up on a symptom log or an alert without waiting to be
+-- messaged. The block was removed rather than left failing, because a test
+-- that contradicts the intended behaviour is worse than no test. What still
+-- holds is covered by POSITIVE 13 (the doctor opens it, the patient reads it)
+-- and EXPLOIT 27 (they cannot open one under another doctor's name).
 
 \echo ''
 \echo '=== POSITIVE 9: admin manages the directory and sees accounts ==='
@@ -738,4 +733,67 @@ begin;
   \echo '  -- expect UPDATE 0 then DELETE 0:'
   update public.peer_messages set body='ข้อความที่ถูกแก้' where conversation_id = :'cid';
   delete from public.peer_messages where conversation_id = :'cid';
+rollback;
+
+\echo ''
+\echo '=== POSITIVE 13: a doctor opens a thread with a patient and both can read it ==='
+begin;
+  select id as pid from public.patients
+   where owner_user_id='11111111-1111-1111-1111-111111111111' \gset
+  insert into auth.users (id, email)
+  values ('77777777-7777-7777-7777-777777777777','doc-init@test.com');
+  insert into public.doctors (id, user_id, name, specialty)
+  values ('eeeeeeee-0000-0000-0000-00000000000a',
+          '77777777-7777-7777-7777-777777777777','หมอ D','อายุรกรรม');
+
+  set local role authenticated;
+  select public.as_user('77777777-7777-7777-7777-777777777777');
+  \echo '  -- doctor starts the conversation (expect INSERT 0 1):'
+  insert into public.conversations (id, patient_id, doctor_id)
+  values ('ffffffff-0000-0000-0000-00000000000a', :'pid',
+          'eeeeeeee-0000-0000-0000-00000000000a');
+  insert into public.messages (conversation_id, sender_id, body)
+  values ('ffffffff-0000-0000-0000-00000000000a',
+          '77777777-7777-7777-7777-777777777777','ผลตรวจออกแล้ว สะดวกคุยไหมครับ');
+
+  \echo '  -- the patient sees it without having started it (expect 1 and 1):'
+  select public.as_user('11111111-1111-1111-1111-111111111111');
+  select count(*) as threads from public.conversations
+   where id='ffffffff-0000-0000-0000-00000000000a';
+  select count(*) as msgs from public.messages
+   where conversation_id='ffffffff-0000-0000-0000-00000000000a';
+rollback;
+
+\echo ''
+\echo '=== EXPLOIT 27: a doctor opens a thread under another doctor''s name (must FAIL) ==='
+begin;
+  select id as pid from public.patients
+   where owner_user_id='11111111-1111-1111-1111-111111111111' \gset
+  insert into auth.users (id, email)
+  values ('77777777-7777-7777-7777-777777777777','doc-init@test.com');
+  insert into public.doctors (id, user_id, name, specialty) values
+    ('eeeeeeee-0000-0000-0000-00000000000a',
+     '77777777-7777-7777-7777-777777777777','หมอ D','อายุรกรรม'),
+    ('eeeeeeee-0000-0000-0000-00000000000b', null,'หมอ E','ผิวหนัง');
+
+  set local role authenticated;
+  select public.as_user('77777777-7777-7777-7777-777777777777');
+  \echo '  -- naming a listing that is not theirs:'
+  insert into public.conversations (patient_id, doctor_id)
+  values (:'pid','eeeeeeee-0000-0000-0000-00000000000b');
+rollback;
+
+\echo ''
+\echo '=== EXPLOIT 28: a patient opens a thread as if they were a doctor (must FAIL) ==='
+begin;
+  select id as other from public.patients
+   where owner_user_id='22222222-2222-2222-2222-222222222222' \gset
+  insert into public.doctors (id, user_id, name, specialty)
+  values ('eeeeeeee-0000-0000-0000-00000000000c', null,'หมอ F','หัวใจ');
+
+  set local role authenticated;
+  select public.as_user('11111111-1111-1111-1111-111111111111');
+  \echo '  -- a thread on someone else''s patient record, no listing of their own:'
+  insert into public.conversations (patient_id, doctor_id)
+  values (:'other','eeeeeeee-0000-0000-0000-00000000000c');
 rollback;

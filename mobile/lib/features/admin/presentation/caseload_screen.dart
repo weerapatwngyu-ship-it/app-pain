@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../auth/presentation/onboarding/onboarding_theme.dart';
+import '../../chat/data/chat_repository.dart';
+import '../../chat/presentation/chat_screen.dart';
 import '../../symptom_tracking/domain/entities/symptom_category.dart';
 import '../data/caseload_repository.dart';
 
@@ -10,9 +12,20 @@ import '../data/caseload_repository.dart';
 /// history, but changing a prescription still requires being that patient's
 /// assigned provider (enforced by RLS, not by hiding buttons).
 class CaseloadScreen extends StatefulWidget {
-  const CaseloadScreen({super.key, required this.repository});
+  const CaseloadScreen({
+    super.key,
+    required this.repository,
+    this.chatRepository,
+    this.doctorId,
+  });
 
   final CaseloadRepository repository;
+
+  /// Set only when a doctor is viewing. An admin browsing the caseload has no
+  /// listing of their own to send from, so they get the read-only screen and
+  /// no message button rather than one that would fail at insert.
+  final ChatRepository? chatRepository;
+  final String? doctorId;
 
   @override
   State<CaseloadScreen> createState() => _CaseloadScreenState();
@@ -132,6 +145,8 @@ class _CaseloadScreenState extends State<CaseloadScreen> {
                             builder: (_) => PatientRecordScreen(
                               patient: patient,
                               repository: widget.repository,
+                              chatRepository: widget.chatRepository,
+                              doctorId: widget.doctorId,
                             ),
                           ),
                         ),
@@ -153,10 +168,14 @@ class PatientRecordScreen extends StatefulWidget {
     super.key,
     required this.patient,
     required this.repository,
+    this.chatRepository,
+    this.doctorId,
   });
 
   final CaseloadPatient patient;
   final CaseloadRepository repository;
+  final ChatRepository? chatRepository;
+  final String? doctorId;
 
   @override
   State<PatientRecordScreen> createState() => _PatientRecordScreenState();
@@ -164,6 +183,7 @@ class PatientRecordScreen extends StatefulWidget {
 
 class _PatientRecordScreenState extends State<PatientRecordScreen> {
   late Future<PatientRecord> _future;
+  bool _opening = false;
 
   @override
   void initState() {
@@ -171,11 +191,65 @@ class _PatientRecordScreenState extends State<PatientRecordScreen> {
     _future = widget.repository.record(widget.patient);
   }
 
+  bool get _canMessage =>
+      widget.chatRepository != null && widget.doctorId != null;
+
+  Future<void> _message() async {
+    final chat = widget.chatRepository;
+    final doctorId = widget.doctorId;
+    if (chat == null || doctorId == null || _opening) return;
+
+    setState(() => _opening = true);
+    try {
+      // Reuses the patient-side call: unique (patient_id, doctor_id) means
+      // starting from here continues the thread the patient may already have
+      // open rather than forking a second one.
+      final conversation = await chat.openConversation(
+        patientId: widget.patient.id,
+        doctorId: doctorId,
+      );
+      if (!mounted) return;
+      await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => ChatScreen(
+            conversationId: conversation.id,
+            title: widget.patient.name,
+            subtitle: 'ผู้ป่วย',
+            repository: chat,
+          ),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('เปิดแชทไม่สำเร็จ: $e')),
+      );
+    } finally {
+      if (mounted) setState(() => _opening = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(title: Text(widget.patient.name)),
+      floatingActionButton: _canMessage
+          ? FloatingActionButton.extended(
+              onPressed: _opening ? null : _message,
+              backgroundColor: OnboardingColors.teal,
+              icon: _opening
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: Colors.white),
+                    )
+                  : const Icon(Icons.chat_bubble_outline, color: Colors.white),
+              label: const Text('ส่งข้อความ',
+                  style: TextStyle(color: Colors.white)),
+            )
+          : null,
       body: FutureBuilder<PatientRecord>(
         future: _future,
         builder: (context, snapshot) {
@@ -196,7 +270,7 @@ class _PatientRecordScreenState extends State<PatientRecordScreen> {
           final past = record.prescriptions.where((p) => !p.isActive).toList();
 
           return ListView(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 96),
             children: [
               _Header(patient: record.patient, openAlerts: record.openAlerts),
               const SizedBox(height: 24),

@@ -185,6 +185,7 @@ class _MedTrackAppState extends State<MedTrackApp> {
             doctor: doctor,
             chatRepository: _chatRepository,
             caseloadRepository: _caseloadRepository,
+            pharmacyFinderRepository: _pharmacyFinderRepository,
             onLogout: _logout,
           );
         },

@@ -1,0 +1,153 @@
+import 'package:flutter/material.dart';
+
+import '../../../shared/widgets/user_avatar.dart';
+import '../../auth/domain/entities/user.dart';
+import '../../auth/presentation/onboarding/onboarding_theme.dart';
+import '../../pharmacy_finder/data/pharmacy_finder_repository.dart';
+import '../../pharmacy_finder/presentation/pharmacy_finder_screen.dart';
+import '../../profile/presentation/settings_screen.dart';
+import '../domain/entities/doctor.dart';
+
+/// The doctor's own account page.
+///
+/// Deliberately not a copy of the patient profile: a doctor has no medication
+/// schedule, symptom log or health questions of their own here, so this shows
+/// the listing patients actually see plus the few app features that make sense
+/// without a patient record behind them.
+class DoctorProfileScreen extends StatelessWidget {
+  const DoctorProfileScreen({
+    super.key,
+    required this.user,
+    required this.doctor,
+    required this.pharmacyFinderRepository,
+    required this.onLogout,
+  });
+
+  final AppUser user;
+  final Doctor doctor;
+  final PharmacyFinderRepository pharmacyFinderRepository;
+  final VoidCallback onLogout;
+
+  Future<void> _confirmLogout(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('ออกจากระบบ'),
+        content: const Text('ต้องการออกจากระบบใช่ไหม?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('ยกเลิก'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('ออกจากระบบ'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) onLogout();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.all(20),
+      children: [
+        Row(
+          children: [
+            UserAvatar(name: doctor.name, avatarUrl: doctor.photoUrl, radius: 32),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    doctor.name,
+                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    doctor.specialty,
+                    style: const TextStyle(
+                        fontSize: 13, color: OnboardingColors.textMuted),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    user.email,
+                    style: const TextStyle(
+                        fontSize: 12, color: OnboardingColors.textMuted),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        if (doctor.bio != null && doctor.bio!.trim().isNotEmpty) ...[
+          const SizedBox(height: 20),
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: const Color(0xFFEAF5F3),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Text(
+              doctor.bio!,
+              style: const TextStyle(fontSize: 13, height: 1.5),
+            ),
+          ),
+        ],
+        const SizedBox(height: 12),
+        const Padding(
+          padding: EdgeInsets.symmetric(vertical: 8),
+          child: Text(
+            'ข้อมูลนี้คือสิ่งที่ผู้ป่วยเห็นในหน้าแรก '
+            'หากต้องการแก้ไข ให้ติดต่อผู้ดูแลระบบ',
+            style: TextStyle(fontSize: 12, color: OnboardingColors.textMuted),
+          ),
+        ),
+        const Divider(height: 32),
+        _MenuTile(
+          icon: Icons.local_pharmacy_outlined,
+          label: 'ร้านยาและคลินิกใกล้ฉัน',
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => PharmacyFinderScreen(repository: pharmacyFinderRepository),
+            ),
+          ),
+        ),
+        _MenuTile(
+          icon: Icons.settings_outlined,
+          label: 'ตั้งค่า',
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const SettingsScreen()),
+          ),
+        ),
+        _MenuTile(
+          icon: Icons.logout,
+          label: 'ออกจากระบบ',
+          onTap: () => _confirmLogout(context),
+        ),
+      ],
+    );
+  }
+}
+
+class _MenuTile extends StatelessWidget {
+  const _MenuTile({required this.icon, required this.label, required this.onTap});
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      leading: Icon(icon, color: OnboardingColors.teal),
+      title: Text(label),
+      trailing: const Icon(Icons.chevron_right, size: 20),
+      onTap: onTap,
+    );
+  }
+}

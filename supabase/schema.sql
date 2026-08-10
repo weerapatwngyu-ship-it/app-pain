@@ -666,11 +666,19 @@ create policy conversations_select on public.conversations
     or doctor_id = public.current_doctor_id()
   );
 
--- Only the patient side opens a thread — a doctor cannot cold-message someone.
 drop policy if exists conversations_insert_patient on public.conversations;
 create policy conversations_insert_patient on public.conversations
   for insert to authenticated
   with check (public.can_access_patient(patient_id));
+
+-- A doctor may also open the thread, so they can follow up on a symptom log
+-- or an alert without waiting to be messaged first. doctor_id is pinned to
+-- the caller's own listing: they can start a conversation as themselves, never
+-- one that appears to come from another doctor.
+drop policy if exists conversations_insert_doctor on public.conversations;
+create policy conversations_insert_doctor on public.conversations
+  for insert to authenticated
+  with check (doctor_id = public.current_doctor_id());
 
 -- Both sides may touch last_message_at when they post.
 drop policy if exists conversations_update on public.conversations;

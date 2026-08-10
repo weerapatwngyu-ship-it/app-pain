@@ -7,6 +7,8 @@ import '../features/admin/presentation/caseload_screen.dart';
 import '../features/chat/data/chat_repository.dart';
 import '../features/chat/presentation/conversation_list_screen.dart';
 import '../features/doctors/domain/entities/doctor.dart';
+import '../features/doctors/presentation/doctor_profile_screen.dart';
+import '../features/pharmacy_finder/data/pharmacy_finder_repository.dart';
 
 /// What a signed-in doctor sees: the threads patients opened with them, and
 /// the full caseload. Not a cut-down copy of the patient app — a doctor has no
@@ -18,6 +20,7 @@ class DoctorHomeShell extends StatefulWidget {
     required this.doctor,
     required this.chatRepository,
     required this.caseloadRepository,
+    required this.pharmacyFinderRepository,
     required this.onLogout,
   });
 
@@ -25,6 +28,7 @@ class DoctorHomeShell extends StatefulWidget {
   final Doctor doctor;
   final ChatRepository chatRepository;
   final CaseloadRepository caseloadRepository;
+  final PharmacyFinderRepository pharmacyFinderRepository;
   final VoidCallback onLogout;
 
   @override
@@ -44,7 +48,17 @@ class _DoctorHomeShellState extends State<DoctorHomeShell> {
         isDoctorView: true,
         showBackButton: false,
       ),
-      CaseloadScreen(repository: widget.caseloadRepository),
+      CaseloadScreen(
+        repository: widget.caseloadRepository,
+        chatRepository: widget.chatRepository,
+        doctorId: doctor.id,
+      ),
+      DoctorProfileScreen(
+        user: widget.user,
+        doctor: doctor,
+        pharmacyFinderRepository: widget.pharmacyFinderRepository,
+        onLogout: widget.onLogout,
+      ),
     ];
 
     return Scaffold(
@@ -82,6 +96,11 @@ class _DoctorHomeShellState extends State<DoctorHomeShell> {
             icon: Icon(Icons.people_outline),
             selectedIcon: Icon(Icons.people),
             label: 'ผู้ป่วย',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.person_outline),
+            selectedIcon: Icon(Icons.person),
+            label: 'โปรไฟล์',
           ),
         ],
       ),
