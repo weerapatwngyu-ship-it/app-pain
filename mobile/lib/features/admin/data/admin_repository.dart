@@ -23,6 +23,10 @@ class AccountSummary {
 
   bool get isDoctor => doctorId != null;
 
+  /// Linked to a listing but still not a provider — the state that leaves a
+  /// doctor stuck in the patient shell, unable to reach their inbox.
+  bool get roleNeedsRepair => isDoctor && role != 'provider';
+
   factory AccountSummary.fromRow(
     Map<String, dynamic> row, {
     Map<String, dynamic>? doctor,
@@ -70,6 +74,35 @@ class AdminRepository {
     return rows.map<Doctor>(Doctor.fromRow).toList();
   }
 
+  /// Writes an account's role and proves the write landed.
+  ///
+  /// PostgREST reports no error for an UPDATE that matches nothing, so a plain
+  /// `.update(...).eq(...)` here looked successful even when RLS refused it.
+  /// That is exactly how a doctor could end up published and linked while
+  /// still carrying role 'patient': the app then routed them to the patient
+  /// shell and their inbox was unreachable, with nothing anywhere reporting a
+  /// failure. Selecting the affected rows back turns that silence into an
+  /// error the admin can actually see.
+  Future<void> _setRole({required String userId, required String role}) async {
+    final updated = await db
+        .from('profiles')
+        .update({'role': role})
+        .eq('id', userId)
+        .select('id');
+    if (updated.isEmpty) {
+      throw StateError(
+        'เปลี่ยนสิทธิ์บัญชีไม่สำเร็จ — ตรวจสอบว่าคุณเข้าสู่ระบบด้วยบัญชีผู้ดูแล '
+        'และรัน supabase/schema.sql เวอร์ชันล่าสุดแล้ว',
+      );
+    }
+  }
+
+  /// Re-applies the provider role to an account that already has a listing.
+  /// Fixes doctors linked before the admin UPDATE policy existed, whose role
+  /// write was silently dropped at the time.
+  Future<void> repairDoctorRole({required String userId}) =>
+      _setRole(userId: userId, role: 'provider');
+
   /// Publish a doctor without waiting for them to sign up. They appear to
   /// patients straight away; until an account is linked nobody can read the
   /// messages patients send, which is why the UI says so.
@@ -86,7 +119,7 @@ class AdminRepository {
       if (userId != null) 'user_id': userId,
     });
     if (userId != null) {
-      await db.from('profiles').update({'role': 'provider'}).eq('id', userId);
+      await _setRole(userId: userId, role: 'provider');
     }
   }
 
@@ -94,13 +127,13 @@ class AdminRepository {
   /// doctor can finally sign in and read their threads.
   Future<void> linkAccount({required String doctorId, required String userId}) async {
     await db.from('doctors').update({'user_id': userId}).eq('id', doctorId);
-    await db.from('profiles').update({'role': 'provider'}).eq('id', userId);
+    await _setRole(userId: userId, role: 'provider');
   }
 
   Future<void> deleteDoctor({required String doctorId, String? userId}) async {
     await db.from('doctors').delete().eq('id', doctorId);
     if (userId != null) {
-      await db.from('profiles').update({'role': 'patient'}).eq('id', userId);
+      await _setRole(userId: userId, role: 'patient');
     }
   }
 
@@ -119,13 +152,13 @@ class AdminRepository {
       'specialty': specialty,
       if (bio != null && bio.trim().isNotEmpty) 'bio': bio.trim(),
     });
-    await db.from('profiles').update({'role': 'provider'}).eq('id', userId);
+    await _setRole(userId: userId, role: 'provider');
   }
 
   /// Withdraw approval. Deleting the listing cascades its conversations away,
   /// so this is a real revocation rather than hiding the doctor.
   Future<void> revokeDoctor({required String userId, required String doctorId}) async {
     await db.from('doctors').delete().eq('id', doctorId);
-    await db.from('profiles').update({'role': 'patient'}).eq('id', userId);
+    await _setRole(userId: userId, role: 'patient');
   }
 }

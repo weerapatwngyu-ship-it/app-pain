@@ -114,6 +114,26 @@ class _AdminDoctorsScreenState extends State<AdminDoctorsScreen> {
     }
   }
 
+  Future<void> _repairRole(AccountSummary account) async {
+    try {
+      await widget.repository.repairDoctorRole(userId: account.id);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'ซ่อมสิทธิ์ ${account.doctorName ?? account.email} แล้ว — '
+            'ให้บัญชีนี้ออกจากระบบแล้วเข้าใหม่',
+          ),
+        ),
+      );
+      await _reload();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('ซ่อมสิทธิ์ไม่สำเร็จ: $e')));
+    }
+  }
+
   Future<void> _remove(Doctor doctor) async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -210,7 +230,9 @@ class _AdminDoctorsScreenState extends State<AdminDoctorsScreen> {
                     style: TextStyle(fontSize: 12, color: OnboardingColors.textMuted),
                   ),
                 ),
-                ...data.accounts.map((a) => _AccountRow(account: a)),
+                ...data.accounts.map(
+                  (a) => _AccountRow(account: a, onRepairRole: () => _repairRole(a)),
+                ),
               ],
             ),
           );
@@ -330,9 +352,10 @@ class _DoctorRow extends StatelessWidget {
 }
 
 class _AccountRow extends StatelessWidget {
-  const _AccountRow({required this.account});
+  const _AccountRow({required this.account, required this.onRepairRole});
 
   final AccountSummary account;
+  final VoidCallback onRepairRole;
 
   @override
   Widget build(BuildContext context) {
@@ -348,12 +371,25 @@ class _AccountRow extends StatelessWidget {
         ),
       ),
       title: Text(account.name.isEmpty ? account.email : account.name),
-      subtitle: Text(
-        account.isDoctor
-            ? 'แพทย์: ${account.doctorName}'
-            : '${account.email} · ${account.role}',
-        style: const TextStyle(fontSize: 12),
+      subtitle: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            account.isDoctor
+                ? 'แพทย์: ${account.doctorName}'
+                : '${account.email} · ${account.role}',
+            style: const TextStyle(fontSize: 12),
+          ),
+          if (account.roleNeedsRepair)
+            const Text(
+              'สิทธิ์ยังเป็นผู้ป่วย — บัญชีนี้จะเข้าหน้าหมอไม่ได้',
+              style: TextStyle(fontSize: 11, color: Color(0xFFB26A00)),
+            ),
+        ],
       ),
+      trailing: account.roleNeedsRepair
+          ? TextButton(onPressed: onRepairRole, child: const Text('ซ่อมสิทธิ์'))
+          : null,
     );
   }
 }
