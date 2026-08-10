@@ -29,6 +29,12 @@ class NotificationService {
     category: AndroidNotificationCategory.alarm,
   );
 
+  /// iOS-only: how a scheduled date is read against the device clock.
+  /// Required on every zonedSchedule call in this package version, so it is
+  /// named here once rather than repeated as a bare literal.
+  static const _dateInterpretation =
+      UILocalNotificationDateInterpretation.absoluteTime;
+
   static const _details = NotificationDetails(
     android: _doseReminderChannel,
     iOS: DarwinNotificationDetails(),
@@ -88,6 +94,7 @@ class NotificationService {
       _nextInstanceOf(hour, minute),
       _details,
       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      uiLocalNotificationDateInterpretation: _dateInterpretation,
     );
   }
 
@@ -106,6 +113,7 @@ class NotificationService {
       _nextInstanceOf(hour, minute),
       _details,
       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      uiLocalNotificationDateInterpretation: _dateInterpretation,
       matchDateTimeComponents: DateTimeComponents.time,
     );
   }
@@ -127,6 +135,7 @@ class NotificationService {
       _nextInstanceOf(hour, minute, weekday: weekday),
       _details,
       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      uiLocalNotificationDateInterpretation: _dateInterpretation,
       matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime,
     );
   }
