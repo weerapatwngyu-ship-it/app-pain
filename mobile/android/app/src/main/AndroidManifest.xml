@@ -62,5 +62,10 @@
             <action android:name="android.intent.action.VIEW"/>
             <data android:scheme="https"/>
         </intent>
+        <!-- So the clock app is visible to us on Android 11+, for handing a
+             reminder over as a real alarm. -->
+        <intent>
+            <action android:name="android.intent.action.SET_ALARM"/>
+        </intent>
     </queries>
 </manifest>

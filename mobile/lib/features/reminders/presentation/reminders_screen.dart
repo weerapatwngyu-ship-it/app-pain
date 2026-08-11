@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../core/notification/notification_service.dart';
 import '../../auth/presentation/onboarding/onboarding_theme.dart';
 import '../data/reminder_repository.dart';
+import '../data/system_alarm.dart';
 import '../domain/entities/medication_reminder.dart';
 
 /// "เตือนกินยา" — the alarm list, laid out like the phone's own clock app so
@@ -53,6 +54,29 @@ class _RemindersScreenState extends State<RemindersScreen> {
         _error = 'โหลดการเตือนไม่สำเร็จ: $e';
         _loading = false;
       });
+    }
+  }
+
+  /// Hands one reminder to the phone's clock app, which unlike this app is
+  /// guaranteed to be allowed to ring.
+  Future<void> _sendToClock(MedicationReminder reminder) async {
+    try {
+      final accepted = await SystemAlarm.create(reminder);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            accepted
+                ? 'ตั้งไว้ในนาฬิกาปลุกของเครื่องแล้ว — เปิดแอปนาฬิกาเพื่อดู'
+                : 'เครื่องนี้ไม่มีแอปนาฬิกาที่รับคำสั่งนี้ได้',
+          ),
+          duration: const Duration(seconds: 6),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('ส่งไปนาฬิกาไม่สำเร็จ: $e')));
     }
   }
 
@@ -169,6 +193,7 @@ class _RemindersScreenState extends State<RemindersScreen> {
               reminder: reminder,
               onTap: () => _edit(reminder),
               onToggle: (value) => _toggle(reminder, value),
+              onSendToClock: () => _sendToClock(reminder),
             ),
         ],
       ),
@@ -181,11 +206,13 @@ class _ReminderCard extends StatelessWidget {
     required this.reminder,
     required this.onTap,
     required this.onToggle,
+    required this.onSendToClock,
   });
 
   final MedicationReminder reminder;
   final VoidCallback onTap;
   final ValueChanged<bool> onToggle;
+  final VoidCallback onSendToClock;
 
   @override
   Widget build(BuildContext context) {
@@ -243,6 +270,11 @@ class _ReminderCard extends StatelessWidget {
                     ],
                   ],
                 ),
+              ),
+              IconButton(
+                tooltip: 'ตั้งในนาฬิกาปลุกของเครื่อง',
+                icon: const Icon(Icons.alarm_add, color: OnboardingColors.teal),
+                onPressed: onSendToClock,
               ),
               Switch(value: reminder.enabled, onChanged: onToggle),
             ],

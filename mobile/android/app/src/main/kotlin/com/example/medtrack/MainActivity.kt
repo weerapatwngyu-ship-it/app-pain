@@ -1,5 +1,68 @@
 package com.example.medtrack
 
+import android.content.ActivityNotFoundException
+import android.content.Intent
+import android.provider.AlarmClock
 import io.flutter.embedding.android.FlutterActivity
+import io.flutter.embedding.engine.FlutterEngine
+import io.flutter.plugin.common.MethodChannel
 
-class MainActivity : FlutterActivity()
+/**
+ * Hands a reminder to the phone's own clock app.
+ *
+ * The app's own scheduled notifications are at the mercy of the device: on
+ * MIUI they can be dropped without a word, and no permission the app can hold
+ * changes that. An alarm created in the system clock app is not — it is the
+ * one thing on the phone that is guaranteed to ring, because the vendor's own
+ * alarm is the thing users notice failing.
+ *
+ * The trade is ownership: once handed over, the alarm belongs to the clock
+ * app. Deleting the reminder here does not remove it there.
+ */
+class MainActivity : FlutterActivity() {
+
+    override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
+        super.configureFlutterEngine(flutterEngine)
+
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL)
+            .setMethodCallHandler { call, result ->
+                if (call.method != "setAlarm") {
+                    result.notImplemented()
+                    return@setMethodCallHandler
+                }
+
+                val hour = call.argument<Int>("hour") ?: 0
+                val minute = call.argument<Int>("minute") ?: 0
+                val label = call.argument<String>("label") ?: "ถึงเวลากินยา"
+                val days = call.argument<List<Int>>("days") ?: emptyList()
+
+                val intent = Intent(AlarmClock.ACTION_SET_ALARM).apply {
+                    putExtra(AlarmClock.EXTRA_HOUR, hour)
+                    putExtra(AlarmClock.EXTRA_MINUTES, minute)
+                    putExtra(AlarmClock.EXTRA_MESSAGE, label)
+                    putExtra(AlarmClock.EXTRA_VIBRATE, true)
+                    // Create it without making the user finish the clock app's
+                    // own form. Clock apps may ignore this and show their UI
+                    // anyway, which is harmless.
+                    putExtra(AlarmClock.EXTRA_SKIP_UI, true)
+                    if (days.isNotEmpty()) {
+                        putExtra(AlarmClock.EXTRA_DAYS, ArrayList(days))
+                    }
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+
+                try {
+                    startActivity(intent)
+                    result.success(true)
+                } catch (error: ActivityNotFoundException) {
+                    // No clock app willing to take it. Reported rather than
+                    // thrown, so the caller can say so instead of crashing.
+                    result.success(false)
+                }
+            }
+    }
+
+    private companion object {
+        const val CHANNEL = "medigo/system_alarm"
+    }
+}
