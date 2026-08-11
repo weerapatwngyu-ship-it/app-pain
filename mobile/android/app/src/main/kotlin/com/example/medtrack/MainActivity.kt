@@ -41,59 +41,57 @@ class MainActivity : FlutterActivity() {
                     putExtra(AlarmClock.EXTRA_MINUTES, minute)
                     putExtra(AlarmClock.EXTRA_MESSAGE, label)
                     putExtra(AlarmClock.EXTRA_VIBRATE, true)
-                    // Create it without making the user finish the clock app's
-                    // own form. Clock apps may ignore this and show their UI
-                    // anyway, which is harmless.
-                    putExtra(AlarmClock.EXTRA_SKIP_UI, true)
+                    // Deliberately let the clock app show its own screen. The
+                    // silent version of this (EXTRA_SKIP_UI) gives no sign of
+                    // whether anything was created, and on this phone nothing
+                    // was. Opening the clock with the time filled in means the
+                    // user sees the alarm land, and can tell at a glance when
+                    // it did not.
+                    putExtra(AlarmClock.EXTRA_SKIP_UI, false)
                     if (days.isNotEmpty()) {
                         putExtra(AlarmClock.EXTRA_DAYS, ArrayList(days))
                     }
                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 }
 
-                // On some MIUI builds the implicit intent resolves to nothing
-                // even though a clock app is installed and visible in
-                // <queries> — the launcher entry and the SET_ALARM
-                // intent-filter can belong to different exported activities
-                // in the same app. So: first try the implicit intent as
-                // normal, and if the OS can't resolve it, fall back to
-                // addressing known clock-app package names directly. An
-                // explicit package intent doesn't depend on package-visibility
-                // resolution at all, so it can succeed even when the query
-                // above finds nothing.
+                // Ask the OS which activities can actually take this, and
+                // address one of them by exact component. Launching the
+                // implicit intent alone is not enough: it has been seen to
+                // fail on MIUI even while this same query reports a handler,
+                // and guessing at clock-app package names is worse still,
+                // since vendors do not agree on them. The names the query
+                // returns are the real ones on this specific phone.
                 val resolved = packageManager.queryIntentActivities(
                     buildIntent(),
                     PackageManager.MATCH_DEFAULT_ONLY,
                 )
-                val triedPackages = mutableListOf<String>()
+                val attempts = mutableListOf<String>()
                 var launched = false
-                var lastError: String? = null
 
-                if (resolved.isNotEmpty()) {
+                for (candidate in resolved) {
+                    val activity = candidate.activityInfo ?: continue
+                    try {
+                        startActivity(
+                            buildIntent().apply {
+                                setClassName(activity.packageName, activity.name)
+                            }
+                        )
+                        launched = true
+                        break
+                    } catch (error: Exception) {
+                        attempts += "${activity.packageName}/${activity.name}" +
+                            " -> ${error.javaClass.simpleName}: ${error.message}"
+                    }
+                }
+
+                // Last resort: let the OS pick, in case the component-level
+                // start was refused but the plain implicit one is allowed.
+                if (!launched) {
                     try {
                         startActivity(buildIntent())
                         launched = true
                     } catch (error: Exception) {
-                        lastError = "${error.javaClass.simpleName}: ${error.message}"
-                    }
-                }
-
-                if (!launched) {
-                    val fallbackPackages = listOf(
-                        "com.android.deskclock",
-                        "com.google.android.deskclock",
-                        "com.miui.deskclock",
-                        "com.android.alarmclock",
-                    )
-                    for (packageName in fallbackPackages) {
-                        triedPackages += packageName
-                        try {
-                            startActivity(buildIntent().apply { setPackage(packageName) })
-                            launched = true
-                            break
-                        } catch (error: Exception) {
-                            lastError = "${error.javaClass.simpleName}: ${error.message}"
-                        }
+                        attempts += "implicit -> ${error.javaClass.simpleName}: ${error.message}"
                     }
                 }
 
@@ -101,8 +99,7 @@ class MainActivity : FlutterActivity() {
                     mapOf(
                         "launched" to launched,
                         "resolvedCount" to resolved.size,
-                        "triedPackages" to triedPackages,
-                        "lastError" to lastError,
+                        "attempts" to attempts,
                     )
                 )
             }

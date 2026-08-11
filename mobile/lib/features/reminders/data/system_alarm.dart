@@ -21,24 +21,18 @@ class SystemAlarmResult {
   const SystemAlarmResult({
     required this.launched,
     required this.resolvedCount,
-    required this.triedPackages,
-    this.lastError,
+    required this.attempts,
   });
 
-  /// Whether some activity actually started.
+  /// Whether a clock app actually opened.
   final bool launched;
 
-  /// How many activities the OS found for the implicit SET_ALARM intent
-  /// before any package-specific fallback was tried. Zero here, alongside
-  /// [launched] also false, means the phone genuinely has no app that
-  /// declares it can handle SET_ALARM the standard way.
+  /// How many activities the OS said can handle SET_ALARM. Zero means the
+  /// phone genuinely has no clock app reachable this way.
   final int resolvedCount;
 
-  /// Package names tried directly after implicit resolution found nothing
-  /// (or failed to launch).
-  final List<String> triedPackages;
-
-  final String? lastError;
+  /// One line per failed start, naming the component and the error.
+  final List<String> attempts;
 }
 
 class SystemAlarm {
@@ -65,14 +59,13 @@ class SystemAlarm {
       return const SystemAlarmResult(
         launched: false,
         resolvedCount: 0,
-        triedPackages: [],
+        attempts: [],
       );
     }
     return SystemAlarmResult(
       launched: result['launched'] as bool? ?? false,
       resolvedCount: result['resolvedCount'] as int? ?? 0,
-      triedPackages: (result['triedPackages'] as List?)?.cast<String>() ?? const [],
-      lastError: result['lastError'] as String?,
+      attempts: (result['attempts'] as List?)?.cast<String>() ?? const [],
     );
   }
 }

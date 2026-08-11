@@ -66,25 +66,27 @@ class _RemindersScreenState extends State<RemindersScreen> {
       if (result.launched) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('ตั้งไว้ในนาฬิกาปลุกของเครื่องแล้ว — เปิดแอปนาฬิกาเพื่อดู'),
+            content: Text('เปิดแอปนาฬิกาแล้ว — กดบันทึกในแอปนาฬิกาเพื่อยืนยัน'),
             duration: Duration(seconds: 6),
           ),
         );
         return;
       }
-      final detail = StringBuffer('เครื่องนี้ไม่มีแอปนาฬิกาที่รับคำสั่งนี้ได้ (พบ ${result.resolvedCount} แอป');
-      if (result.triedPackages.isNotEmpty) {
-        detail.write(', ลองแล้ว: ${result.triedPackages.join(", ")}');
+      final detail = StringBuffer(
+        result.resolvedCount == 0
+            ? 'เครื่องนี้ไม่มีแอปนาฬิกาที่รับคำสั่งนี้ได้'
+            : 'พบแอปนาฬิกา ${result.resolvedCount} แอป แต่เปิดไม่ได้',
+      );
+      for (final attempt in result.attempts) {
+        detail.write('\n\n$attempt');
       }
-      if (result.lastError != null) {
-        detail.write(', ${result.lastError}');
-      }
-      detail.write(')');
       showDialog<void>(
         context: context,
         builder: (_) => AlertDialog(
           title: const Text('ตั้งนาฬิกาปลุกไม่สำเร็จ'),
-          content: Text(detail.toString()),
+          content: SingleChildScrollView(
+            child: SelectableText(detail.toString()),
+          ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
