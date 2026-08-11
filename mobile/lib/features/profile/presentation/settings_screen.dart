@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../auth/presentation/onboarding/onboarding_theme.dart';
+import '../../reminders/presentation/notification_check_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -59,6 +60,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
               const SizedBox(height: 8),
               const Divider(color: OnboardingColors.border),
+              _MenuRow(
+                label: 'ตรวจสอบระบบเตือน',
+                trailing: Icons.chevron_right,
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const NotificationCheckScreen(),
+                  ),
+                ),
+              ),
               _MenuRow(
                 label: 'ตั้งค่าความเป็นส่วนตัว',
                 trailing: Icons.lock_outline,

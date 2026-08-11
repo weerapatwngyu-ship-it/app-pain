@@ -225,6 +225,15 @@ class NotificationService {
     );
   }
 
+  /// The alarms the OS is holding, in full.
+  ///
+  /// [status] only counts them; this is for the diagnostics screen, where the
+  /// question is which specific alarm is or is not still pending.
+  Future<List<PendingNotificationRequest>> pending() async {
+    await init();
+    return _plugin.pendingNotificationRequests();
+  }
+
   /// Fires immediately, to separate "notifications are blocked" from
   /// "scheduling is broken" — two failures that look the same from the
   /// reminders list.
