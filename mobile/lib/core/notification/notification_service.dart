@@ -84,7 +84,21 @@ class NotificationService {
     autoCancel: true,
 
     audioAttributesUsage: AudioAttributesUsage.alarm,
+
+    // Two ways to answer the alarm without hunting for the app. Both stop the
+    // ringing: cancelNotification defaults to true, and an insistent
+    // notification keeps buzzing until it is cancelled.
+    actions: <AndroidNotificationAction>[
+      AndroidNotificationAction(_takenActionId, 'ทานยาแล้ว'),
+      AndroidNotificationAction(_snoozeActionId, 'เลื่อน 10 นาที'),
+    ],
   );
+
+  static const _takenActionId = 'taken';
+  static const _snoozeActionId = 'snooze';
+
+  /// How long "เลื่อน 10 นาที" pushes the alarm back.
+  static const snoozeDuration = Duration(minutes: 10);
 
   /// iOS-only: how a scheduled date is read against the device clock.
   /// Required on every zonedSchedule call in this package version, so it is
@@ -115,8 +129,35 @@ class NotificationService {
     const iosInit = DarwinInitializationSettings();
     await _plugin.initialize(
       const InitializationSettings(android: androidInit, iOS: iosInit),
+      onDidReceiveNotificationResponse: _handleResponse,
+      // Runs in a separate isolate when the app is not in the foreground,
+      // which is the usual case for an alarm. It shares no state with the
+      // app, so it rebuilds what it needs from scratch.
+      onDidReceiveBackgroundNotificationResponse: notificationBackgroundHandler,
     );
     _initialized = true;
+  }
+
+  static void _handleResponse(NotificationResponse response) {
+    if (response.actionId == _snoozeActionId) {
+      // Fire and forget: nothing on screen is waiting on this, and failing to
+      // snooze should not throw out of a notification callback.
+      instance.snooze(response.id ?? 0);
+    }
+  }
+
+  /// Re-arms [id] one snooze away. Used by both isolates.
+  Future<void> snooze(int id) async {
+    await init();
+    await _plugin.zonedSchedule(
+      id,
+      'ถึงเวลากินยา',
+      'เลื่อนมาจากรอบก่อนหน้า',
+      tz.TZDateTime.now(tz.local).add(snoozeDuration),
+      _details,
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      uiLocalNotificationDateInterpretation: _dateInterpretation,
+    );
   }
 
   /// Asks for the two things Android 13+ needs before a timed reminder can
@@ -279,4 +320,19 @@ class NotificationService {
     }
     return scheduled;
   }
+}
+
+/// Handles an action tapped while the app is not in the foreground.
+///
+/// Android runs this in its own isolate, so none of the app's singletons,
+/// timezone setup or plugin registrations exist here — everything it needs is
+/// re-created. It has to be a top-level function with the vm:entry-point
+/// pragma, or the tree shaker drops it from a release build and the buttons
+/// do nothing.
+@pragma('vm:entry-point')
+void notificationBackgroundHandler(NotificationResponse response) {
+  if (response.actionId != 'snooze') return;
+  // "ทานยาแล้ว" needs no work: the action cancels the notification, which is
+  // what stops an insistent alarm.
+  NotificationService.instance.snooze(response.id ?? 0);
 }
