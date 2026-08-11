@@ -1,6 +1,9 @@
+import 'dart:io';
+
 import '../../../core/notification/notification_service.dart';
 import '../../../core/storage/local_database.dart';
 import '../domain/entities/medication_reminder.dart';
+import 'reminder_watch_service.dart';
 
 /// Stores reminders and keeps the scheduled notifications in step with them.
 ///
@@ -45,6 +48,7 @@ class ReminderRepository {
     }
 
     await _reschedule(saved);
+    await _syncWatchService();
     return saved;
   }
 
@@ -52,6 +56,7 @@ class ReminderRepository {
     final db = await LocalDatabase.instance.database;
     await db.delete('medication_reminders', where: 'id = ?', whereArgs: [id]);
     await _cancelAll(id);
+    await _syncWatchService();
   }
 
   Future<MedicationReminder> setEnabled(
@@ -70,10 +75,24 @@ class ReminderRepository {
     for (final reminder in await all()) {
       await _reschedule(reminder);
     }
+    await _syncWatchService();
   }
 
+  /// Keeps the Android service's copy of the reminders current.
+  Future<void> _syncWatchService() => ReminderWatchService.sync(await all());
+
   Future<void> _reschedule(MedicationReminder reminder) async {
+    // Always cancel, on every platform. Builds before the service existed
+    // scheduled these, and leaving them registered would ring a second time
+    // next to whatever the service does.
     await _cancelAll(reminder.id);
+
+    // On Android the foreground service owns the ringing outright. Scheduling
+    // here as well would mean two alarms for one reminder on any device where
+    // the plugin path does work — and where it does not, which is the case
+    // this was all built for, it adds nothing.
+    if (Platform.isAndroid) return;
+
     if (!reminder.enabled) return;
 
     final body = reminder.label.trim().isEmpty ? 'ถึงเวลากินยาแล้ว' : reminder.label;

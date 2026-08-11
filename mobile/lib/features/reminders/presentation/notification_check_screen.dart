@@ -3,6 +3,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 import '../../../core/notification/notification_service.dart';
 import '../../auth/presentation/onboarding/onboarding_theme.dart';
+import '../data/reminder_watch_service.dart';
 
 /// Answers one question: when a reminder does not arrive, was the alarm never
 /// delivered, or was it delivered and the notification suppressed?
@@ -53,11 +54,14 @@ class _NotificationCheckScreenState extends State<NotificationCheckScreen> {
 
   Future<void> _scheduleTest() async {
     try {
-      await NotificationService.instance.scheduleTestIn(seconds: 30);
+      // Goes through the reminder service, which is what rings a real
+      // reminder now. Testing the old plugin path would prove nothing about
+      // whether a reminder arrives.
+      await ReminderWatchService.test(seconds: 30);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('ตั้งไว้แล้ว — อย่าปิดแอป รอ 30 วินาที'),
+          content: Text('ตั้งไว้แล้ว — ปิดหน้าจอวางไว้ รอ 30 วินาที'),
           duration: Duration(seconds: 6),
         ),
       );
@@ -129,20 +133,21 @@ class _NotificationCheckScreenState extends State<NotificationCheckScreen> {
                 ),
                 const SizedBox(height: 8),
                 const Text(
-                  '1. กด "ตั้งทดสอบ 30 วินาที" แล้วเปิดหน้านี้ค้างไว้\n\n'
-                  '• มีการเตือนขึ้น = ระบบส่งได้ตามปกติ\n'
-                  '• ไม่มี = ระบบไม่ยอมส่งให้แอปนี้\n\n'
-                  '2. หลังเลยเวลาเตือนจริงไปแล้ว ให้กลับมาที่หน้านี้ '
-                  'แล้วกด "อ่านสถานะใหม่" โดยยังไม่ต้องเปิดหน้าเตือนกินยา\n\n'
-                  '• รายการยังค้างอยู่ = นาฬิกาไม่เคยถูกปลุกเลย ปัญหาอยู่ที่ '
-                  'การตั้งค่าของเครื่อง\n'
-                  '• รายการหายไป = นาฬิกาทำงานแล้ว แต่การแจ้งเตือนถูกซ่อน',
+                  'กด "ตั้งทดสอบ 30 วินาที" แล้ว "ปิดหน้าจอวางเครื่องทิ้งไว้" '
+                  'อย่าเปิดแอปค้างไว้ — ถ้าเปิดค้าง เครื่องจะไม่ปิดแอป '
+                  'ผลที่ได้จะไม่ตรงกับตอนใช้งานจริง\n\n'
+                  '• ดังขึ้นมา = ใช้งานได้แล้ว เตือนกินยาจะดังตามเวลาที่ตั้ง\n'
+                  '• ไม่ดัง = ยังมีอะไรบล็อกอยู่ ส่งภาพหน้าจอนี้มาให้ดูได้',
                   style: TextStyle(fontSize: 13, height: 1.6),
                 ),
                 const SizedBox(height: 16),
                 const Text(
-                  'อย่าเปิดหน้า "เตือนกินยา" ก่อนอ่านผลข้อ 2 — หน้านั้นจะตั้ง'
-                  'นาฬิกาใหม่ทั้งหมด ทำให้ดูไม่ออกว่าของเดิมเคยถูกปลุกหรือไม่',
+                  'ตอนนี้แอปเฝ้าเวลาด้วยตัวเอง ไม่ได้ฝากเครื่องปลุกแล้ว '
+                  'จึงต้องมีการแจ้งเตือน "MediGo กำลังเฝ้าเวลากินยา" '
+                  'ค้างอยู่ในแถบบนตลอด — อันนั้นคือสิ่งที่ทำให้แอปไม่ถูกปิด '
+                  'ถ้าปัดทิ้งหรือปิดไป การเตือนกินยาจะกลับไปไม่ดังเหมือนเดิม\n\n'
+                  'รายการ "นาฬิกาที่ระบบถือไว้ให้" ด้านบนเป็นของกลไกเดิม '
+                  'ตอนนี้เลิกใช้แล้วจึงว่างเปล่าเป็นปกติ ไม่ใช่ความผิดพลาด',
                   style: TextStyle(
                       fontSize: 12,
                       height: 1.5,

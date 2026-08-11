@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'app/app.dart';
 import 'core/notification/notification_service.dart';
+import 'features/reminders/data/reminder_watch_service.dart';
 
 /// Supabase project credentials, passed at build time:
 ///   --dart-define=SUPABASE_URL=https://<ref>.supabase.co
@@ -32,6 +33,15 @@ Future<void> main() async {
     await NotificationService.instance.init();
   } catch (error, stack) {
     debugPrint('NotificationService.init failed: $error\n$stack');
+  }
+
+  // Bring the reminder service back up. It survives the app being closed but
+  // not the app being force stopped, and this is the moment it can be started
+  // again. Wrapped for the same reason as the line above.
+  try {
+    await ReminderWatchService.start();
+  } catch (error, stack) {
+    debugPrint('ReminderWatchService.start failed: $error\n$stack');
   }
 
   if (_supabaseUrl.isEmpty || _supabaseAnonKey.isEmpty) {

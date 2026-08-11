@@ -13,6 +13,13 @@
     <uses-permission android:name="android.permission.USE_EXACT_ALARM"/>
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
     <uses-permission android:name="android.permission.VIBRATE"/>
+    <!-- The reminder service. Scheduling a reminder and waiting to be woken
+         did not work on this device — alarms stayed registered and unfired,
+         because the app's process had been killed and a dead process cannot
+         be woken. A foreground service is the supported way to ask to stay
+         running, so the app watches the clock itself instead of asking. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE"/>
     <application
         android:label="MediGo"
         android:name="${applicationName}"
@@ -39,6 +46,34 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
+        <service
+            android:name=".ReminderService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse"
+            android:stopWithTask="false">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Medication reminders must ring at an exact time. Scheduled alarms are not delivered on this class of device because the app process is killed first, so the app stays resident to watch the clock itself."/>
+        </service>
+
+        <!-- Rings whatever is due when the exact alarm arrives — the path that
+             still works while the device is in deep sleep and the service's
+             own timer is frozen. -->
+        <receiver
+            android:name=".AlarmReceiver"
+            android:exported="false"/>
+
+        <receiver
+            android:name=".BootReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED"/>
+                <action android:name="android.intent.action.LOCKED_BOOT_COMPLETED"/>
+                <action android:name="android.intent.action.QUICKBOOT_POWERON"/>
+                <action android:name="com.htc.intent.action.QUICKBOOT_POWERON"/>
+            </intent-filter>
+        </receiver>
+
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data

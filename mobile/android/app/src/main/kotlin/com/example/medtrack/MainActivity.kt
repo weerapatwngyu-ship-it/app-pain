@@ -24,6 +24,38 @@ class MainActivity : FlutterActivity() {
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
 
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, REMINDER_CHANNEL)
+            .setMethodCallHandler { call, result ->
+                when (call.method) {
+                    // Hands the current reminder list over to the service, which
+                    // owns the ringing from here on. Called after every save,
+                    // delete or toggle, so the two never drift apart.
+                    "sync" -> {
+                        Reminders.sync(applicationContext, call.arguments as? String ?: "[]")
+                        ReminderService.start(applicationContext)
+                        Reminders.armNext(applicationContext)
+                        result.success(true)
+                    }
+                    "start" -> {
+                        ReminderService.start(applicationContext)
+                        result.success(true)
+                    }
+                    "stop" -> {
+                        ReminderService.stop(applicationContext)
+                        result.success(true)
+                    }
+                    // Rings in [seconds], to prove the path end to end without
+                    // waiting out a real reminder time.
+                    "test" -> {
+                        val seconds = call.argument<Int>("seconds") ?: 30
+                        Reminders.scheduleSelfTest(applicationContext, seconds)
+                        ReminderService.start(applicationContext)
+                        result.success(true)
+                    }
+                    else -> result.notImplemented()
+                }
+            }
+
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL)
             .setMethodCallHandler { call, result ->
                 if (call.method != "setAlarm") {
@@ -107,5 +139,6 @@ class MainActivity : FlutterActivity() {
 
     private companion object {
         const val CHANNEL = "medigo/system_alarm"
+        const val REMINDER_CHANNEL = "medigo/reminder_service"
     }
 }

@@ -57,4 +57,9 @@ flutter {
 dependencies {
     // Required by flutter_local_notifications (Java 8+ API desugaring).
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
+
+    // NotificationCompat, used by the reminder service to build the alarm it
+    // posts. The Flutter embedding pulls this in transitively, but the service
+    // is this app's own code and should not depend on that staying true.
+    implementation("androidx.core:core-ktx:1.13.1")
 }
