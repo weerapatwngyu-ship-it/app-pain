@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import 'package:flutter/services.dart' show PlatformException;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest_all.dart' as tz_data;
 import 'package:timezone/timezone.dart' as tz;
@@ -48,51 +49,74 @@ class NotificationService {
   /// from then on treats its importance, sound and vibration as the user's to
   /// change, not the app's — anything set here is ignored for a channel that
   /// already exists. Changing how a reminder behaves therefore means a new id.
-  static final _doseReminderChannel = AndroidNotificationDetails(
-    'dose_reminders_v3',
-    'เตือนกินยา',
-    channelDescription: 'ปลุกเมื่อถึงเวลากินยา',
-    importance: Importance.max,
-    priority: Priority.high,
-    category: AndroidNotificationCategory.alarm,
+  ///
+  /// Built per call rather than held as a constant so [_iconAvailable] can
+  /// drop the custom icon after one has been rejected.
+  AndroidNotificationDetails _channel() => AndroidNotificationDetails(
+        'dose_reminders_v3',
+        'เตือนกินยา',
+        channelDescription: 'ปลุกเมื่อถึงเวลากินยา',
+        importance: Importance.max,
+        priority: Priority.high,
+        category: AndroidNotificationCategory.alarm,
 
-    // A silhouette drawable, not the launcher icon — see
-    // res/drawable/ic_notification.xml.
-    icon: '@drawable/ic_notification',
+        // Null falls back to the icon given to initialize(). See
+        // res/drawable/ic_notification.xml and res/raw/keep.xml.
+        icon: _iconAvailable ? '@drawable/ic_notification' : null,
 
-    playSound: true,
-    enableVibration: true,
-    enableLights: true,
-    // Long pattern, but a pattern alone still runs once and stops. What makes
-    // it repeat is the insistent flag below.
-    vibrationPattern: Int64List.fromList(<int>[0, 800, 400, 800, 400, 800, 400]),
+        playSound: true,
+        enableVibration: true,
+        enableLights: true,
+        // Long pattern, but a pattern alone still runs once and stops. What
+        // makes it repeat is the insistent flag below.
+        vibrationPattern:
+            Int64List.fromList(<int>[0, 800, 400, 800, 400, 800, 400]),
 
-    // FLAG_INSISTENT (0x00000004). Android repeats the sound and vibration
-    // until the notification is dismissed or opened, which is the difference
-    // between a reminder that buzzes once while the phone is in a bag and an
-    // alarm that keeps going until someone deals with it. There is no
-    // higher-level flutter_local_notifications option for this — the flag is
-    // passed through as a raw int.
-    additionalFlags: Int32List.fromList(<int>[4]),
+        // FLAG_INSISTENT (0x00000004). Android repeats the sound and
+        // vibration until the notification is dismissed or opened — the
+        // difference between one buzz from inside a bag and an alarm that
+        // waits to be dealt with. The plugin exposes no option for it, so it
+        // goes through as a raw flag.
+        additionalFlags: Int32List.fromList(<int>[4]),
 
-    // Presents it as an alarm: on a locked screen it takes over the display
-    // instead of arriving as a banner that can be missed.
-    fullScreenIntent: true,
+        // Presents it as an alarm: on a locked screen it takes over the
+        // display instead of arriving as a banner that can be missed.
+        fullScreenIntent: true,
 
-    // Tapping it stops the ringing. Without this it keeps insisting even
-    // after the patient has acknowledged it.
-    autoCancel: true,
+        // Tapping it stops the ringing. Insistent without this would keep
+        // going after the patient had already acknowledged it.
+        autoCancel: true,
 
-    audioAttributesUsage: AudioAttributesUsage.alarm,
+        audioAttributesUsage: AudioAttributesUsage.alarm,
 
-    // Two ways to answer the alarm without hunting for the app. Both stop the
-    // ringing: cancelNotification defaults to true, and an insistent
-    // notification keeps buzzing until it is cancelled.
-    actions: <AndroidNotificationAction>[
-      AndroidNotificationAction(_takenActionId, 'ทานยาแล้ว'),
-      AndroidNotificationAction(_snoozeActionId, 'เลื่อน 10 นาที'),
-    ],
-  );
+        // Two ways to answer without hunting for the app. Both stop the
+        // ringing: cancelNotification defaults to true, and an insistent
+        // notification buzzes until it is cancelled.
+        actions: <AndroidNotificationAction>[
+          AndroidNotificationAction(_takenActionId, 'ทานยาแล้ว'),
+          AndroidNotificationAction(_snoozeActionId, 'เลื่อน 10 นาที'),
+        ],
+      );
+
+  /// Cleared the first time Android rejects the custom icon.
+  ///
+  /// A missing drawable makes every post throw, so the alarm goes completely
+  /// silent over what is a cosmetic detail — that already happened once, when
+  /// the release build's resource shrinker stripped the icon. Losing the
+  /// silhouette is an acceptable trade; losing the reminder is not.
+  bool _iconAvailable = true;
+
+  /// Runs [action], and retries once without the custom icon if that is what
+  /// Android objected to.
+  Future<void> _withIconFallback(Future<void> Function() action) async {
+    try {
+      await action();
+    } on PlatformException catch (error) {
+      if (error.code != 'invalid_icon' || !_iconAvailable) rethrow;
+      _iconAvailable = false;
+      await action();
+    }
+  }
 
   static const _takenActionId = 'taken';
   static const _snoozeActionId = 'snooze';
@@ -106,12 +130,10 @@ class NotificationService {
   static const _dateInterpretation =
       UILocalNotificationDateInterpretation.absoluteTime;
 
-  // Not const: the channel carries a vibration pattern, which is a runtime
-  // list.
-  static final _details = NotificationDetails(
-    android: _doseReminderChannel,
-    iOS: const DarwinNotificationDetails(),
-  );
+  NotificationDetails get _details => NotificationDetails(
+        android: _channel(),
+        iOS: const DarwinNotificationDetails(),
+      );
 
   Future<void> init() async {
     if (_initialized) return;
@@ -149,15 +171,15 @@ class NotificationService {
   /// Re-arms [id] one snooze away. Used by both isolates.
   Future<void> snooze(int id) async {
     await init();
-    await _plugin.zonedSchedule(
-      id,
-      'ถึงเวลากินยา',
-      'เลื่อนมาจากรอบก่อนหน้า',
-      tz.TZDateTime.now(tz.local).add(snoozeDuration),
-      _details,
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-      uiLocalNotificationDateInterpretation: _dateInterpretation,
-    );
+    await _withIconFallback(() => _plugin.zonedSchedule(
+        id,
+        'ถึงเวลากินยา',
+        'เลื่อนมาจากรอบก่อนหน้า',
+        tz.TZDateTime.now(tz.local).add(snoozeDuration),
+        _details,
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        uiLocalNotificationDateInterpretation: _dateInterpretation,
+        ));
   }
 
   /// Asks for the two things Android 13+ needs before a timed reminder can
@@ -194,12 +216,12 @@ class NotificationService {
   /// reminders list.
   Future<void> showTestNotification() async {
     await init();
-    await _plugin.show(
-      _testNotificationId,
-      'ทดสอบการแจ้งเตือน',
-      'ถ้าเห็นข้อความนี้ แปลว่าการแจ้งเตือนของแอปทำงานปกติ',
-      _details,
-    );
+    await _withIconFallback(() => _plugin.show(
+          _testNotificationId,
+          'ทดสอบการแจ้งเตือน',
+          'ถ้าเห็นข้อความนี้ แปลว่าการแจ้งเตือนของแอปทำงานปกติ',
+          _details,
+        ));
   }
 
   /// Well above the ids reminders use (reminderId * 10 + weekday), so a test
@@ -217,15 +239,15 @@ class NotificationService {
   Future<void> scheduleTestIn({int seconds = 15}) async {
     await init();
     final when = tz.TZDateTime.now(tz.local).add(Duration(seconds: seconds));
-    await _plugin.zonedSchedule(
-      _testScheduledId,
-      'ทดสอบการตั้งเวลา',
-      'ตั้งไว้ $seconds วินาทีที่แล้ว — ถ้าเห็นข้อความนี้ การตั้งเวลาทำงานปกติ',
-      when,
-      _details,
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-      uiLocalNotificationDateInterpretation: _dateInterpretation,
-    );
+    await _withIconFallback(() => _plugin.zonedSchedule(
+        _testScheduledId,
+        'ทดสอบการตั้งเวลา',
+        'ตั้งไว้ $seconds วินาทีที่แล้ว — ถ้าเห็นข้อความนี้ การตั้งเวลาทำงานปกติ',
+        when,
+        _details,
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        uiLocalNotificationDateInterpretation: _dateInterpretation,
+        ));
   }
 
   static const _testScheduledId = 999001;
@@ -235,7 +257,8 @@ class NotificationService {
     required String medicationName,
   }) async {
     await init();
-    await _plugin.show(id, 'ถึงเวลากินยา', medicationName, _details);
+    await _withIconFallback(
+        () => _plugin.show(id, 'ถึงเวลากินยา', medicationName, _details));
   }
 
   /// Fires once, at the next occurrence of [hour]:[minute].
@@ -246,15 +269,15 @@ class NotificationService {
     required int minute,
   }) async {
     await init();
-    await _plugin.zonedSchedule(
-      id,
-      'ถึงเวลากินยา',
-      body,
-      _nextInstanceOf(hour, minute),
-      _details,
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-      uiLocalNotificationDateInterpretation: _dateInterpretation,
-    );
+    await _withIconFallback(() => _plugin.zonedSchedule(
+        id,
+        'ถึงเวลากินยา',
+        body,
+        _nextInstanceOf(hour, minute),
+        _details,
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        uiLocalNotificationDateInterpretation: _dateInterpretation,
+        ));
   }
 
   /// Repeats every day at [hour]:[minute].
@@ -265,16 +288,16 @@ class NotificationService {
     required int minute,
   }) async {
     await init();
-    await _plugin.zonedSchedule(
-      id,
-      'ถึงเวลากินยา',
-      body,
-      _nextInstanceOf(hour, minute),
-      _details,
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-      uiLocalNotificationDateInterpretation: _dateInterpretation,
-      matchDateTimeComponents: DateTimeComponents.time,
-    );
+    await _withIconFallback(() => _plugin.zonedSchedule(
+        id,
+        'ถึงเวลากินยา',
+        body,
+        _nextInstanceOf(hour, minute),
+        _details,
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        uiLocalNotificationDateInterpretation: _dateInterpretation,
+        matchDateTimeComponents: DateTimeComponents.time,
+        ));
   }
 
   /// Repeats weekly on [weekday] (1 = Monday … 7 = Sunday, matching
@@ -287,16 +310,16 @@ class NotificationService {
     required int weekday,
   }) async {
     await init();
-    await _plugin.zonedSchedule(
-      id,
-      'ถึงเวลากินยา',
-      body,
-      _nextInstanceOf(hour, minute, weekday: weekday),
-      _details,
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-      uiLocalNotificationDateInterpretation: _dateInterpretation,
-      matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime,
-    );
+    await _withIconFallback(() => _plugin.zonedSchedule(
+        id,
+        'ถึงเวลากินยา',
+        body,
+        _nextInstanceOf(hour, minute, weekday: weekday),
+        _details,
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        uiLocalNotificationDateInterpretation: _dateInterpretation,
+        matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime,
+        ));
   }
 
   Future<void> cancel(int id) => _plugin.cancel(id);

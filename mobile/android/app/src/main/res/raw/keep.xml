@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Protects resources that nothing in the Android project references.
+
+  ic_notification is named only from Dart, as the string "@drawable/ic_notification".
+  The release build runs R8's resource shrinker, which sees no reference to it
+  anywhere in the Android sources or manifest and strips it. The APK then has
+  no such drawable, and every notification fails with
+
+    PlatformException(invalid_icon, The resource @drawable/ic_notification
+    could not be found.)
+
+  which is why reminders produced nothing at all. Listing it here tells the
+  shrinker to keep it.
+
+  Anything else referenced only from Dart by name belongs in this list too.
+-->
+<resources
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:keep="@drawable/ic_notification" />
