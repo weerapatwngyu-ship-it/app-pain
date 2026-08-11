@@ -61,16 +61,36 @@ class _RemindersScreenState extends State<RemindersScreen> {
   /// guaranteed to be allowed to ring.
   Future<void> _sendToClock(MedicationReminder reminder) async {
     try {
-      final accepted = await SystemAlarm.create(reminder);
+      final result = await SystemAlarm.create(reminder);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            accepted
-                ? 'ตั้งไว้ในนาฬิกาปลุกของเครื่องแล้ว — เปิดแอปนาฬิกาเพื่อดู'
-                : 'เครื่องนี้ไม่มีแอปนาฬิกาที่รับคำสั่งนี้ได้',
+      if (result.launched) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('ตั้งไว้ในนาฬิกาปลุกของเครื่องแล้ว — เปิดแอปนาฬิกาเพื่อดู'),
+            duration: Duration(seconds: 6),
           ),
-          duration: const Duration(seconds: 6),
+        );
+        return;
+      }
+      final detail = StringBuffer('เครื่องนี้ไม่มีแอปนาฬิกาที่รับคำสั่งนี้ได้ (พบ ${result.resolvedCount} แอป');
+      if (result.triedPackages.isNotEmpty) {
+        detail.write(', ลองแล้ว: ${result.triedPackages.join(", ")}');
+      }
+      if (result.lastError != null) {
+        detail.write(', ${result.lastError}');
+      }
+      detail.write(')');
+      showDialog<void>(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: const Text('ตั้งนาฬิกาปลุกไม่สำเร็จ'),
+          content: Text(detail.toString()),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('ปิด'),
+            ),
+          ],
         ),
       );
     } catch (e) {

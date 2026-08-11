@@ -1,7 +1,7 @@
 package com.example.medtrack
 
-import android.content.ActivityNotFoundException
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.provider.AlarmClock
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -36,7 +36,7 @@ class MainActivity : FlutterActivity() {
                 val label = call.argument<String>("label") ?: "ถึงเวลากินยา"
                 val days = call.argument<List<Int>>("days") ?: emptyList()
 
-                val intent = Intent(AlarmClock.ACTION_SET_ALARM).apply {
+                fun buildIntent() = Intent(AlarmClock.ACTION_SET_ALARM).apply {
                     putExtra(AlarmClock.EXTRA_HOUR, hour)
                     putExtra(AlarmClock.EXTRA_MINUTES, minute)
                     putExtra(AlarmClock.EXTRA_MESSAGE, label)
@@ -51,14 +51,60 @@ class MainActivity : FlutterActivity() {
                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 }
 
-                try {
-                    startActivity(intent)
-                    result.success(true)
-                } catch (error: ActivityNotFoundException) {
-                    // No clock app willing to take it. Reported rather than
-                    // thrown, so the caller can say so instead of crashing.
-                    result.success(false)
+                // On some MIUI builds the implicit intent resolves to nothing
+                // even though a clock app is installed and visible in
+                // <queries> — the launcher entry and the SET_ALARM
+                // intent-filter can belong to different exported activities
+                // in the same app. So: first try the implicit intent as
+                // normal, and if the OS can't resolve it, fall back to
+                // addressing known clock-app package names directly. An
+                // explicit package intent doesn't depend on package-visibility
+                // resolution at all, so it can succeed even when the query
+                // above finds nothing.
+                val resolved = packageManager.queryIntentActivities(
+                    buildIntent(),
+                    PackageManager.MATCH_DEFAULT_ONLY,
+                )
+                val triedPackages = mutableListOf<String>()
+                var launched = false
+                var lastError: String? = null
+
+                if (resolved.isNotEmpty()) {
+                    try {
+                        startActivity(buildIntent())
+                        launched = true
+                    } catch (error: Exception) {
+                        lastError = "${error.javaClass.simpleName}: ${error.message}"
+                    }
                 }
+
+                if (!launched) {
+                    val fallbackPackages = listOf(
+                        "com.android.deskclock",
+                        "com.google.android.deskclock",
+                        "com.miui.deskclock",
+                        "com.android.alarmclock",
+                    )
+                    for (packageName in fallbackPackages) {
+                        triedPackages += packageName
+                        try {
+                            startActivity(buildIntent().apply { setPackage(packageName) })
+                            launched = true
+                            break
+                        } catch (error: Exception) {
+                            lastError = "${error.javaClass.simpleName}: ${error.message}"
+                        }
+                    }
+                }
+
+                result.success(
+                    mapOf(
+                        "launched" to launched,
+                        "resolvedCount" to resolved.size,
+                        "triedPackages" to triedPackages,
+                        "lastError" to lastError,
+                    )
+                )
             }
     }
 
