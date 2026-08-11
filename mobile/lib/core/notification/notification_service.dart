@@ -124,6 +124,17 @@ class NotificationService {
   static const _takenActionId = 'taken';
   static const _snoozeActionId = 'snooze';
 
+  /// Every schedule uses AndroidScheduleMode.alarmClock, which maps to
+  /// AlarmManager.setAlarmClock() — the same call the phone's clock app makes.
+  ///
+  /// exactAllowWhileIdle was the earlier choice and it is a weaker promise:
+  /// Android and, far more aggressively, MIUI still defer or drop it to save
+  /// battery, which is consistent with reminders that were accepted by the
+  /// system and then never arrived. setAlarmClock is the one delivery
+  /// guarantee the platform does not throttle, because users notice when an
+  /// alarm clock fails. The visible cost is the alarm icon Android shows in
+  /// the status bar while one is pending.
+
   /// How long "เลื่อน 10 นาที" pushes the alarm back.
   static const snoozeDuration = Duration(minutes: 10);
 
@@ -180,7 +191,7 @@ class NotificationService {
         'เลื่อนมาจากรอบก่อนหน้า',
         tz.TZDateTime.now(tz.local).add(snoozeDuration),
         _details,
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        androidScheduleMode: AndroidScheduleMode.alarmClock,
         uiLocalNotificationDateInterpretation: _dateInterpretation,
         ));
   }
@@ -248,7 +259,7 @@ class NotificationService {
         'ตั้งไว้ $seconds วินาทีที่แล้ว — ถ้าเห็นข้อความนี้ การตั้งเวลาทำงานปกติ',
         when,
         _details,
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        androidScheduleMode: AndroidScheduleMode.alarmClock,
         uiLocalNotificationDateInterpretation: _dateInterpretation,
         ));
   }
@@ -278,7 +289,7 @@ class NotificationService {
         body,
         _nextInstanceOf(hour, minute),
         _details,
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        androidScheduleMode: AndroidScheduleMode.alarmClock,
         uiLocalNotificationDateInterpretation: _dateInterpretation,
         ));
   }
@@ -297,7 +308,7 @@ class NotificationService {
         body,
         _nextInstanceOf(hour, minute),
         _details,
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        androidScheduleMode: AndroidScheduleMode.alarmClock,
         uiLocalNotificationDateInterpretation: _dateInterpretation,
         matchDateTimeComponents: DateTimeComponents.time,
         ));
@@ -319,7 +330,7 @@ class NotificationService {
         body,
         _nextInstanceOf(hour, minute, weekday: weekday),
         _details,
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        androidScheduleMode: AndroidScheduleMode.alarmClock,
         uiLocalNotificationDateInterpretation: _dateInterpretation,
         matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime,
         ));

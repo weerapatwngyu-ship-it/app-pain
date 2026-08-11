@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/notification/notification_service.dart';
-import '../../alerts/data/alerts_repository.dart';
-import '../../alerts/presentation/alerts_screen.dart';
 import '../../auth/presentation/onboarding/onboarding_theme.dart';
 import '../data/reminder_repository.dart';
 import '../domain/entities/medication_reminder.dart';
@@ -10,14 +8,9 @@ import '../domain/entities/medication_reminder.dart';
 /// "เตือนกินยา" — the alarm list, laid out like the phone's own clock app so
 /// it needs no explaining: big time, when it repeats, a switch.
 class RemindersScreen extends StatefulWidget {
-  const RemindersScreen({
-    super.key,
-    required this.repository,
-    required this.alertsRepository,
-  });
+  const RemindersScreen({super.key, required this.repository});
 
   final ReminderRepository repository;
-  final AlertsRepository alertsRepository;
 
   @override
   State<RemindersScreen> createState() => _RemindersScreenState();
@@ -60,73 +53,6 @@ class _RemindersScreenState extends State<RemindersScreen> {
         _error = 'โหลดการเตือนไม่สำเร็จ: $e';
         _loading = false;
       });
-    }
-  }
-
-  /// Two tests, because they fail for different reasons and the fixes are
-  /// nothing alike: one posts immediately, the other goes through the alarm
-  /// scheduler exactly as a reminder does.
-  Future<void> _test() async {
-    final choice = await showModalBottomSheet<String>(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Padding(
-              padding: EdgeInsets.fromLTRB(20, 20, 20, 4),
-              child: Text(
-                'ทดสอบการแจ้งเตือน',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
-              ),
-            ),
-            ListTile(
-              leading: const Icon(Icons.notifications_active_outlined),
-              title: const Text('แจ้งเตือนทันที'),
-              subtitle: const Text('ตรวจว่าระบบยอมให้แอปแจ้งเตือนหรือไม่'),
-              onTap: () => Navigator.of(context).pop('now'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.timer_outlined),
-              title: const Text('ตั้งเวลา 15 วินาที'),
-              subtitle: const Text('ตรวจว่าการตั้งเวลาล่วงหน้าทำงานหรือไม่'),
-              onTap: () => Navigator.of(context).pop('scheduled'),
-            ),
-            const SizedBox(height: 8),
-          ],
-        ),
-      ),
-    );
-    if (choice == null) return;
-
-    try {
-      if (choice == 'now') {
-        await NotificationService.instance.showTestNotification();
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('ส่งแล้ว — ถ้าไม่เห็น แปลว่าระบบปิดกั้นการแจ้งเตือนอยู่'),
-            duration: Duration(seconds: 5),
-          ),
-        );
-      } else {
-        await NotificationService.instance.scheduleTestIn();
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('ตั้งไว้แล้ว — เปิดหน้านี้ค้างไว้ รอ 15 วินาที'),
-            duration: Duration(seconds: 8),
-          ),
-        );
-      }
-      await _load();
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('ทดสอบไม่สำเร็จ: $e')));
     }
   }
 
@@ -182,26 +108,7 @@ class _RemindersScreenState extends State<RemindersScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(
-        title: const Text('เตือนกินยา'),
-        actions: [
-          IconButton(
-            tooltip: 'ทดสอบการแจ้งเตือน',
-            icon: const Icon(Icons.notifications_active_outlined),
-            onPressed: _test,
-          ),
-          IconButton(
-            tooltip: 'การแจ้งเตือนจากระบบ',
-            icon: const Icon(Icons.notifications_none),
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (_) =>
-                    AlertsScreen(alertsRepository: widget.alertsRepository),
-              ),
-            ),
-          ),
-        ],
-      ),
+      appBar: AppBar(title: const Text('เตือนกินยา')),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _edit(),
         backgroundColor: OnboardingColors.teal,

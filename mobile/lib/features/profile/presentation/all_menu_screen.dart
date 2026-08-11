@@ -8,6 +8,8 @@ import '../../admin/data/admin_repository.dart';
 import '../../admin/data/caseload_repository.dart';
 import '../../admin/presentation/admin_doctors_screen.dart';
 import '../../admin/presentation/caseload_screen.dart';
+import '../../alerts/data/alerts_repository.dart';
+import '../../alerts/presentation/alerts_screen.dart';
 import '../../chat/data/chat_repository.dart';
 import '../../chat/presentation/conversation_list_screen.dart';
 import '../../doctors/presentation/doctor_list_screen.dart';
@@ -40,6 +42,7 @@ class AllMenuScreen extends StatelessWidget {
     required this.pharmacyFinderRepository,
     required this.healthQuestionRepository,
     required this.chatRepository,
+    required this.alertsRepository,
     required this.peerChatRepository,
     required this.adminRepository,
     required this.caseloadRepository,
@@ -56,6 +59,7 @@ class AllMenuScreen extends StatelessWidget {
   final PharmacyFinderRepository pharmacyFinderRepository;
   final HealthQuestionRepository healthQuestionRepository;
   final ChatRepository chatRepository;
+  final AlertsRepository alertsRepository;
   final PeerChatRepository peerChatRepository;
   final AdminRepository adminRepository;
   final CaseloadRepository caseloadRepository;
@@ -152,6 +156,15 @@ class AllMenuScreen extends StatelessWidget {
                     ownerId: patientId,
                     isDoctorView: false,
                   ),
+                ),
+              ),
+            ),
+            _MenuItem(
+              icon: Icons.notifications_none,
+              label: 'การแจ้งเตือนจากระบบ',
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => AlertsScreen(alertsRepository: alertsRepository),
                 ),
               ),
             ),

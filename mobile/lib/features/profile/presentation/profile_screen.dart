@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../shared/widgets/user_avatar.dart';
 import '../../auth/domain/auth_repository.dart';
 import '../../auth/domain/entities/user.dart';
+import '../../alerts/data/alerts_repository.dart';
 import '../../auth/presentation/onboarding/onboarding_theme.dart';
 import '../../doctors/data/doctor_repository.dart';
 import '../../admin/data/admin_repository.dart';
@@ -30,6 +31,7 @@ class ProfileScreen extends StatelessWidget {
     required this.pharmacyFinderRepository,
     required this.healthQuestionRepository,
     required this.chatRepository,
+    required this.alertsRepository,
     required this.peerChatRepository,
     required this.adminRepository,
     required this.caseloadRepository,
@@ -46,6 +48,7 @@ class ProfileScreen extends StatelessWidget {
   final PharmacyFinderRepository pharmacyFinderRepository;
   final HealthQuestionRepository healthQuestionRepository;
   final ChatRepository chatRepository;
+  final AlertsRepository alertsRepository;
   final PeerChatRepository peerChatRepository;
   final AdminRepository adminRepository;
   final CaseloadRepository caseloadRepository;
@@ -108,6 +111,7 @@ class ProfileScreen extends StatelessWidget {
                         pharmacyFinderRepository: pharmacyFinderRepository,
                         healthQuestionRepository: healthQuestionRepository,
                         chatRepository: chatRepository,
+                        alertsRepository: alertsRepository,
                         peerChatRepository: peerChatRepository,
                         adminRepository: adminRepository,
                         caseloadRepository: caseloadRepository,
