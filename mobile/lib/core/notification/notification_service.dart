@@ -79,9 +79,12 @@ class NotificationService {
         // goes through as a raw flag.
         additionalFlags: Int32List.fromList(<int>[4]),
 
-        // Presents it as an alarm: on a locked screen it takes over the
-        // display instead of arriving as a banner that can be missed.
-        fullScreenIntent: true,
+        // Deliberately no fullScreenIntent. It made a due dose take over the
+        // whole screen like the clock app's alarm, which is more than a
+        // medication reminder should do — this arrives in the tray and as a
+        // banner, the way a notification normally does. The insistent flag
+        // above still keeps it buzzing until it is answered, so nothing is
+        // lost by not seizing the display.
 
         // Tapping it stops the ringing. Insistent without this would keep
         // going after the patient had already acknowledged it.
