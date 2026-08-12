@@ -79,7 +79,9 @@ class ReminderRepository {
   }
 
   /// Keeps the Android service's copy of the reminders current.
-  Future<void> _syncWatchService() => ReminderWatchService.sync(await all());
+  Future<void> _syncWatchService() async {
+    await ReminderWatchService.sync(await all());
+  }
 
   Future<void> _reschedule(MedicationReminder reminder) async {
     // Always cancel, on every platform. Builds before the service existed
