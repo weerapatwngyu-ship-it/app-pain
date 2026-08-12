@@ -16,7 +16,6 @@ import '../../pharmacy_finder/data/pharmacy_finder_repository.dart';
 import '../../symptom_tracking/data/symptom_repository_impl.dart';
 import '../data/patient_profile_repository.dart';
 import 'all_menu_screen.dart';
-import 'health_profile_screen.dart';
 import 'personal_info_detail_screen.dart';
 import 'settings_screen.dart';
 
@@ -176,45 +175,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                 ),
               ),
-            ),
-            _MenuTile(
-              icon: Icons.favorite_border,
-              label: 'ข้อมูลสุขภาพ',
-              onTap: () => Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => HealthProfileScreen(
-                    patientId: widget.patientId,
-                    repository: widget.patientProfileRepository,
-                  ),
-                ),
-              ),
-            ),
-            _MenuTile(
-              icon: Icons.payments_outlined,
-              label: 'การชำระเงิน',
-              onTap: () => _comingSoon(context),
-            ),
-            _MenuTile(
-              icon: Icons.local_shipping_outlined,
-              label: 'ข้อมูลการจัดส่งสินค้า',
-              onTap: () => _comingSoon(context),
-            ),
-            const SizedBox(height: 16),
-            _SectionLabel('ช่วยเหลือ'),
-            _MenuTile(
-              icon: Icons.headset_mic_outlined,
-              label: 'ติดต่อเจ้าหน้าที่ทาง Line App',
-              onTap: () => _comingSoon(context),
-            ),
-            _MenuTile(
-              icon: Icons.help_outline,
-              label: 'คำถามที่พบบ่อย',
-              onTap: () => _comingSoon(context),
-            ),
-            _MenuTile(
-              icon: Icons.menu_book_outlined,
-              label: 'คู่มือการใช้งาน',
-              onTap: () => _comingSoon(context),
             ),
             const SizedBox(height: 16),
             _SectionLabel('อื่นๆ'),
