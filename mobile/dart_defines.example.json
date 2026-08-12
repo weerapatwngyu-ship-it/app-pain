@@ -1,5 +1,5 @@
 {
   "SUPABASE_URL": "https://<project-ref>.supabase.co",
-  "SUPABASE_ANON_KEY": "<anon key>",
+  "SUPABASE_ANON_KEY": "sb_publishable_<...>  หรือ legacy anon key ที่ขึ้นต้น eyJ",
   "GOOGLE_WEB_CLIENT_ID": "<web client id>.apps.googleusercontent.com"
 }

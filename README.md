@@ -49,6 +49,17 @@ MedTrack แอปจ่ายยาและติดตามอาการ�
    flutter run --dart-define-from-file=dart_defines.json
    ```
 
+   **SUPABASE_ANON_KEY ใส่ key ตัวไหน:** เอาจาก Supabase → Settings → API Keys
+   ถ้าโปรเจกต์มี **Publishable key** (`sb_publishable_...`) ให้ใช้ตัวนั้น
+   โปรเจกต์ที่ปิด legacy key ไว้จะปฏิเสธ anon JWT แบบเก่า (`eyJ...`) ด้วยข้อความ
+   `Invalid API key` ทั้งที่ตัว key เองถูกต้องทุกอย่าง
+
+   เช็คว่า key ใช้ได้ไหมก่อน build (ได้ JSON กลับมา = ผ่าน):
+
+   ```bash
+   curl -s "https://<project-ref>.supabase.co/auth/v1/settings" -H "apikey: <key>"
+   ```
+
    `dart_defines.json` ถูกใส่ไว้ใน `.gitignore` แล้ว จะไม่ถูก commit เข้า repo
 
    หรือจะใส่ `--dart-define` ตรงๆ ในคำสั่งเดียวก็ได้ (ใช้ได้ถ้ารันจากเทอร์มินัลบนเครื่อง

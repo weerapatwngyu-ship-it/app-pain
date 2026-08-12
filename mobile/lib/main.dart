@@ -11,8 +11,15 @@ import 'features/reminders/data/reminder_watch_service.dart';
 /// Or pass them one at a time:
 ///   --dart-define=SUPABASE_URL=https://<ref>.supabase.co
 ///   --dart-define=SUPABASE_ANON_KEY=<anon key>
-/// The anon key is a public client key — it is safe to ship in the app, and
-/// on its own grants nothing beyond what Supabase's own rules allow.
+/// SUPABASE_ANON_KEY takes whichever key the project issues: the newer
+/// publishable key (`sb_publishable_...`) or the legacy anon JWT (`eyJ...`).
+/// Both travel as the same request header, so the name is kept for the sake
+/// of existing config files. A project that has turned legacy keys off
+/// rejects the JWT with "Invalid API key" — reason enough to reach for the
+/// publishable key first.
+///
+/// Either way it is a public client key: safe to ship in the app, and on its
+/// own it grants nothing beyond what Supabase's own rules allow.
 const _supabaseUrl = String.fromEnvironment('SUPABASE_URL');
 const _supabaseAnonKey = String.fromEnvironment('SUPABASE_ANON_KEY');
 
