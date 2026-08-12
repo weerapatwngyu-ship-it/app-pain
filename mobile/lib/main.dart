@@ -5,7 +5,10 @@ import 'app/app.dart';
 import 'core/notification/notification_service.dart';
 import 'features/reminders/data/reminder_watch_service.dart';
 
-/// Supabase project credentials, passed at build time:
+/// Supabase project credentials, passed at build time. Easiest route is to
+/// copy dart_defines.example.json to dart_defines.json, fill it in, and:
+///   flutter build apk --release --dart-define-from-file=dart_defines.json
+/// Or pass them one at a time:
 ///   --dart-define=SUPABASE_URL=https://<ref>.supabase.co
 ///   --dart-define=SUPABASE_ANON_KEY=<anon key>
 /// The anon key is a public client key — it is safe to ship in the app, and
@@ -74,10 +77,15 @@ class _MissingSupabaseConfigApp extends StatelessWidget {
             padding: EdgeInsets.all(24),
             child: Text(
               'ยังไม่ได้ตั้งค่า Supabase\n\n'
-              'ต้องรันด้วยคำสั่งที่มี:\n'
-              '--dart-define=SUPABASE_URL=...\n'
-              '--dart-define=SUPABASE_ANON_KEY=...',
+              'แอปถูก build โดยไม่ได้ใส่ค่าเชื่อมต่อฐานข้อมูล\n\n'
+              'วิธีแก้ — ที่โฟลเดอร์ mobile:\n'
+              '1. คัดลอก dart_defines.example.json\n'
+              '   เป็น dart_defines.json\n'
+              '2. ใส่ URL และ anon key ของโปรเจกต์\n'
+              '3. flutter build apk --release\n'
+              '   --dart-define-from-file=dart_defines.json',
               textAlign: TextAlign.center,
+              style: TextStyle(height: 1.6),
             ),
           ),
         ),
