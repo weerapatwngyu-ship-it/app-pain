@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../../../shared/widgets/avatar_picker.dart';
+import '../../profile/data/patient_profile_repository.dart';
+import '../data/medication_list_repository.dart';
+import 'medication_list_screen.dart';
 import '../../../shared/widgets/user_avatar.dart';
 import '../../auth/domain/auth_repository.dart';
 import '../../auth/domain/entities/user.dart';
@@ -34,6 +37,8 @@ class TodayScheduleScreen extends StatefulWidget {
     required this.doctorRepository,
     required this.healthQuestionRepository,
     required this.chatRepository,
+    required this.medicationListRepository,
+    required this.patientProfileRepository,
     required this.onUserUpdated,
   });
 
@@ -50,6 +55,8 @@ class TodayScheduleScreen extends StatefulWidget {
   final DoctorRepository doctorRepository;
   final HealthQuestionRepository healthQuestionRepository;
   final ChatRepository chatRepository;
+  final MedicationListRepository medicationListRepository;
+  final PatientProfileRepository patientProfileRepository;
   final ValueChanged<AppUser> onUserUpdated;
 
   @override
@@ -85,6 +92,15 @@ class _TodayScheduleScreenState extends State<TodayScheduleScreen> {
 
   void _reloadDoctors() {
     setState(() => _doctorsFuture = widget.doctorRepository.fetchAll());
+  }
+
+  void _reloadSchedule() {
+    setState(() {
+      _scheduleFuture = widget.medicationRepository.todaySchedule(widget.patientId);
+      // Doses actioned against the old schedule no longer describe the new
+      // one, and a stale id here would grey out an unrelated row.
+      _actionedScheduleIds.clear();
+    });
   }
 
   void _openHealthTopics() {
@@ -150,6 +166,21 @@ class _TodayScheduleScreenState extends State<TodayScheduleScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('บันทึกแล้ว: ${item.medicationName}')),
     );
+  }
+
+  /// Opens the medication list, then refreshes today's schedule — adding a
+  /// medication with a time for later today should show up on return.
+  Future<void> _openMedicationList() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => MedicationListScreen(
+          patientId: widget.patientId,
+          repository: widget.medicationListRepository,
+          profileRepository: widget.patientProfileRepository,
+        ),
+      ),
+    );
+    if (mounted) _reloadSchedule();
   }
 
   Future<void> _pickAndUploadAvatar() async {
@@ -352,15 +383,38 @@ class _TodayScheduleScreenState extends State<TodayScheduleScreen> {
                   },
                 ),
                 const SizedBox(height: 24),
-                const Text(
-                  'ตารางยาวันนี้',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+                Row(
+                  children: [
+                    const Expanded(
+                      child: Text(
+                        'ตารางยาวันนี้',
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+                      ),
+                    ),
+                    TextButton.icon(
+                      onPressed: _openMedicationList,
+                      icon: const Icon(Icons.medication_outlined, size: 18),
+                      label: const Text('ยาของฉัน'),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 12),
                 if (items.isEmpty)
-                  const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 32),
-                    child: Center(child: Text('ไม่มีรายการยาวันนี้')),
+                  // An empty schedule used to be a dead end: nothing in the app
+                  // could add a medication, so this said "none today" forever.
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 24),
+                    child: Column(
+                      children: [
+                        const Text('ไม่มีรายการยาวันนี้'),
+                        const SizedBox(height: 12),
+                        OutlinedButton.icon(
+                          onPressed: _openMedicationList,
+                          icon: const Icon(Icons.add),
+                          label: const Text('เพิ่มยาที่กินอยู่'),
+                        ),
+                      ],
+                    ),
                   )
                 else
                   ...items.map((item) => _DoseTile(

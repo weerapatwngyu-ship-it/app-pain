@@ -14,6 +14,7 @@ import '../features/chat/data/chat_repository.dart';
 import '../features/doctors/data/doctor_repository.dart';
 import '../features/doctors/domain/entities/doctor.dart';
 import '../features/health_topics/data/health_question_repository.dart';
+import '../features/medication/data/medication_list_repository.dart';
 import '../features/medication/data/medication_repository_impl.dart';
 import '../features/peer_chat/data/peer_chat_repository.dart';
 import '../features/pharmacy_finder/data/pharmacy_finder_repository.dart';
@@ -40,6 +41,7 @@ class _MediGoAppState extends State<MediGoApp> {
   final AuthRepositoryImpl _authRepository = AuthRepositoryImpl();
   final MedicationRepositoryImpl _medicationRepository =
       MedicationRepositoryImpl(LocalDatabase.instance);
+  final MedicationListRepository _medicationListRepository = MedicationListRepository();
   final SymptomRepositoryImpl _symptomRepository = SymptomRepositoryImpl();
   final AlertsRepository _alertsRepository = AlertsRepository();
   final PatientProfileRepository _patientProfileRepository = PatientProfileRepository();
@@ -238,6 +240,7 @@ class _MediGoAppState extends State<MediGoApp> {
       user: user,
       patientId: user.patientId!,
       medicationRepository: _medicationRepository,
+      medicationListRepository: _medicationListRepository,
       symptomRepository: _symptomRepository,
       alertsRepository: _alertsRepository,
       patientProfileRepository: _patientProfileRepository,

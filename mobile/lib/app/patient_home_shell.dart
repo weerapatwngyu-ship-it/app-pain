@@ -11,6 +11,7 @@ import '../features/admin/data/caseload_repository.dart';
 import '../features/chat/data/chat_repository.dart';
 import '../features/doctors/data/doctor_repository.dart';
 import '../features/health_topics/data/health_question_repository.dart';
+import '../features/medication/data/medication_list_repository.dart';
 import '../features/medication/data/medication_repository_impl.dart';
 import '../features/medication/domain/usecases/log_dose_usecase.dart';
 import '../features/medication/presentation/today_schedule_screen.dart';
@@ -32,6 +33,7 @@ class PatientHomeShell extends StatefulWidget {
     required this.user,
     required this.patientId,
     required this.medicationRepository,
+    required this.medicationListRepository,
     required this.symptomRepository,
     required this.alertsRepository,
     required this.patientProfileRepository,
@@ -50,6 +52,7 @@ class PatientHomeShell extends StatefulWidget {
   final AppUser user;
   final String patientId;
   final MedicationRepositoryImpl medicationRepository;
+  final MedicationListRepository medicationListRepository;
   final SymptomRepositoryImpl symptomRepository;
   final AlertsRepository alertsRepository;
   final PatientProfileRepository patientProfileRepository;
@@ -97,6 +100,8 @@ class _PatientHomeShellState extends State<PatientHomeShell> {
         user: widget.user,
         patientId: widget.patientId,
         medicationRepository: widget.medicationRepository,
+        medicationListRepository: widget.medicationListRepository,
+        patientProfileRepository: widget.patientProfileRepository,
         logDoseUseCase: LogDoseUseCase(widget.medicationRepository),
         symptomRepository: widget.symptomRepository,
         authRepository: widget.authRepository,

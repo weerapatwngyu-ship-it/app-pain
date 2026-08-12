@@ -99,6 +99,7 @@ alter table public.patients drop constraint if exists patients_height_check;
 alter table public.patients add constraint patients_height_check
   check (height_cm is null or (height_cm > 0 and height_cm <= 300));
 
+
 -- Grants a caregiver access to someone else's patient record.
 create table if not exists public.patient_links (
   id uuid primary key default gen_random_uuid(),
@@ -122,6 +123,25 @@ create table if not exists public.prescriptions (
   created_at timestamptz not null default now()
 );
 create index if not exists prescriptions_patient_idx on public.prescriptions (patient_id);
+
+-- Who entered a medication.
+--
+-- Until now only clinical staff could write prescriptions, and no screen ever
+-- did — so the table stayed empty and every patient's schedule was blank
+-- forever. Patients can now add their own, which raises the question the
+-- policies below answer: a patient must not be able to quietly edit an order a
+-- doctor wrote. Marking the origin is what makes those two cases separable.
+--
+-- The default is 'clinician' so rows that already exist keep the meaning they
+-- were written with.
+alter table public.prescriptions
+  add column if not exists source text not null default 'clinician';
+alter table public.prescriptions drop constraint if exists prescriptions_source_check;
+alter table public.prescriptions add constraint prescriptions_source_check
+  check (source in ('self', 'clinician'));
+
+alter table public.prescriptions
+  add column if not exists created_by uuid references auth.users (id);
 
 create table if not exists public.dose_schedules (
   id uuid primary key default gen_random_uuid(),
@@ -406,6 +426,28 @@ as $$
   );
 $$;
 
+-- True when the caller owns the patient this prescription belongs to AND
+-- entered it themselves. Both halves matter: ownership alone would let a
+-- patient rewrite the times on an order a doctor placed.
+create or replace function public.owns_self_entered_prescription(
+  target_prescription_id uuid
+)
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select exists (
+    select 1
+    from public.prescriptions pr
+    join public.patients p on p.id = pr.patient_id
+    where pr.id = target_prescription_id
+      and pr.source = 'self'
+      and p.owner_user_id = auth.uid()
+  );
+$$;
+
 -- Read access to the whole caseload, for approved clinical staff.
 --
 -- This is deliberately broader than can_access_patient(): a doctor here sees
@@ -581,6 +623,45 @@ create policy prescriptions_write_staff on public.prescriptions
   using (public.can_manage_patient_care(patient_id))
   with check (public.can_manage_patient_care(patient_id));
 
+-- A patient keeps their own medication list.
+--
+-- Scoped to rows marked 'self' on BOTH sides, which is what stops a patient
+-- editing an order a doctor wrote: `using` tests the row as it stands, so an
+-- existing clinician row never matches and cannot be updated or deleted;
+-- `with check` tests the row being written, so neither an insert nor an
+-- update can pass itself off as clinician-entered. Losing either half would
+-- let a patient rewrite a prescription and leave it still looking official.
+drop policy if exists prescriptions_write_own_self on public.prescriptions;
+create policy prescriptions_write_own_self on public.prescriptions
+  for all to authenticated
+  using (source = 'self' and public.patient_owner(patient_id) = auth.uid())
+  with check (source = 'self' and public.patient_owner(patient_id) = auth.uid());
+
+-- Stamps who wrote the row instead of trusting what the client sent. The
+-- policy above already pins `source` for patients, but staff write through a
+-- policy that does not, and created_by is otherwise whatever was posted.
+create or replace function public.prescriptions_stamp_author()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  new.created_by := auth.uid();
+  if tg_op = 'UPDATE' then
+    -- Origin is set once, when the row is created. Allowing it to change
+    -- would give back exactly what the policy above takes away.
+    new.source := old.source;
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists prescriptions_stamp_author on public.prescriptions;
+create trigger prescriptions_stamp_author
+  before insert or update on public.prescriptions
+  for each row execute function public.prescriptions_stamp_author();
+
 drop policy if exists dose_schedules_select on public.dose_schedules;
 create policy dose_schedules_select on public.dose_schedules
   for select to authenticated
@@ -600,6 +681,17 @@ create policy dose_schedules_write_staff on public.dose_schedules
   with check (
     public.can_manage_patient_care(public.patient_id_for_prescription(prescription_id))
   );
+
+-- The times on a patient's own medication.
+--
+-- Delegated to a helper rather than written inline because it has to read the
+-- parent prescription, and a policy on dose_schedules querying prescriptions
+-- would re-enter that table's own policies.
+drop policy if exists dose_schedules_write_own_self on public.dose_schedules;
+create policy dose_schedules_write_own_self on public.dose_schedules
+  for all to authenticated
+  using (public.owns_self_entered_prescription(prescription_id))
+  with check (public.owns_self_entered_prescription(prescription_id));
 
 -- dose_logs: patients record their own doses, so read and write both go
 -- through patient access rather than staff-only.

@@ -1048,3 +1048,106 @@ begin;
   select drug_allergies from public.patients where id = :'pa';
   reset role;
 rollback;
+
+\echo ''
+\echo '=== CONTROL 39: a patient adds their own medication and times (must succeed) ==='
+begin;
+  select id as pa from public.patients
+   where owner_user_id='11111111-1111-1111-1111-111111111111' \gset
+  set local role authenticated;
+  select public.as_user('11111111-1111-1111-1111-111111111111');
+
+  insert into public.prescriptions
+    (patient_id, medication_name, dosage, frequency, start_date, source)
+  values (:'pa','พาราเซตามอล','500 mg','วันละ 3 ครั้ง', current_date, 'self');
+
+  select id as rx from public.prescriptions
+   where patient_id = :'pa' and medication_name='พาราเซตามอล' \gset
+  insert into public.dose_schedules (prescription_id, scheduled_time)
+  values (:'rx','08:00'), (:'rx','20:00');
+
+  \echo '  -- expect 1 prescription and 2 times:'
+  select count(*) as times from public.dose_schedules where prescription_id = :'rx';
+  reset role;
+  \echo '  -- and created_by stamped to the patient, not left to the client:'
+  select source, created_by = '11111111-1111-1111-1111-111111111111' as stamped
+    from public.prescriptions where id = :'rx';
+rollback;
+
+\echo ''
+\echo '=== EXPLOIT 40: a patient edits a prescription a doctor wrote (must not) ==='
+begin;
+  select id as pa from public.patients
+   where owner_user_id='11111111-1111-1111-1111-111111111111' \gset
+  insert into public.prescriptions
+    (patient_id, medication_name, dosage, frequency, start_date, source)
+  values (:'pa','วาร์ฟาริน','5 mg','วันละครั้ง', current_date, 'clinician');
+  select id as rx from public.prescriptions
+   where patient_id = :'pa' and medication_name='วาร์ฟาริน' \gset
+
+  set local role authenticated;
+  select public.as_user('11111111-1111-1111-1111-111111111111');
+  \echo '  -- changing the dose of a doctor''s order must not take:'
+  update public.prescriptions set dosage='50 mg' where id = :'rx';
+  \echo '  -- nor deleting it:'
+  delete from public.prescriptions where id = :'rx';
+  reset role;
+  \echo '  -- expect the original 5 mg, still present:'
+  select medication_name, dosage, source from public.prescriptions where id = :'rx';
+rollback;
+
+\echo ''
+\echo '=== EXPLOIT 41: a patient relabels their own entry as clinician-written (must not) ==='
+begin;
+  select id as pa from public.patients
+   where owner_user_id='11111111-1111-1111-1111-111111111111' \gset
+  set local role authenticated;
+  select public.as_user('11111111-1111-1111-1111-111111111111');
+  insert into public.prescriptions
+    (patient_id, medication_name, dosage, frequency, start_date, source)
+  values (:'pa','ยาของฉัน','1 เม็ด','วันละครั้ง', current_date, 'self');
+  select id as rx from public.prescriptions
+   where patient_id = :'pa' and medication_name='ยาของฉัน' \gset
+
+  update public.prescriptions set source='clinician' where id = :'rx';
+  reset role;
+  \echo '  -- expect source still self: the trigger pins it after creation:'
+  select source from public.prescriptions where id = :'rx';
+rollback;
+
+\echo ''
+\echo '=== EXPLOIT 42: a patient inserts medication onto someone else''s record (must not) ==='
+begin;
+  select id as pb from public.patients
+   where owner_user_id='22222222-2222-2222-2222-222222222222' \gset
+  set local role authenticated;
+  select public.as_user('11111111-1111-1111-1111-111111111111');
+  \echo '  -- expect an RLS refusal, not a row on B''s chart:'
+  savepoint s1;
+  insert into public.prescriptions
+    (patient_id, medication_name, dosage, frequency, start_date, source)
+  values (:'pb','ยาที่ยัดใส่คนอื่น','1 เม็ด','วันละครั้ง', current_date, 'self');
+  rollback to savepoint s1;
+  reset role;
+rollback;
+
+\echo ''
+\echo '=== EXPLOIT 43: a patient sets times on a doctor''s prescription (must not) ==='
+begin;
+  select id as pa from public.patients
+   where owner_user_id='11111111-1111-1111-1111-111111111111' \gset
+  insert into public.prescriptions
+    (patient_id, medication_name, dosage, frequency, start_date, source)
+  values (:'pa','วาร์ฟาริน','5 mg','วันละครั้ง', current_date, 'clinician');
+  select id as rx from public.prescriptions
+   where patient_id = :'pa' and medication_name='วาร์ฟาริน' \gset
+
+  set local role authenticated;
+  select public.as_user('11111111-1111-1111-1111-111111111111');
+  \echo '  -- expect an RLS refusal:'
+  savepoint s1;
+  insert into public.dose_schedules (prescription_id, scheduled_time)
+  values (:'rx','03:00');
+  rollback to savepoint s1;
+  reset role;
+rollback;
