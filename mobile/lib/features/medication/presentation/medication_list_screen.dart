@@ -170,7 +170,7 @@ class _MedicationListScreenState extends State<MedicationListScreen> {
                 for (final medication in active)
                   _MedicationCard(
                     medication: medication,
-                    onLongPress: medication.enteredBySelf
+                    onManage: medication.enteredBySelf
                         ? () => _confirmRemove(medication)
                         : null,
                   ),
@@ -200,28 +200,28 @@ class _MedicationCard extends StatelessWidget {
   const _MedicationCard({
     required this.medication,
     this.faded = false,
-    this.onLongPress,
+    this.onManage,
   });
 
   final Medication medication;
   final bool faded;
-  final VoidCallback? onLongPress;
+  /// Opens stop/delete. Null for a clinician's prescription, which the
+  /// patient may read but not change.
+  final VoidCallback? onManage;
 
   @override
   Widget build(BuildContext context) {
     return Opacity(
       opacity: faded ? 0.55 : 1,
-      child: InkWell(
-        onLongPress: onLongPress,
-        borderRadius: BorderRadius.circular(14),
-        child: Container(
-          margin: const EdgeInsets.only(bottom: 12),
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: const Color(0xFFF7F7F7),
-            borderRadius: BorderRadius.circular(14),
-          ),
-          child: Column(
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: OnboardingColors.border),
+        ),
+        child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
@@ -278,17 +278,24 @@ class _MedicationCard extends StatelessWidget {
                   ],
                 ),
               ],
-              if (onLongPress != null) ...[
-                const SizedBox(height: 8),
-                const Text(
-                  'กดค้างเพื่อหยุดหรือลบ',
-                  style: TextStyle(
-                      fontSize: 11, color: OnboardingColors.textMuted),
+              if (onManage != null) ...[
+                const SizedBox(height: 6),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton.icon(
+                    onPressed: onManage,
+                    icon: const Icon(Icons.more_horiz, size: 18),
+                    label: const Text('หยุดยา / ลบ'),
+                    style: TextButton.styleFrom(
+                      foregroundColor: OnboardingColors.textMuted,
+                      padding: EdgeInsets.zero,
+                      visualDensity: VisualDensity.compact,
+                    ),
+                  ),
                 ),
               ],
             ],
           ),
-        ),
       ),
     );
   }

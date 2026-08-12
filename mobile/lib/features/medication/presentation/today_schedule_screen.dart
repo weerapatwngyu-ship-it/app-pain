@@ -241,22 +241,12 @@ class _TodayScheduleScreenState extends State<TodayScheduleScreen> {
                   done: doneCount,
                   onTap: _openMedicationList,
                 ),
-                const SizedBox(height: 24),
-                const SizedBox(height: 24),
-                Row(
-                  children: [
-                    const Expanded(
-                      child: Text(
-                        'ตารางยาวันนี้',
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
-                      ),
-                    ),
-                    TextButton.icon(
-                      onPressed: _openMedicationList,
-                      icon: const Icon(Icons.medication_outlined, size: 18),
-                      label: const Text('ยาของฉัน'),
-                    ),
-                  ],
+                const SizedBox(height: 28),
+                _SectionHeader(
+                  title: 'ตารางยาวันนี้',
+                  actionLabel: 'ยาของฉัน',
+                  actionIcon: Icons.medication_outlined,
+                  onAction: _openMedicationList,
                 ),
                 const SizedBox(height: 12),
                 if (items.isEmpty)
@@ -282,26 +272,13 @@ class _TodayScheduleScreenState extends State<TodayScheduleScreen> {
                         actioned: _actionedScheduleIds.contains(item.scheduleId),
                         onLog: (status) => _logDose(item, status),
                       )),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      'ปรึกษาแพทย์',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
-                    ),
-                    TextButton(
-                      onPressed: _openDoctorList,
-                      child: const Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text('ดูทั้งหมด', style: TextStyle(color: OnboardingColors.teal)),
-                          Icon(Icons.chevron_right, size: 18, color: OnboardingColors.teal),
-                        ],
-                      ),
-                    ),
-                  ],
+                const SizedBox(height: 28),
+                _SectionHeader(
+                  title: 'ปรึกษาแพทย์',
+                  actionLabel: 'ดูทั้งหมด',
+                  onAction: _openDoctorList,
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 10),
                 FutureBuilder<List<Doctor>>(
                   future: _doctorsFuture,
                   builder: (context, snapshot) {
@@ -340,27 +317,13 @@ class _TodayScheduleScreenState extends State<TodayScheduleScreen> {
                     );
                   },
                 ),
-                const SizedBox(height: 24),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      'คลินิกออนไลน์',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
-                    ),
-                    TextButton(
-                      onPressed: _openHealthTopics,
-                      child: const Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text('ดูทั้งหมด', style: TextStyle(color: OnboardingColors.teal)),
-                          Icon(Icons.chevron_right, size: 18, color: OnboardingColors.teal),
-                        ],
-                      ),
-                    ),
-                  ],
+                const SizedBox(height: 28),
+                _SectionHeader(
+                  title: 'คลินิกออนไลน์',
+                  actionLabel: 'ดูทั้งหมด',
+                  onAction: _openHealthTopics,
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 10),
                 SizedBox(
                   height: 96,
                   child: ListView.separated(
@@ -383,27 +346,13 @@ class _TodayScheduleScreenState extends State<TodayScheduleScreen> {
                     },
                   ),
                 ),
-                const SizedBox(height: 24),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      'หมวดอาการ',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
-                    ),
-                    TextButton(
-                      onPressed: () => _openCategory(null),
-                      child: const Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text('ดูทั้งหมด', style: TextStyle(color: OnboardingColors.teal)),
-                          Icon(Icons.chevron_right, size: 18, color: OnboardingColors.teal),
-                        ],
-                      ),
-                    ),
-                  ],
+                const SizedBox(height: 28),
+                _SectionHeader(
+                  title: 'หมวดอาการ',
+                  actionLabel: 'ดูทั้งหมด',
+                  onAction: () => _openCategory(null),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 10),
                 FutureBuilder<Map<String, int>>(
                   future: _categoryCountsFuture,
                   builder: (context, snapshot) {
@@ -695,6 +644,62 @@ class _SummaryCard extends StatelessWidget {
   }
 }
 
+/// One heading style for every section on this screen.
+///
+/// The four headings were four copies of the same twelve lines, which is how
+/// they drifted apart — one used an icon, the others a chevron, and the gap
+/// above each differed. Written once, they stay level with each other.
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader({
+    required this.title,
+    required this.actionLabel,
+    required this.onAction,
+    this.actionIcon,
+  });
+
+  final String title;
+  final String actionLabel;
+  final VoidCallback onAction;
+  final IconData? actionIcon;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            title,
+            style: const TextStyle(
+              fontSize: 19,
+              fontWeight: FontWeight.w700,
+              letterSpacing: -0.2,
+            ),
+          ),
+        ),
+        TextButton(
+          onPressed: onAction,
+          style: TextButton.styleFrom(
+            foregroundColor: OnboardingColors.teal,
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            visualDensity: VisualDensity.compact,
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (actionIcon != null) ...[
+                Icon(actionIcon, size: 17),
+                const SizedBox(width: 4),
+              ],
+              Text(actionLabel, style: const TextStyle(fontSize: 14)),
+              const Icon(Icons.chevron_right, size: 18),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class _DoseTile extends StatelessWidget {
   const _DoseTile({required this.item, required this.actioned, required this.onLog});
 
@@ -702,50 +707,142 @@ class _DoseTile extends StatelessWidget {
   final bool actioned;
   final ValueChanged<DoseLogStatus> onLog;
 
+  /// Roughly which part of the day a dose falls in. Printed under the clock
+  /// time because "08:00" is precise but "เช้า" is what someone is actually
+  /// looking for when they glance at the list.
+  String get _partOfDay {
+    final hour = int.tryParse(item.scheduledTime.split(':').first) ?? 0;
+    // Before 05:00 is still the night before, not the morning — a 02:00 dose
+    // labelled "เช้า" would send someone looking for it at breakfast.
+    if (hour < 5) return 'กลางคืน';
+    if (hour < 11) return 'เช้า';
+    if (hour < 15) return 'กลางวัน';
+    if (hour < 19) return 'เย็น';
+    return 'ก่อนนอน';
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(14),
+      margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        border: Border.all(color: OnboardingColors.border),
-        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: actioned ? const Color(0xFFD8ECE8) : OnboardingColors.border,
+        ),
+        borderRadius: BorderRadius.circular(16),
         color: actioned ? const Color(0xFFF3FAF8) : Colors.white,
       ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(item.medicationName, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
-                const SizedBox(height: 2),
-                Text(
-                  '${item.dosage} · ${item.scheduledTime}',
-                  style: const TextStyle(color: OnboardingColors.textMuted, fontSize: 13),
-                ),
-              ],
-            ),
-          ),
-          if (actioned)
-            const Icon(Icons.check_circle, color: OnboardingColors.teal)
-          else
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          children: [
             Row(
-              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                IconButton(
-                  icon: const Icon(Icons.check_circle_outline, color: OnboardingColors.teal),
-                  tooltip: 'กินยาแล้ว',
-                  onPressed: () => onLog(DoseLogStatus.taken),
+                // The time leads, because a schedule is read by time first and
+                // by drug name second.
+                Container(
+                  width: 62,
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  decoration: BoxDecoration(
+                    color: actioned
+                        ? Colors.white
+                        : OnboardingColors.teal.withValues(alpha: 0.10),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Column(
+                    children: [
+                      Text(
+                        item.scheduledTime,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: OnboardingColors.teal,
+                        ),
+                      ),
+                      Text(
+                        _partOfDay,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: OnboardingColors.textMuted,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-                IconButton(
-                  icon: Icon(Icons.cancel_outlined, color: Theme.of(context).colorScheme.error),
-                  tooltip: 'ข้าม',
-                  onPressed: () => onLog(DoseLogStatus.skipped),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        item.medicationName,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 16,
+                        ),
+                      ),
+                      if (item.dosage.trim().isNotEmpty) ...[
+                        const SizedBox(height: 3),
+                        Text(
+                          item.dosage,
+                          style: const TextStyle(
+                            color: OnboardingColors.textMuted,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
                 ),
+                if (actioned)
+                  const Icon(Icons.check_circle,
+                      color: OnboardingColors.teal, size: 26),
               ],
             ),
-        ],
+            if (!actioned) ...[
+              const SizedBox(height: 12),
+              // Labelled, full-width targets rather than two bare icons.
+              // These write a medical record, and a mis-tap here says someone
+              // took a dose they skipped.
+              Row(
+                children: [
+                  Expanded(
+                    flex: 2,
+                    child: FilledButton.icon(
+                      onPressed: () => onLog(DoseLogStatus.taken),
+                      icon: const Icon(Icons.check, size: 18),
+                      label: const Text('กินแล้ว'),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: OnboardingColors.teal,
+                        foregroundColor: Colors.white,
+                        minimumSize: const Size.fromHeight(42),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => onLog(DoseLogStatus.skipped),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: OnboardingColors.textMuted,
+                        side: const BorderSide(color: OnboardingColors.border),
+                        minimumSize: const Size.fromHeight(42),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: const Text('ข้าม'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }

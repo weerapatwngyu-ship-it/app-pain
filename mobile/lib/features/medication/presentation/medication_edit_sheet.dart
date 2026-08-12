@@ -45,6 +45,33 @@ class _MedicationEditSheetState extends State<MedicationEditSheet> {
   DateTime _startDate = DateTime.now();
   DateTime? _endDate;
   final List<TimeOfDay> _times = [];
+  bool _showTimeError = false;
+
+  /// The times most doses actually land on. Offered as one tap each, because
+  /// the alternative is opening a clock dialog four times to enter a schedule
+  /// that is almost always one of these.
+  static const _quickTimes = <String, TimeOfDay>{
+    'เช้า': TimeOfDay(hour: 8, minute: 0),
+    'กลางวัน': TimeOfDay(hour: 12, minute: 0),
+    'เย็น': TimeOfDay(hour: 18, minute: 0),
+    'ก่อนนอน': TimeOfDay(hour: 21, minute: 0),
+  };
+
+  bool _hasTime(TimeOfDay t) =>
+      _times.any((x) => x.hour == t.hour && x.minute == t.minute);
+
+  void _toggleTime(TimeOfDay t) {
+    setState(() {
+      if (_hasTime(t)) {
+        _times.removeWhere((x) => x.hour == t.hour && x.minute == t.minute);
+      } else {
+        _times.add(t);
+        _times.sort((a, b) =>
+            (a.hour * 60 + a.minute) - (b.hour * 60 + b.minute));
+      }
+      if (_times.isNotEmpty) _showTimeError = false;
+    });
+  }
 
   @override
   void initState() {
@@ -104,15 +131,10 @@ class _MedicationEditSheetState extends State<MedicationEditSheet> {
       initialTime: const TimeOfDay(hour: 8, minute: 0),
       helpText: 'เวลาที่ต้องกิน',
     );
-    if (picked == null) return;
-    final already = _times.any(
-      (t) => t.hour == picked.hour && t.minute == picked.minute,
-    );
-    if (already) return;
-    setState(() {
-      _times.add(picked);
-      _times.sort((a, b) => (a.hour * 60 + a.minute) - (b.hour * 60 + b.minute));
-    });
+    if (picked == null || _hasTime(picked)) return;
+    // Shared with the preset chips so sorting and clearing the "pick a time"
+    // error happen in one place rather than two that can drift.
+    _toggleTime(picked);
   }
 
   static String _two(int n) => n.toString().padLeft(2, '0');
@@ -120,12 +142,18 @@ class _MedicationEditSheetState extends State<MedicationEditSheet> {
   static String _dateText(DateTime d) => '${_two(d.day)}/${_two(d.month)}/${d.year}';
 
   void _submit() {
-    if (!_formKey.currentState!.validate()) return;
+    final formOk = _formKey.currentState!.validate();
+    // A medication with no time never reaches the schedule and never fires a
+    // reminder, so saving one produces a row that quietly does nothing.
+    setState(() => _showTimeError = _times.isEmpty);
+    if (!formOk || _times.isEmpty) return;
+
+    final typed = _frequencyController.text.trim();
     Navigator.of(context).pop(
       MedicationDraft(
         name: _nameController.text.trim(),
         dosage: _dosageController.text.trim(),
-        frequency: _frequencyController.text.trim(),
+        frequency: typed.isEmpty ? 'วันละ ${_times.length} ครั้ง' : typed,
         startDate: _startDate,
         endDate: _endDate,
         times: _times.map(_timeText).toList(),
@@ -225,36 +253,82 @@ class _MedicationEditSheetState extends State<MedicationEditSheet> {
                     (v == null || v.trim().isEmpty) ? 'กรอกขนาดยา' : null,
               ),
               const SizedBox(height: 16),
-              const _Label('ความถี่*'),
-              TextFormField(
-                controller: _frequencyController,
-                decoration: _decoration('เช่น วันละ 3 ครั้ง หลังอาหาร'),
-                validator: (v) =>
-                    (v == null || v.trim().isEmpty) ? 'กรอกความถี่' : null,
-              ),
-              const SizedBox(height: 16),
-              const _Label('เวลาที่ต้องกิน'),
+              const _Label('ความถี่'),
               const Text(
-                'เวลาที่ใส่ไว้จะขึ้นในรายการ "วันนี้"',
+                'เว้นว่างได้ — ระบบจะเติมให้จากจำนวนเวลาที่เลือก',
                 style: TextStyle(fontSize: 12, color: OnboardingColors.textMuted),
               ),
               const SizedBox(height: 8),
+              TextFormField(
+                controller: _frequencyController,
+                decoration: _decoration(_times.isEmpty
+                    ? 'เช่น วันละ 3 ครั้ง หลังอาหาร'
+                    : 'วันละ ${_times.length} ครั้ง'),
+              ),
+              const SizedBox(height: 16),
+              const _Label('เวลาที่ต้องกิน*'),
+              const Text(
+                'เลือกอย่างน้อย 1 เวลา ระบบจะเตือนและขึ้นในตารางวันนี้ตามนี้',
+                style: TextStyle(fontSize: 12, color: OnboardingColors.textMuted),
+              ),
+              const SizedBox(height: 10),
               Wrap(
                 spacing: 8,
                 runSpacing: 8,
                 children: [
-                  for (final time in _times)
-                    Chip(
-                      label: Text(_timeText(time)),
-                      onDeleted: () => setState(() => _times.remove(time)),
+                  for (final entry in _quickTimes.entries)
+                    FilterChip(
+                      selected: _hasTime(entry.value),
+                      onSelected: (_) => _toggleTime(entry.value),
+                      showCheckmark: false,
+                      label: Text('${entry.key}  ${_timeText(entry.value)}'),
+                      labelStyle: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: _hasTime(entry.value)
+                            ? Colors.white
+                            : OnboardingColors.text,
+                      ),
+                      selectedColor: OnboardingColors.teal,
+                      backgroundColor: Colors.white,
+                      side: BorderSide(
+                        color: _hasTime(entry.value)
+                            ? OnboardingColors.teal
+                            : OnboardingColors.border,
+                      ),
                     ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  // Anything the four presets do not cover.
+                  for (final time in _times)
+                    if (!_quickTimes.values.any(
+                        (q) => q.hour == time.hour && q.minute == time.minute))
+                      Chip(
+                        label: Text(_timeText(time)),
+                        onDeleted: () => setState(() => _times.remove(time)),
+                      ),
                   ActionChip(
                     avatar: const Icon(Icons.add, size: 18),
-                    label: const Text('เพิ่มเวลา'),
+                    label: const Text('เวลาอื่น'),
                     onPressed: _addTime,
                   ),
                 ],
               ),
+              if (_showTimeError) ...[
+                const SizedBox(height: 8),
+                Text(
+                  'เลือกเวลาอย่างน้อย 1 เวลา มิฉะนั้นยานี้จะไม่ขึ้นในตารางและไม่มีการเตือน',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Theme.of(context).colorScheme.error,
+                  ),
+                ),
+              ],
               const SizedBox(height: 16),
               Row(
                 children: [
