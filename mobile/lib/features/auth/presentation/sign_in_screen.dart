@@ -14,12 +14,7 @@ import 'onboarding/onboarding_theme.dart';
 /// there is no server of this app's own to bypass it from. Google accounts
 /// skip this — Google has already verified the address.
 class SignInScreen extends StatefulWidget {
-  const SignInScreen({
-    super.key,
-    this.notice,
-    this.googleWebClientId,
-    this.connectionReport = const [],
-  });
+  const SignInScreen({super.key, this.notice, this.googleWebClientId});
 
   /// Shown when the user was sent here rather than arriving on their own —
   /// e.g. their session expired mid-use.
@@ -28,13 +23,6 @@ class SignInScreen extends StatefulWidget {
   /// Null when Google Sign-In hasn't been configured for this build — the
   /// Google button is hidden rather than shown broken.
   final String? googleWebClientId;
-
-  /// What the startup credential check found, offered under a failure.
-  ///
-  /// A rejected API key and a mistyped password both end up as one red line
-  /// here, and only one of them is the user's to fix. Keeping the findings
-  /// beside the failure is what separates them.
-  final List<String> connectionReport;
 
   @override
   State<SignInScreen> createState() => _SignInScreenState();
@@ -217,37 +205,6 @@ class _SignInScreenState extends State<SignInScreen> {
                     textAlign: TextAlign.center,
                     style: TextStyle(color: Theme.of(context).colorScheme.error),
                   ),
-                  if (widget.connectionReport.isNotEmpty)
-                    Theme(
-                      // The default divider lines read as a broken layout
-                      // directly under an error message.
-                      data: Theme.of(context)
-                          .copyWith(dividerColor: Colors.transparent),
-                      child: ExpansionTile(
-                        tilePadding: EdgeInsets.zero,
-                        title: const Text(
-                          'รายละเอียดการเชื่อมต่อ',
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: OnboardingColors.textMuted,
-                          ),
-                        ),
-                        children: [
-                          for (final line in widget.connectionReport)
-                            Padding(
-                              padding: const EdgeInsets.only(bottom: 8),
-                              child: Text(
-                                '•  $line',
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  height: 1.5,
-                                  color: OnboardingColors.textMuted,
-                                ),
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
                 ],
                 const SizedBox(height: 24),
                 SizedBox(

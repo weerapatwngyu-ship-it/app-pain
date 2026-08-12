@@ -26,21 +26,12 @@ import 'doctor_home_shell.dart';
 import 'patient_home_shell.dart';
 
 class MediGoApp extends StatefulWidget {
-  const MediGoApp({
-    super.key,
-    this.googleWebClientId,
-    this.connectionReport = const [],
-  });
+  const MediGoApp({super.key, this.googleWebClientId});
 
   /// Null when GOOGLE_WEB_CLIENT_ID wasn't passed at build time — the sign-in
   /// screen hides the Google button rather than offering a flow that would
   /// only fail.
   final String? googleWebClientId;
-
-  /// What the startup credential check found. Shown beside a sign-in failure,
-  /// where the difference between a wrong password and an unusable API key is
-  /// otherwise invisible.
-  final List<String> connectionReport;
 
   @override
   State<MediGoApp> createState() => _MediGoAppState();
@@ -143,7 +134,6 @@ class _MediGoAppState extends State<MediGoApp> {
       return SignInScreen(
         notice: _sessionExpiredNotice ? 'เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่' : null,
         googleWebClientId: widget.googleWebClientId,
-        connectionReport: widget.connectionReport,
       );
     }
     return _buildSignedIn(user);
