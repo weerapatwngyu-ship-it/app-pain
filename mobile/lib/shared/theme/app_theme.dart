@@ -179,7 +179,7 @@ class AppTheme {
         elevation: 8,
       ),
 
-      navigationBarTheme: NavigationBarThemeData(
+      navigationBarTheme: const NavigationBarThemeData(
         backgroundColor: AppPalette.surface,
         indicatorColor: AppPalette.soft,
         elevation: 8,

@@ -162,7 +162,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               onPressed: () => _comingSoon(context),
             ),
             const SizedBox(height: 24),
-            _SectionLabel('บัญชีผู้ใช้'),
+            const _SectionLabel('บัญชีผู้ใช้'),
             _MenuTile(
               icon: Icons.person_outline,
               label: 'แก้ไขข้อมูลส่วนตัว',
@@ -178,7 +178,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
             ),
             const SizedBox(height: 16),
-            _SectionLabel('อื่นๆ'),
+            const _SectionLabel('อื่นๆ'),
             _MenuTile(
               icon: Icons.logout,
               label: 'ออกจากระบบ',

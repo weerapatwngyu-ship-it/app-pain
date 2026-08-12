@@ -113,7 +113,7 @@ class _LanguageChip extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: selected ? OnboardingColors.teal.withOpacity(0.12) : null,
+          color: selected ? AppPalette.soft : null,
           border: Border.all(color: selected ? OnboardingColors.teal : OnboardingColors.border),
           borderRadius: BorderRadius.circular(10),
         ),

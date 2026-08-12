@@ -242,7 +242,7 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
                       ),
                     ),
                     const SizedBox(height: 24),
-                    _Label('ชื่อจริง*'),
+                    const _Label('ชื่อจริง*'),
                     TextFormField(
                       controller: _firstNameController,
                       textCapitalization: TextCapitalization.words,
@@ -251,7 +251,7 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
                           (v == null || v.trim().isEmpty) ? 'กรอกชื่อจริง' : null,
                     ),
                     const SizedBox(height: 16),
-                    _Label('นามสกุล*'),
+                    const _Label('นามสกุล*'),
                     TextFormField(
                       controller: _lastNameController,
                       textCapitalization: TextCapitalization.words,
@@ -260,7 +260,7 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
                           (v == null || v.trim().isEmpty) ? 'กรอกนามสกุล' : null,
                     ),
                     const SizedBox(height: 16),
-                    _Label('เบอร์โทรศัพท์*'),
+                    const _Label('เบอร์โทรศัพท์*'),
                     TextFormField(
                       controller: _phoneController,
                       keyboardType: TextInputType.phone,
@@ -268,7 +268,7 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
                       validator: validateThaiPhone,
                     ),
                     const SizedBox(height: 16),
-                    _Label('อีเมล*'),
+                    const _Label('อีเมล*'),
                     TextFormField(
                       controller: _emailController,
                       keyboardType: TextInputType.emailAddress,
@@ -278,7 +278,7 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
                           : null,
                     ),
                     const SizedBox(height: 16),
-                    _Label('วันเกิด*'),
+                    const _Label('วันเกิด*'),
                     InkWell(
                       onTap: _saving ? null : _pickBirthDate,
                       child: InputDecorator(
@@ -296,7 +296,7 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
                       ),
                     ),
                     const SizedBox(height: 16),
-                    _Label('เพศ'),
+                    const _Label('เพศ'),
                     Row(
                       children: _genderOptions.entries.map((entry) {
                         final selected = _gender == entry.key;
@@ -307,7 +307,7 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
                               onPressed: () => setState(() => _gender = entry.key),
                               style: OutlinedButton.styleFrom(
                                 backgroundColor: selected
-                                    ? OnboardingColors.teal.withOpacity(0.12)
+                                    ? AppPalette.soft
                                     : null,
                                 side: BorderSide(
                                   color: selected
