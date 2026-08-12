@@ -236,8 +236,52 @@ class _TodayScheduleScreenState extends State<TodayScheduleScreen> {
                   onAvatarTap: _pickAndUploadAvatar,
                 ),
                 const SizedBox(height: 20),
-                _SummaryCard(total: items.length, done: doneCount),
+                _SummaryCard(
+                  total: items.length,
+                  done: doneCount,
+                  onTap: _openMedicationList,
+                ),
                 const SizedBox(height: 24),
+                const SizedBox(height: 24),
+                Row(
+                  children: [
+                    const Expanded(
+                      child: Text(
+                        'ตารางยาวันนี้',
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+                      ),
+                    ),
+                    TextButton.icon(
+                      onPressed: _openMedicationList,
+                      icon: const Icon(Icons.medication_outlined, size: 18),
+                      label: const Text('ยาของฉัน'),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                if (items.isEmpty)
+                  // An empty schedule used to be a dead end: nothing in the app
+                  // could add a medication, so this said "none today" forever.
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 24),
+                    child: Column(
+                      children: [
+                        const Text('ไม่มีรายการยาวันนี้'),
+                        const SizedBox(height: 12),
+                        OutlinedButton.icon(
+                          onPressed: _openMedicationList,
+                          icon: const Icon(Icons.add),
+                          label: const Text('เพิ่มยาที่กินอยู่'),
+                        ),
+                      ],
+                    ),
+                  )
+                else
+                  ...items.map((item) => _DoseTile(
+                        item: item,
+                        actioned: _actionedScheduleIds.contains(item.scheduleId),
+                        onLog: (status) => _logDose(item, status),
+                      )),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -382,46 +426,6 @@ class _TodayScheduleScreenState extends State<TodayScheduleScreen> {
                     );
                   },
                 ),
-                const SizedBox(height: 24),
-                Row(
-                  children: [
-                    const Expanded(
-                      child: Text(
-                        'ตารางยาวันนี้',
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
-                      ),
-                    ),
-                    TextButton.icon(
-                      onPressed: _openMedicationList,
-                      icon: const Icon(Icons.medication_outlined, size: 18),
-                      label: const Text('ยาของฉัน'),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                if (items.isEmpty)
-                  // An empty schedule used to be a dead end: nothing in the app
-                  // could add a medication, so this said "none today" forever.
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 24),
-                    child: Column(
-                      children: [
-                        const Text('ไม่มีรายการยาวันนี้'),
-                        const SizedBox(height: 12),
-                        OutlinedButton.icon(
-                          onPressed: _openMedicationList,
-                          icon: const Icon(Icons.add),
-                          label: const Text('เพิ่มยาที่กินอยู่'),
-                        ),
-                      ],
-                    ),
-                  )
-                else
-                  ...items.map((item) => _DoseTile(
-                        item: item,
-                        actioned: _actionedScheduleIds.contains(item.scheduleId),
-                        onLog: (status) => _logDose(item, status),
-                      )),
               ],
             );
           },
@@ -626,40 +630,66 @@ class _CategoryTile extends StatelessWidget {
 }
 
 class _SummaryCard extends StatelessWidget {
-  const _SummaryCard({required this.total, required this.done});
+  const _SummaryCard({
+    required this.total,
+    required this.done,
+    required this.onTap,
+  });
 
   final int total;
   final int done;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final progress = total == 0 ? 0.0 : done / total;
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: OnboardingColors.teal,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text('ยาวันนี้', style: TextStyle(color: Colors.white70, fontSize: 13)),
-          const SizedBox(height: 4),
-          Text(
-            total == 0 ? 'ไม่มีรายการยาวันนี้' : 'บันทึกแล้ว $done จาก $total รายการ',
-            style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w700),
-          ),
-          const SizedBox(height: 12),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: LinearProgressIndicator(
-              value: progress,
-              minHeight: 8,
-              backgroundColor: Colors.white24,
-              valueColor: const AlwaysStoppedAnimation(Colors.white),
+    // The first thing on the screen, and on a new account it reads "no
+    // medication today" — so it is also the first place someone will press
+    // to do something about that.
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: OnboardingColors.teal,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('ยาวันนี้',
+                style: TextStyle(color: Colors.white70, fontSize: 13)),
+            const SizedBox(height: 4),
+            Text(
+              total == 0
+                  ? 'ไม่มีรายการยาวันนี้'
+                  : 'บันทึกแล้ว $done จาก $total รายการ',
+              style: const TextStyle(
+                  color: Colors.white, fontSize: 18, fontWeight: FontWeight.w700),
             ),
-          ),
-        ],
+            const SizedBox(height: 12),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: LinearProgressIndicator(
+                value: progress,
+                minHeight: 8,
+                backgroundColor: Colors.white24,
+                valueColor: const AlwaysStoppedAnimation(Colors.white),
+              ),
+            ),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Text(
+                  total == 0 ? 'เพิ่มยาที่กินอยู่' : 'ดูยาทั้งหมดของฉัน',
+                  style: const TextStyle(color: Colors.white, fontSize: 13),
+                ),
+                const Icon(Icons.chevron_right, size: 18, color: Colors.white),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
