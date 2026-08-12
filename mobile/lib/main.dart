@@ -86,6 +86,7 @@ Future<void> main() async {
   runApp(
     MediGoApp(
       googleWebClientId: _googleWebClientId.isEmpty ? null : _googleWebClientId,
+      connectionReport: report.lines,
     ),
   );
 }
