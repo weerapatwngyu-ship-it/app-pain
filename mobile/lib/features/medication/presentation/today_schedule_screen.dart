@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
 
+import '../../../shared/widgets/avatar_picker.dart';
 import '../../../shared/widgets/user_avatar.dart';
 import '../../auth/domain/auth_repository.dart';
 import '../../auth/domain/entities/user.dart';
@@ -153,48 +153,13 @@ class _TodayScheduleScreenState extends State<TodayScheduleScreen> {
   }
 
   Future<void> _pickAndUploadAvatar() async {
-    final source = await showModalBottomSheet<ImageSource>(
-      context: context,
-      builder: (context) => SafeArea(
-        child: Wrap(
-          children: [
-            ListTile(
-              leading: const Icon(Icons.photo_camera_outlined),
-              title: const Text('ถ่ายรูป'),
-              onTap: () => Navigator.of(context).pop(ImageSource.camera),
-            ),
-            ListTile(
-              leading: const Icon(Icons.photo_library_outlined),
-              title: const Text('เลือกจากคลังภาพ'),
-              onTap: () => Navigator.of(context).pop(ImageSource.gallery),
-            ),
-          ],
-        ),
-      ),
-    );
-    if (source == null || !mounted) return;
-
-    final picked = await ImagePicker().pickImage(
-      source: source,
-      maxWidth: 1024,
-      imageQuality: 85,
-    );
-    if (picked == null || !mounted) return;
-
     setState(() => _uploadingAvatar = true);
     try {
-      final bytes = await picked.readAsBytes();
-      final updatedUser = await widget.authRepository.uploadAvatar(
-        fileBytes: bytes,
-        fileName: picked.name,
+      final updated = await pickAndUploadAvatar(
+        context: context,
+        authRepository: widget.authRepository,
       );
-      widget.onUserUpdated(updatedUser);
-    } catch (_) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('อัปโหลดรูปไม่สำเร็จ ลองใหม่อีกครั้ง')),
-        );
-      }
+      if (updated != null) widget.onUserUpdated(updated);
     } finally {
       if (mounted) setState(() => _uploadingAvatar = false);
     }

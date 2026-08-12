@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../../../shared/widgets/user_avatar.dart';
 import '../../auth/domain/entities/user.dart';
@@ -19,7 +20,7 @@ import '../domain/entities/doctor.dart';
 /// schedule, symptom log or health questions of their own here, so this shows
 /// the listing patients actually see plus the few app features that make sense
 /// without a patient record behind them.
-class DoctorProfileScreen extends StatelessWidget {
+class DoctorProfileScreen extends StatefulWidget {
   const DoctorProfileScreen({
     super.key,
     required this.user,
@@ -39,6 +40,65 @@ class DoctorProfileScreen extends StatelessWidget {
   final ChatRepository chatRepository;
   final VoidCallback onLogout;
 
+  @override
+  State<DoctorProfileScreen> createState() => _DoctorProfileScreenState();
+}
+
+class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
+  /// The listing as it stands now, so a newly uploaded photo shows without
+  /// waiting for the shell above to re-query.
+  late Doctor _doctor = widget.doctor;
+  bool _uploadingPhoto = false;
+
+  AppUser get user => widget.user;
+  Doctor get doctor => _doctor;
+
+  /// A doctor's photo is the one on their listing, not their account avatar —
+  /// that listing is what patients see, so it is the one worth changing.
+  Future<void> _changePhoto() async {
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      builder: (sheetContext) => SafeArea(
+        child: Wrap(
+          children: [
+            ListTile(
+              leading: const Icon(Icons.photo_camera_outlined),
+              title: const Text('ถ่ายรูป'),
+              onTap: () => Navigator.of(sheetContext).pop(ImageSource.camera),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library_outlined),
+              title: const Text('เลือกจากคลังภาพ'),
+              onTap: () => Navigator.of(sheetContext).pop(ImageSource.gallery),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (source == null || !mounted) return;
+
+    setState(() => _uploadingPhoto = true);
+    try {
+      final picked = await ImagePicker()
+          .pickImage(source: source, maxWidth: 1024, imageQuality: 85);
+      if (picked == null) return;
+      final updated = await widget.doctorRepository.uploadPhoto(
+        _doctor.id,
+        fileBytes: await picked.readAsBytes(),
+        fileName: picked.name,
+      );
+      if (mounted) setState(() => _doctor = updated);
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('อัปโหลดรูปไม่สำเร็จ ลองใหม่อีกครั้ง')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _uploadingPhoto = false);
+    }
+  }
+
   Future<void> _confirmLogout(BuildContext context) async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -57,7 +117,7 @@ class DoctorProfileScreen extends StatelessWidget {
         ],
       ),
     );
-    if (confirmed == true) onLogout();
+    if (confirmed == true) widget.onLogout();
   }
 
   @override
@@ -67,7 +127,13 @@ class DoctorProfileScreen extends StatelessWidget {
       children: [
         Row(
           children: [
-            UserAvatar(name: doctor.name, avatarUrl: doctor.photoUrl, radius: 32),
+            UserAvatar(
+              name: doctor.name,
+              avatarUrl: doctor.photoUrl,
+              radius: 32,
+              onTap: _changePhoto,
+              loading: _uploadingPhoto,
+            ),
             const SizedBox(width: 16),
             Expanded(
               child: Column(
@@ -113,7 +179,8 @@ class DoctorProfileScreen extends StatelessWidget {
           padding: EdgeInsets.symmetric(vertical: 8),
           child: Text(
             'ข้อมูลนี้คือสิ่งที่ผู้ป่วยเห็นในหน้าแรก '
-            'หากต้องการแก้ไข ให้ติดต่อผู้ดูแลระบบ',
+            'รูปแตะเพื่อเปลี่ยนได้เอง ส่วนชื่อและสาขาความเชี่ยวชาญ '
+            'ต้องติดต่อผู้ดูแลระบบ',
             style: TextStyle(fontSize: 12, color: OnboardingColors.textMuted),
           ),
         ),
@@ -123,7 +190,7 @@ class DoctorProfileScreen extends StatelessWidget {
           label: 'คำถามจากผู้ป่วย',
           onTap: () => Navigator.of(context).push(
             MaterialPageRoute(
-              builder: (_) => QuestionQueueScreen(repository: healthQuestionRepository),
+              builder: (_) => QuestionQueueScreen(repository: widget.healthQuestionRepository),
             ),
           ),
         ),
@@ -137,9 +204,9 @@ class DoctorProfileScreen extends StatelessWidget {
               // stay hidden.
               builder: (_) => HealthTopicsScreen(
                 patientId: null,
-                questionRepository: healthQuestionRepository,
-                doctorRepository: doctorRepository,
-                chatRepository: chatRepository,
+                questionRepository: widget.healthQuestionRepository,
+                doctorRepository: widget.doctorRepository,
+                chatRepository: widget.chatRepository,
               ),
             ),
           ),
@@ -149,7 +216,7 @@ class DoctorProfileScreen extends StatelessWidget {
           label: 'ร้านยาและคลินิกใกล้ฉัน',
           onTap: () => Navigator.of(context).push(
             MaterialPageRoute(
-              builder: (_) => PharmacyFinderScreen(repository: pharmacyFinderRepository),
+              builder: (_) => PharmacyFinderScreen(repository: widget.pharmacyFinderRepository),
             ),
           ),
         ),

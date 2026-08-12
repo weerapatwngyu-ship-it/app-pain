@@ -5,6 +5,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../auth/domain/auth_repository.dart';
 import '../../auth/domain/entities/user.dart';
+import '../../../shared/widgets/avatar_picker.dart';
+import '../../../shared/widgets/user_avatar.dart';
 import '../../auth/presentation/onboarding/onboarding_theme.dart';
 import '../../../shared/validation/thai_phone.dart';
 import '../data/patient_profile_repository.dart';
@@ -51,7 +53,12 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
   DateTime? _birthDate;
   String _gender = 'unspecified';
   bool _saving = false;
+  bool _uploadingAvatar = false;
   String? _error;
+
+  /// Held here rather than read from widget.user, because the upload happens
+  /// while this form is still open and the parent has not been told yet.
+  late AppUser _user = widget.user;
 
   static const _genderOptions = {
     'female': 'หญิง',
@@ -78,6 +85,23 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
       helpText: 'เลือกวันเกิด',
     );
     if (picked != null) setState(() => _birthDate = picked);
+  }
+
+  /// The photo uploads immediately rather than waiting for the save, because
+  /// uploading is what the backend offers — there is no way to hold bytes
+  /// pending alongside a row update. Backing out of the form after choosing
+  /// one therefore keeps the photo, which is the harmless direction to err.
+  Future<void> _changeAvatar() async {
+    setState(() => _uploadingAvatar = true);
+    try {
+      final updated = await pickAndUploadAvatar(
+        context: context,
+        authRepository: widget.authRepository,
+      );
+      if (updated != null && mounted) setState(() => _user = updated);
+    } finally {
+      if (mounted) setState(() => _uploadingAvatar = false);
+    }
   }
 
   static String _two(int n) => n.toString().padLeft(2, '0');
@@ -190,6 +214,33 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
                 child: ListView(
                   padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
                   children: [
+                    Center(
+                      child: Column(
+                        children: [
+                          UserAvatar(
+                            // The initial is only a stand-in until a photo is
+                            // chosen, so it reads the saved name rather than
+                            // the field being typed into — following the field
+                            // would need a listener to earn a letter nobody is
+                            // looking at.
+                            name: _user.name,
+                            avatarUrl: _user.avatarUrl,
+                            radius: 44,
+                            onTap: _saving ? null : _changeAvatar,
+                            loading: _uploadingAvatar,
+                          ),
+                          const SizedBox(height: 8),
+                          const Text(
+                            'แตะเพื่อใส่รูปโปรไฟล์',
+                            style: TextStyle(
+                              color: OnboardingColors.textMuted,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 24),
                     _Label('ชื่อจริง*'),
                     TextFormField(
                       controller: _firstNameController,

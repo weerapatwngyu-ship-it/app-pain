@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../shared/widgets/avatar_picker.dart';
 import '../../../shared/widgets/user_avatar.dart';
 import '../../auth/domain/auth_repository.dart';
 import '../../auth/domain/entities/user.dart';
@@ -18,7 +19,7 @@ import 'all_menu_screen.dart';
 import 'personal_info_detail_screen.dart';
 import 'settings_screen.dart';
 
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends StatefulWidget {
   const ProfileScreen({
     super.key,
     required this.user,
@@ -54,6 +55,15 @@ class ProfileScreen extends StatelessWidget {
   final CaseloadRepository caseloadRepository;
   final ValueChanged<AppUser> onUserUpdated;
 
+  @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  bool _uploadingAvatar = false;
+
+  AppUser get user => widget.user;
+
   /// Short, human-friendly stand-in for a "member code" — derived from the
   /// account's real id (not fabricated), since the backend doesn't hand out
   /// a separate short code today.
@@ -63,6 +73,19 @@ class ProfileScreen extends StatelessWidget {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('ฟีเจอร์นี้อยู่ระหว่างการพัฒนา')),
     );
+  }
+
+  Future<void> _changeAvatar() async {
+    setState(() => _uploadingAvatar = true);
+    try {
+      final updated = await pickAndUploadAvatar(
+        context: context,
+        authRepository: widget.authRepository,
+      );
+      if (updated != null) widget.onUserUpdated(updated);
+    } finally {
+      if (mounted) setState(() => _uploadingAvatar = false);
+    }
   }
 
   @override
@@ -77,8 +100,10 @@ class ProfileScreen extends StatelessWidget {
               children: [
                 UserAvatar(
                   name: user.name,
-                  avatarUrl: user.avatarUrl != null ? user.avatarUrl! : null,
+                  avatarUrl: user.avatarUrl,
                   radius: 28,
+                  onTap: _changeAvatar,
+                  loading: _uploadingAvatar,
                 ),
                 const SizedBox(width: 16),
                 Expanded(
@@ -103,20 +128,20 @@ class ProfileScreen extends StatelessWidget {
                     MaterialPageRoute(
                       builder: (_) => AllMenuScreen(
                         user: user,
-                        patientId: patientId,
-                        authRepository: authRepository,
-                        patientProfileRepository: patientProfileRepository,
-                        symptomRepository: symptomRepository,
-                        doctorRepository: doctorRepository,
-                        pharmacyFinderRepository: pharmacyFinderRepository,
-                        healthQuestionRepository: healthQuestionRepository,
-                        chatRepository: chatRepository,
-                        alertsRepository: alertsRepository,
-                        peerChatRepository: peerChatRepository,
-                        adminRepository: adminRepository,
-                        caseloadRepository: caseloadRepository,
-                        onUserUpdated: onUserUpdated,
-                        onLogout: onLogout,
+                        patientId: widget.patientId,
+                        authRepository: widget.authRepository,
+                        patientProfileRepository: widget.patientProfileRepository,
+                        symptomRepository: widget.symptomRepository,
+                        doctorRepository: widget.doctorRepository,
+                        pharmacyFinderRepository: widget.pharmacyFinderRepository,
+                        healthQuestionRepository: widget.healthQuestionRepository,
+                        chatRepository: widget.chatRepository,
+                        alertsRepository: widget.alertsRepository,
+                        peerChatRepository: widget.peerChatRepository,
+                        adminRepository: widget.adminRepository,
+                        caseloadRepository: widget.caseloadRepository,
+                        onUserUpdated: widget.onUserUpdated,
+                        onLogout: widget.onLogout,
                       ),
                     ),
                   ),
@@ -144,9 +169,9 @@ class ProfileScreen extends StatelessWidget {
                 MaterialPageRoute(
                   builder: (_) => PersonalInfoDetailScreen(
                     user: user,
-                    authRepository: authRepository,
-                    repository: patientProfileRepository,
-                    onUserUpdated: onUserUpdated,
+                    authRepository: widget.authRepository,
+                    repository: widget.patientProfileRepository,
+                    onUserUpdated: widget.onUserUpdated,
                   ),
                 ),
               ),
@@ -188,7 +213,7 @@ class ProfileScreen extends StatelessWidget {
             _MenuTile(
               icon: Icons.logout,
               label: 'ออกจากระบบ',
-              onTap: onLogout,
+              onTap: widget.onLogout,
             ),
           ],
         ),
