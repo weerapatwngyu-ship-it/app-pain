@@ -223,6 +223,16 @@ class _TodayScheduleScreenState extends State<TodayScheduleScreen> {
                 .where((item) => _actionedScheduleIds.contains(item.scheduleId))
                 .length;
 
+            // The backend returns today's doses ordered by time, so the first
+            // one still unlogged is the next one due.
+            DoseScheduleItem? nextDose;
+            for (final item in items) {
+              if (!_actionedScheduleIds.contains(item.scheduleId)) {
+                nextDose = item;
+                break;
+              }
+            }
+
             return ListView(
               padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
               children: [
@@ -236,42 +246,31 @@ class _TodayScheduleScreenState extends State<TodayScheduleScreen> {
                   onAvatarTap: _pickAndUploadAvatar,
                 ),
                 const SizedBox(height: 20),
-                _SummaryCard(
+                _TodayHeroCard(
                   total: items.length,
                   done: doneCount,
-                  onTap: _openMedicationList,
+                  nextDose: nextDose,
+                  onOpenList: _openMedicationList,
                 ),
-                const SizedBox(height: 28),
-                _SectionHeader(
-                  title: 'ตารางยาวันนี้',
-                  actionLabel: 'ยาของฉัน',
-                  actionIcon: Icons.medication_outlined,
-                  onAction: _openMedicationList,
-                ),
-                const SizedBox(height: 12),
-                if (items.isEmpty)
-                  // An empty schedule used to be a dead end: nothing in the app
-                  // could add a medication, so this said "none today" forever.
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 24),
-                    child: Column(
-                      children: [
-                        const Text('ไม่มีรายการยาวันนี้'),
-                        const SizedBox(height: 12),
-                        OutlinedButton.icon(
-                          onPressed: _openMedicationList,
-                          icon: const Icon(Icons.add),
-                          label: const Text('เพิ่มยาที่กินอยู่'),
-                        ),
-                      ],
-                    ),
-                  )
-                else
+                // With nothing scheduled the card above already says so and
+                // offers the one thing to do about it, so the section is left
+                // out entirely rather than repeating the message under an
+                // empty heading.
+                if (items.isNotEmpty) ...[
+                  const SizedBox(height: 28),
+                  _SectionHeader(
+                    title: 'ตารางยาวันนี้',
+                    actionLabel: 'ยาของฉัน',
+                    actionIcon: Icons.medication_outlined,
+                    onAction: _openMedicationList,
+                  ),
+                  const SizedBox(height: 12),
                   ...items.map((item) => _DoseTile(
                         item: item,
                         actioned: _actionedScheduleIds.contains(item.scheduleId),
                         onLog: (status) => _logDose(item, status),
                       )),
+                ],
                 const SizedBox(height: 28),
                 _SectionHeader(
                   title: 'ปรึกษาแพทย์',
@@ -301,7 +300,7 @@ class _TodayScheduleScreenState extends State<TodayScheduleScreen> {
                       );
                     }
                     return SizedBox(
-                      height: 132,
+                      height: 148,
                       child: ListView.separated(
                         scrollDirection: Axis.horizontal,
                         itemCount: doctors.length,
@@ -325,7 +324,7 @@ class _TodayScheduleScreenState extends State<TodayScheduleScreen> {
                 ),
                 const SizedBox(height: 10),
                 SizedBox(
-                  height: 96,
+                  height: 108,
                   child: ListView.separated(
                     scrollDirection: Axis.horizontal,
                     itemCount: healthTopics.length,
@@ -358,7 +357,7 @@ class _TodayScheduleScreenState extends State<TodayScheduleScreen> {
                   builder: (context, snapshot) {
                     final counts = snapshot.data ?? const {};
                     return SizedBox(
-                      height: 88,
+                      height: 96,
                       child: ListView.separated(
                         scrollDirection: Axis.horizontal,
                         itemCount: symptomCategories.length,
@@ -382,6 +381,25 @@ class _TodayScheduleScreenState extends State<TodayScheduleScreen> {
       ),
     );
   }
+}
+
+/// Thai weekday and month names. Written out rather than pulled from
+/// intl, which the project does not depend on and which would be a lot of
+/// weight for one line of text.
+const _thaiWeekdays = ['จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์', 'อาทิตย์'];
+const _thaiMonths = [
+  'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.',
+  'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.',
+];
+
+/// Today, as "วันอังคาร 12 ส.ค." — a screen headed "ยาวันนี้" should say
+/// which day that is, and the Buddhist year is added because that is what a
+/// Thai reader expects to see next to a date.
+String _thaiToday() {
+  final now = DateTime.now();
+  final weekday = _thaiWeekdays[now.weekday - 1];
+  final month = _thaiMonths[now.month - 1];
+  return 'วัน$weekday ${now.day} $month ${now.year + 543}';
 }
 
 class _Header extends StatelessWidget {
@@ -414,9 +432,31 @@ class _Header extends StatelessWidget {
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Text(greeting, style: const TextStyle(color: OnboardingColors.textMuted, fontSize: 13)),
-              Text(name, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+              Text(
+                greeting,
+                style: const TextStyle(
+                    color: OnboardingColors.textMuted, fontSize: 13),
+              ),
+              Text(
+                name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 19,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: -0.2,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                _thaiToday(),
+                style: const TextStyle(
+                  color: OnboardingColors.textMuted,
+                  fontSize: 12,
+                ),
+              ),
             ],
           ),
         ),
@@ -438,31 +478,41 @@ class _DoctorTile extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(16),
       child: Container(
-        width: 96,
-        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+        width: 104,
+        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
         decoration: BoxDecoration(
+          color: Colors.white,
           border: Border.all(color: OnboardingColors.border),
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(18),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x0F000000),
+              blurRadius: 10,
+              offset: Offset(0, 4),
+            ),
+          ],
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             CircleAvatar(
-              radius: 24,
+              radius: 27,
               backgroundColor: OnboardingColors.teal,
               backgroundImage: photoUrl != null ? NetworkImage(photoUrl) : null,
               child: photoUrl == null
-                  ? const Icon(Icons.medical_services_outlined, color: Colors.white, size: 20)
+                  ? const Icon(Icons.medical_services_outlined,
+                      color: Colors.white, size: 22)
                   : null,
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 8),
             Text(
               doctor.name,
               textAlign: TextAlign.center,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+              style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700),
             ),
+            const SizedBox(height: 1),
             Text(
               doctor.specialty,
               textAlign: TextAlign.center,
@@ -491,26 +541,34 @@ class _HealthTopicTile extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(16),
       child: SizedBox(
-        width: 72,
+        width: 76,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              width: 56,
-              height: 56,
+              width: 60,
+              height: 60,
               decoration: const BoxDecoration(
                 color: Color(0xFFEAF5F3),
                 shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: Color(0x14000000),
+                    blurRadius: 8,
+                    offset: Offset(0, 3),
+                  ),
+                ],
               ),
-              child: Icon(topic.icon, color: OnboardingColors.teal, size: 28),
+              child: Icon(topic.icon, color: OnboardingColors.teal, size: 29),
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 7),
             Text(
               topic.label,
               textAlign: TextAlign.center,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 11, height: 1.2),
+              style: const TextStyle(
+                  fontSize: 11.5, height: 1.25, fontWeight: FontWeight.w500),
             ),
           ],
         ),
@@ -532,11 +590,19 @@ class _CategoryTile extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(16),
       child: Container(
-        width: 76,
-        padding: const EdgeInsets.symmetric(vertical: 10),
+        width: 80,
+        padding: const EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(
+          color: Colors.white,
           border: Border.all(color: OnboardingColors.border),
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(18),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x0F000000),
+              blurRadius: 10,
+              offset: Offset(0, 4),
+            ),
+          ],
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -578,68 +644,204 @@ class _CategoryTile extends StatelessWidget {
   }
 }
 
-class _SummaryCard extends StatelessWidget {
-  const _SummaryCard({
+/// The card at the top of the home screen.
+///
+/// Two genuinely different states rather than one layout with the numbers
+/// swapped. With nothing scheduled, a progress bar shows progress through
+/// nothing and the card repeated the same "none today" the section below
+/// already said; that space now carries the one useful action instead. With
+/// doses on it, the card answers the question actually being asked — how far
+/// through today am I, and what is next.
+class _TodayHeroCard extends StatelessWidget {
+  const _TodayHeroCard({
     required this.total,
     required this.done,
-    required this.onTap,
+    required this.nextDose,
+    required this.onOpenList,
   });
 
   final int total;
   final int done;
-  final VoidCallback onTap;
+
+  /// Earliest dose not yet logged. Null once everything is done.
+  final DoseScheduleItem? nextDose;
+
+  final VoidCallback onOpenList;
 
   @override
   Widget build(BuildContext context) {
-    final progress = total == 0 ? 0.0 : done / total;
-    // The first thing on the screen, and on a new account it reads "no
-    // medication today" — so it is also the first place someone will press
-    // to do something about that.
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(20),
-      child: Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: OnboardingColors.teal,
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: OnboardingColors.teal,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: OnboardingColors.teal.withValues(alpha: 0.28),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: total == 0 ? _buildEmpty(context) : _buildProgress(context),
+    );
+  }
+
+  Widget _buildEmpty(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
           children: [
-            const Text('ยาวันนี้',
-                style: TextStyle(color: Colors.white70, fontSize: 13)),
-            const SizedBox(height: 4),
-            Text(
-              total == 0
-                  ? 'ไม่มีรายการยาวันนี้'
-                  : 'บันทึกแล้ว $done จาก $total รายการ',
-              style: const TextStyle(
-                  color: Colors.white, fontSize: 18, fontWeight: FontWeight.w700),
-            ),
-            const SizedBox(height: 12),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: LinearProgressIndicator(
-                value: progress,
-                minHeight: 8,
-                backgroundColor: Colors.white24,
-                valueColor: const AlwaysStoppedAnimation(Colors.white),
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.22),
+                borderRadius: BorderRadius.circular(14),
               ),
+              child: const Icon(Icons.medication_liquid_outlined,
+                  color: Colors.white, size: 24),
             ),
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                Text(
-                  total == 0 ? 'เพิ่มยาที่กินอยู่' : 'ดูยาทั้งหมดของฉัน',
-                  style: const TextStyle(color: Colors.white, fontSize: 13),
+            const SizedBox(width: 14),
+            const Expanded(
+              child: Text(
+                'ยังไม่มียาในระบบ',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 19,
+                  fontWeight: FontWeight.w700,
                 ),
-                const Icon(Icons.chevron_right, size: 18, color: Colors.white),
-              ],
+              ),
             ),
           ],
         ),
-      ),
+        const SizedBox(height: 12),
+        const Text(
+          'เพิ่มยาที่กินอยู่พร้อมเวลา แล้วแอปจะเตือนให้ตามเวลานั้นทุกวัน',
+          style: TextStyle(color: Colors.white, fontSize: 13.5, height: 1.5),
+        ),
+        const SizedBox(height: 16),
+        SizedBox(
+          width: double.infinity,
+          child: FilledButton.icon(
+            onPressed: onOpenList,
+            icon: const Icon(Icons.add, size: 20),
+            label: const Text('เพิ่มยาที่กินอยู่'),
+            style: FilledButton.styleFrom(
+              backgroundColor: Colors.white,
+              foregroundColor: OnboardingColors.teal,
+              minimumSize: const Size.fromHeight(46),
+              textStyle:
+                  const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildProgress(BuildContext context) {
+    final allDone = done >= total;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('ยาวันนี้',
+                      style: TextStyle(color: Colors.white70, fontSize: 13)),
+                  const SizedBox(height: 6),
+                  Text(
+                    allDone ? 'ครบแล้ววันนี้' : 'บันทึกแล้ว $done จาก $total',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 21,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            SizedBox(
+              width: 56,
+              height: 56,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  SizedBox(
+                    width: 56,
+                    height: 56,
+                    child: CircularProgressIndicator(
+                      value: total == 0 ? 0 : done / total,
+                      strokeWidth: 5,
+                      backgroundColor: Colors.white24,
+                      valueColor: const AlwaysStoppedAnimation(Colors.white),
+                    ),
+                  ),
+                  if (allDone)
+                    const Icon(Icons.check, color: Colors.white, size: 24)
+                  else
+                    Text(
+                      '$done/$total',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        if (nextDose != null) ...[
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.18),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.schedule, color: Colors.white, size: 18),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'ถัดไป ${nextDose!.scheduledTime} · ${nextDose!.medicationName}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+        const SizedBox(height: 14),
+        InkWell(
+          onTap: onOpenList,
+          child: const Row(
+            children: [
+              Text('ดูยาทั้งหมดของฉัน',
+                  style: TextStyle(color: Colors.white, fontSize: 13.5)),
+              Icon(Icons.chevron_right, size: 18, color: Colors.white),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
