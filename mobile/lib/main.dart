@@ -1,6 +1,5 @@
 import 'dart:convert';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -56,16 +55,33 @@ Future<void> main() async {
     return;
   }
 
-  // Debug-only check on the credentials, because "Invalid API key" arrives
-  // at the sign-in screen with no way to tell which of several causes it is:
-  // a truncated key, a key for another project, or a key the project has
-  // since disabled. Prints what was actually compiled in, then asks Supabase
-  // directly and reports the verdict.
-  if (kDebugMode) await _reportSupabaseConfig();
+  // Ask Supabase whether it accepts these credentials before showing a
+  // sign-in screen that cannot work without them.
+  //
+  // "Invalid API key" used to surface as four red words under the password
+  // field, identical whether the key was truncated on copy, belonged to
+  // another project, was a secret key by mistake, or had been disabled — each
+  // needing a different fix. A refusal now stops here and shows what was
+  // compiled in alongside the server's own answer.
+  final report = await _checkCredentials();
+  for (final line in report.lines) {
+    debugPrint('[supabase-check] $line');
+  }
+  if (report.refused) {
+    runApp(_RejectedConfigApp(report));
+    return;
+  }
 
   // Supabase is the whole backend: auth, database and file storage. There
   // is no server of this app's own to point at.
-  await Supabase.initialize(url: _supabaseUrl, anonKey: _supabaseAnonKey);
+  //
+  // Trimmed because these arrive from a JSON file a person edits, and a
+  // stray space inside the quotes is invisible there but makes every request
+  // fail with the same unhelpful rejection.
+  await Supabase.initialize(
+    url: _trimmedSupabaseUrl,
+    anonKey: _supabaseAnonKey.trim(),
+  );
 
   runApp(
     MediGoApp(
@@ -84,62 +100,134 @@ String get _trimmedSupabaseUrl {
   return url;
 }
 
-/// Prints what the build was given and what Supabase makes of it.
+/// What the build was given, and what Supabase makes of it.
+class _CredentialReport {
+  const _CredentialReport({required this.lines, required this.refused});
+
+  /// Human-readable findings, in the order they should be read.
+  final List<String> lines;
+
+  /// True only when Supabase answered and rejected the key. An unreachable
+  /// server leaves this false: being offline is not a bad key, and refusing
+  /// to start would strand a user who only wanted to read today's doses.
+  final bool refused;
+}
+
+/// Describes the credentials, then asks Supabase to judge them.
 ///
-/// Debug builds only. Reveals nothing the app does not already ship: the anon
-/// key is a public client key, and the claims printed here are the key's own
-/// unencrypted middle segment.
-Future<void> _reportSupabaseConfig() async {
-  void line(String text) => debugPrint('[supabase-check] $text');
+/// Nothing here is secret. The anon key ships inside every copy of the app,
+/// and the claims shown are the key's own unencrypted middle segment.
+Future<_CredentialReport> _checkCredentials() async {
+  final key = _supabaseAnonKey.trim();
+  final lines = <String>[
+    'URL = $_trimmedSupabaseUrl',
+    'key: ยาว ${key.length} ตัว, จุด ${key.split('.').length - 1} จุด, '
+        'ขึ้นต้น ${key.substring(0, key.length.clamp(0, 12))}',
+    'GOOGLE_WEB_CLIENT_ID = '
+        '${_googleWebClientId.trim().isEmpty ? "(ว่าง — ปุ่ม Google จะไม่แสดง)" : "ตั้งค่าแล้ว"}',
+  ];
 
-  line('URL = $_supabaseUrl');
-  line('key length = ${_supabaseAnonKey.length}, dots = '
-      '${_supabaseAnonKey.split('.').length - 1}');
-  line('key starts = ${_supabaseAnonKey.substring(0, _supabaseAnonKey.length.clamp(0, 12))}');
-  line('GOOGLE_WEB_CLIENT_ID = '
-      '${_googleWebClientId.isEmpty ? "(ว่าง — ปุ่ม Google จะไม่ขึ้น)" : _googleWebClientId}');
+  if (key.length != _supabaseAnonKey.length) {
+    lines.add('หมายเหตุ: key ในไฟล์มีช่องว่างหัว/ท้าย — ตัดออกให้แล้ว');
+  }
 
-  // A legacy key carries its project ref and role in the clear; a new-style
-  // publishable key carries neither, so say which kind arrived.
-  if (_supabaseAnonKey.startsWith('sb_publishable_')) {
-    line('kind = publishable key (แบบใหม่)');
-  } else if (_supabaseAnonKey.startsWith('sb_secret_')) {
-    line('kind = SECRET KEY — ห้ามใช้ในแอป ไปเอา publishable key มาแทน');
+  if (key.startsWith('sb_secret_')) {
+    lines.add('ชนิด: SECRET KEY — ห้ามใส่ในแอป ให้ใช้ publishable key แทน');
+  } else if (key.startsWith('sb_publishable_')) {
+    lines.add('ชนิด: publishable key (แบบใหม่)');
   } else {
-    final parts = _supabaseAnonKey.split('.');
-    if (parts.length == 3) {
+    final parts = key.split('.');
+    if (parts.length != 3) {
+      lines.add('ชนิด: รูปแบบไม่ถูก — JWT ต้องมี 3 ท่อนคั่นด้วยจุด '
+          '(น่าจะ copy มาไม่ครบ)');
+    } else {
       try {
-        final payload = jsonDecode(
+        final claims = jsonDecode(
           utf8.decode(base64Url.decode(base64Url.normalize(parts[1]))),
         ) as Map<String, dynamic>;
-        line('kind = legacy JWT, ref = ${payload["ref"]}, role = ${payload["role"]}');
-        final refInUrl = Uri.parse(_supabaseUrl).host.split('.').first;
-        if (payload['ref'] != refInUrl) {
-          line('!! ref ไม่ตรงกับ URL ($refInUrl) — key มาจากคนละโปรเจกต์');
+        final ref = claims['ref'];
+        final role = claims['role'];
+        lines.add('ชนิด: legacy JWT — โปรเจกต์ $ref, role $role');
+        if (role != 'anon') {
+          lines.add('คำเตือน: role ควรเป็น anon ไม่ใช่ $role');
         }
-      } catch (e) {
-        line('!! ถอด JWT ไม่ได้: $e');
+        final refInUrl = Uri.parse(_trimmedSupabaseUrl).host.split('.').first;
+        if (ref != refInUrl) {
+          lines.add('ไม่ตรงกัน: key เป็นของ $ref แต่ URL ชี้ไป $refInUrl');
+        }
+      } catch (error) {
+        lines.add('อ่านเนื้อใน JWT ไม่ได้: $error');
       }
-    } else {
-      line('!! รูปแบบ key ไม่ถูก — ควรมี 3 ท่อนคั่นด้วยจุด');
     }
   }
 
   try {
-    final response = await http.get(
-      Uri.parse('$_trimmedSupabaseUrl/auth/v1/settings'),
-      headers: {'apikey': _supabaseAnonKey},
-    );
-    line('GET /auth/v1/settings -> HTTP ${response.statusCode}');
+    final response = await http
+        .get(
+          Uri.parse('$_trimmedSupabaseUrl/auth/v1/settings'),
+          headers: {'apikey': key},
+        )
+        .timeout(const Duration(seconds: 8));
+    lines.add('ถาม Supabase: HTTP ${response.statusCode}');
     if (response.statusCode == 200) {
-      line('ผลลัพธ์: key ใช้งานได้ ✓');
-    } else {
-      line('ผลลัพธ์: Supabase ปฏิเสธ -> ${response.body}');
-      line('ถ้าเป็น Invalid API key ทั้งที่ ref/role ถูก แปลว่าโปรเจกต์ปิด '
-          'legacy key ไว้ ให้ไปเอา publishable key มาใส่แทน');
+      lines.add('ผล: key ใช้งานได้');
+      return _CredentialReport(lines: lines, refused: false);
     }
-  } catch (e) {
-    line('!! ต่อ Supabase ไม่ได้เลย (เน็ต/DNS/ไฟร์วอลล์): $e');
+    lines.add('Supabase ตอบ: ${response.body}');
+    if (!key.startsWith('sb_')) {
+      lines.add('key ถูกต้องตามรูปแบบแต่ถูกปฏิเสธ — โปรเจกต์น่าจะปิด '
+          'legacy API key ไว้ ให้ไปหน้า Settings > API Keys คัดลอก '
+          'Publishable key มาใส่ใน dart_defines.json แทน');
+    }
+    return _CredentialReport(lines: lines, refused: true);
+  } catch (error) {
+    // Unreachable, not rejected: let the app start.
+    lines.add('ต่อ Supabase ไม่ได้ (ออฟไลน์หรือถูกบล็อก): $error');
+    return _CredentialReport(lines: lines, refused: false);
+  }
+}
+
+/// Shown when Supabase actively refuses the key, so the reason is on screen
+/// rather than four red words under a password field.
+class _RejectedConfigApp extends StatelessWidget {
+  const _RejectedConfigApp(this.report);
+
+  final _CredentialReport report;
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      home: Scaffold(
+        body: SafeArea(
+          child: ListView(
+            padding: const EdgeInsets.all(20),
+            children: [
+              const Text(
+                'Supabase ปฏิเสธ API key',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'แอปเปิดหน้าเข้าสู่ระบบไม่ได้ เพราะกุญแจที่ build มาใช้ไม่ได้ '
+                'รายละเอียดด้านล่างคือสิ่งที่แอปได้รับและคำตอบจากเซิร์ฟเวอร์',
+                style: TextStyle(height: 1.5),
+              ),
+              const SizedBox(height: 16),
+              for (final line in report.lines)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: Text('•  $line', style: const TextStyle(height: 1.5)),
+                ),
+              const SizedBox(height: 8),
+              const Text(
+                'แก้ที่ mobile/dart_defines.json แล้ว build ใหม่',
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
 
