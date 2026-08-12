@@ -1,17 +1,30 @@
 import 'package:flutter/material.dart';
 
-/// Visual language for the phone/OTP/PIN onboarding flow — kept separate
-/// from [AppTheme] because it deliberately mirrors a specific reference
-/// design (teal accent, white cards, rounded square icon buttons) rather
-/// than the app's general theme.
+import '../../../../shared/theme/app_palette.dart';
+
+/// Named colours the onboarding and patient screens were written against.
+///
+/// These now forward to [AppPalette] rather than holding their own values.
+/// The names stay because forty screens reference them; what they point at
+/// is decided in one place.
 class OnboardingColors {
   OnboardingColors._();
 
-  static const teal = Color(0xFF5FBDB0);
-  static const tealDisabled = Color(0xFFBFE1DB);
-  static const border = Color(0xFFE1E1E1);
-  static const text = Color(0xFF1B1B1B);
-  static const textMuted = Color(0xFF6B6B6B);
+  /// The accent. Named `teal` when the app was teal — kept as an alias so the
+  /// screens still using that name keep working.
+  static const teal = AppPalette.primary;
+  static const tealDisabled = AppPalette.primaryDisabled;
+
+  static const primary = AppPalette.primary;
+  static const primaryDisabled = AppPalette.primaryDisabled;
+  static const soft = AppPalette.soft;
+  static const softBorder = AppPalette.softBorder;
+  static const heading = AppPalette.heading;
+  static const surface = AppPalette.surface;
+  static const field = AppPalette.field;
+  static const border = AppPalette.border;
+  static const text = AppPalette.text;
+  static const textMuted = AppPalette.textMuted;
 }
 
 /// Rounded-square icon button used for the close/back control at the top

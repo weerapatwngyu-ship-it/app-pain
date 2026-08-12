@@ -4,6 +4,7 @@ import 'package:latlong2/latlong.dart';
 
 import '../../auth/presentation/onboarding/onboarding_theme.dart';
 import '../domain/entities/nearby_pharmacy.dart';
+import '../../../shared/theme/app_palette.dart';
 
 /// Embedded map (OpenStreetMap tiles — free, no API key/billing, unlike
 /// Google Maps SDK) showing the user's location plus a pin for every
@@ -55,7 +56,7 @@ class PharmacyMapView extends StatelessWidget {
                   onTap: () => onTapPharmacy(pharmacy),
                   child: Icon(
                     pharmacy.isPharmacy ? Icons.local_pharmacy : Icons.medical_services,
-                    color: pharmacy.isPharmacy ? OnboardingColors.teal : const Color(0xFFE07A3F),
+                    color: pharmacy.isPharmacy ? OnboardingColors.teal : AppPalette.warning,
                     size: 34,
                   ),
                 ),

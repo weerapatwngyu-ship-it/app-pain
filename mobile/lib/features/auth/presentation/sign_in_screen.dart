@@ -3,6 +3,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'onboarding/onboarding_theme.dart';
+import '../../../shared/theme/app_palette.dart';
 
 /// Email/password against Supabase Auth, plus Google when the build carries
 /// a GOOGLE_WEB_CLIENT_ID (see main.dart) — both against Supabase directly,
@@ -153,7 +154,7 @@ class _SignInScreenState extends State<SignInScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppPalette.tint,
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
@@ -180,8 +181,8 @@ class _SignInScreenState extends State<SignInScreen> {
                   textAlign: TextAlign.center,
                   style: const TextStyle(fontSize: 16, color: OnboardingColors.textMuted),
                 ),
-                if (widget.notice != null) _Banner(text: widget.notice!, color: const Color(0xFFB26A00), background: const Color(0xFFFFF4E5)),
-                if (_info != null) _Banner(text: _info!, color: OnboardingColors.teal, background: const Color(0xFFE8F5F3)),
+                if (widget.notice != null) _Banner(text: widget.notice!, color: AppPalette.warning, background: AppPalette.warningSoft),
+                if (_info != null) _Banner(text: _info!, color: OnboardingColors.teal, background: AppPalette.soft),
                 const SizedBox(height: 32),
                 TextFormField(
                   controller: _emailController,

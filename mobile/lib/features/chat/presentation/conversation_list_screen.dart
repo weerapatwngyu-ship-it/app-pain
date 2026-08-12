@@ -4,6 +4,7 @@ import '../../auth/presentation/onboarding/onboarding_theme.dart';
 import '../data/chat_repository.dart';
 import '../domain/entities/conversation.dart';
 import 'chat_screen.dart';
+import '../../../shared/theme/app_palette.dart';
 
 /// Thread list for either side. [isDoctorView] only picks which counterpart
 /// name to show — the underlying rows and access rules are the same.
@@ -66,7 +67,7 @@ class _ConversationListScreenState extends State<ConversationListScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppPalette.tint,
       appBar: AppBar(
         automaticallyImplyLeading: widget.showBackButton,
         title: Text(widget.isDoctorView ? 'ข้อความจากผู้ป่วย' : 'ข้อความของฉัน'),

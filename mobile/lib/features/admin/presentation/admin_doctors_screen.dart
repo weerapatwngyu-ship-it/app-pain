@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../auth/presentation/onboarding/onboarding_theme.dart';
 import '../../doctors/domain/entities/doctor.dart';
 import '../data/admin_repository.dart';
+import '../../../shared/theme/app_palette.dart';
 
 /// Where an admin publishes doctors and decides which accounts are one.
 ///
@@ -150,7 +151,7 @@ class _AdminDoctorsScreenState extends State<AdminDoctorsScreen> {
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('ยืนยันลบ', style: TextStyle(color: Color(0xFFC0392B))),
+            child: const Text('ยืนยันลบ', style: TextStyle(color: AppPalette.danger)),
           ),
         ],
       ),
@@ -172,7 +173,7 @@ class _AdminDoctorsScreenState extends State<AdminDoctorsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppPalette.tint,
       appBar: AppBar(title: const Text('จัดการบัญชีแพทย์')),
       body: FutureBuilder<_AdminData>(
         future: _future,
@@ -269,7 +270,7 @@ class _SectionLabel extends StatelessWidget {
   Widget build(BuildContext context) => Padding(
         padding: const EdgeInsets.only(top: 8, bottom: 8),
         child: Text(text,
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppPalette.heading)),
       );
 }
 
@@ -323,11 +324,11 @@ class _DoctorRow extends StatelessWidget {
                 else
                   const Row(
                     children: [
-                      Icon(Icons.info_outline, size: 13, color: Color(0xFFB26A00)),
+                      Icon(Icons.info_outline, size: 13, color: AppPalette.warning),
                       SizedBox(width: 4),
                       Expanded(
                         child: Text('ยังไม่มีบัญชี — อ่านข้อความจากผู้ป่วยไม่ได้',
-                            style: TextStyle(fontSize: 11, color: Color(0xFFB26A00))),
+                            style: TextStyle(fontSize: 11, color: AppPalette.warning)),
                       ),
                     ],
                   ),
@@ -342,7 +343,7 @@ class _DoctorRow extends StatelessWidget {
             ),
           IconButton(
             onPressed: onRemove,
-            icon: const Icon(Icons.delete_outline, size: 20, color: Color(0xFFC0392B)),
+            icon: const Icon(Icons.delete_outline, size: 20, color: AppPalette.danger),
             tooltip: 'ลบ',
           ),
         ],
@@ -363,7 +364,7 @@ class _AccountRow extends StatelessWidget {
       contentPadding: EdgeInsets.zero,
       leading: CircleAvatar(
         backgroundColor:
-            account.isDoctor ? OnboardingColors.teal : const Color(0xFFE1E1E1),
+            account.isDoctor ? OnboardingColors.teal : AppPalette.border,
         child: Icon(
           account.isDoctor ? Icons.medical_services_outlined : Icons.person,
           color: account.isDoctor ? Colors.white : OnboardingColors.textMuted,
@@ -383,7 +384,7 @@ class _AccountRow extends StatelessWidget {
           if (account.roleNeedsRepair)
             const Text(
               'สิทธิ์ยังเป็นผู้ป่วย — บัญชีนี้จะเข้าหน้าหมอไม่ได้',
-              style: TextStyle(fontSize: 11, color: Color(0xFFB26A00)),
+              style: TextStyle(fontSize: 11, color: AppPalette.warning),
             ),
         ],
       ),
@@ -460,7 +461,7 @@ class _DoctorFormSheetState extends State<_DoctorFormSheet> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text('เพิ่มแพทย์',
-                style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
+                style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: AppPalette.heading)),
             const SizedBox(height: 4),
             const Text(
               'แพทย์ที่เพิ่มจะขึ้นในหน้าแรกของผู้ป่วยทันที',
@@ -523,7 +524,7 @@ class _DoctorFormSheetState extends State<_DoctorFormSheet> {
             const Text(
               'ตรวจสอบว่าเป็นบุคลากรทางการแพทย์จริงก่อนเพิ่ม — เมื่อเพิ่มแล้ว '
               'บัญชีที่ผูกไว้จะให้คำแนะนำกับผู้ป่วยได้',
-              style: TextStyle(fontSize: 12, color: Color(0xFFB26A00), height: 1.4),
+              style: TextStyle(fontSize: 12, color: AppPalette.warning, height: 1.4),
             ),
             const SizedBox(height: 16),
             OnboardingPrimaryButton(label: 'เพิ่มแพทย์', onPressed: _submit),
@@ -565,7 +566,7 @@ class _AccountPickerSheet extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Text(title,
-                  style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
+                  style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: AppPalette.heading)),
             ),
             const SizedBox(height: 12),
             Flexible(
@@ -574,7 +575,7 @@ class _AccountPickerSheet extends StatelessWidget {
                 children: accounts
                     .map((a) => ListTile(
                           leading: const CircleAvatar(
-                            backgroundColor: Color(0xFFE1E1E1),
+                            backgroundColor: AppPalette.border,
                             child: Icon(Icons.person,
                                 size: 20, color: OnboardingColors.textMuted),
                           ),

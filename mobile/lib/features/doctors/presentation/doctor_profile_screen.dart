@@ -13,6 +13,7 @@ import '../../pharmacy_finder/data/pharmacy_finder_repository.dart';
 import '../../pharmacy_finder/presentation/pharmacy_finder_screen.dart';
 import '../../profile/presentation/settings_screen.dart';
 import '../domain/entities/doctor.dart';
+import '../../../shared/theme/app_palette.dart';
 
 /// The doctor's own account page.
 ///
@@ -141,7 +142,7 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
                 children: [
                   Text(
                     doctor.name,
-                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppPalette.heading),
                   ),
                   const SizedBox(height: 2),
                   Text(
@@ -165,7 +166,7 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
           Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: const Color(0xFFEAF5F3),
+              color: AppPalette.soft,
               borderRadius: BorderRadius.circular(14),
             ),
             child: Text(

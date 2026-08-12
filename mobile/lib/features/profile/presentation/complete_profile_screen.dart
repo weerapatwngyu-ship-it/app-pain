@@ -10,6 +10,7 @@ import '../../../shared/widgets/user_avatar.dart';
 import '../../auth/presentation/onboarding/onboarding_theme.dart';
 import '../../../shared/validation/thai_phone.dart';
 import '../data/patient_profile_repository.dart';
+import '../../../shared/theme/app_palette.dart';
 
 /// The form a new member fills in once, straight after signing up.
 ///
@@ -167,7 +168,7 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
         hintText: hint,
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         filled: true,
-        fillColor: const Color(0xFFF7F7F7),
+        fillColor: AppPalette.field,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide.none,
@@ -177,7 +178,7 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppPalette.tint,
       body: SafeArea(
         child: Form(
           key: _formKey,
@@ -190,7 +191,7 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
                     const Expanded(
                       child: Text(
                         'กรอกข้อมูลส่วนตัว',
-                        style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
+                        style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: AppPalette.heading),
                       ),
                     ),
                     TextButton(

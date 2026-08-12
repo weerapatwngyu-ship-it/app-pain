@@ -8,6 +8,7 @@ import '../../doctors/presentation/doctor_detail_screen.dart';
 import '../data/health_question_repository.dart';
 import '../domain/entities/health_question.dart';
 import '../domain/entities/health_topic.dart';
+import '../../../shared/theme/app_palette.dart';
 
 class HealthTopicDetailScreen extends StatefulWidget {
   const HealthTopicDetailScreen({
@@ -92,7 +93,7 @@ class _HealthTopicDetailScreenState extends State<HealthTopicDetailScreen> {
   Widget build(BuildContext context) {
     final topic = widget.topic;
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppPalette.tint,
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
@@ -106,7 +107,7 @@ class _HealthTopicDetailScreenState extends State<HealthTopicDetailScreen> {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: const Color(0xFFEAF5F3),
+                color: AppPalette.soft,
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Row(
@@ -132,7 +133,7 @@ class _HealthTopicDetailScreenState extends State<HealthTopicDetailScreen> {
               icon: Icons.warning_amber_rounded,
               title: 'ควรพบแพทย์เมื่อไหร่',
               items: topic.seeDoctorWhen,
-              accent: const Color(0xFFC0392B),
+              accent: AppPalette.danger,
             ),
             _Section(
               icon: Icons.favorite_outline,
@@ -143,18 +144,18 @@ class _HealthTopicDetailScreenState extends State<HealthTopicDetailScreen> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: const Color(0xFFFFF6E5),
+                color: AppPalette.warningSoft,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: const Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(Icons.info_outline, size: 18, color: Color(0xFFB26A00)),
+                  Icon(Icons.info_outline, size: 18, color: AppPalette.warning),
                   SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       healthTopicDisclaimer,
-                      style: TextStyle(fontSize: 12, color: Color(0xFFB26A00), height: 1.5),
+                      style: TextStyle(fontSize: 12, color: AppPalette.warning, height: 1.5),
                     ),
                   ),
                 ],
@@ -163,14 +164,14 @@ class _HealthTopicDetailScreenState extends State<HealthTopicDetailScreen> {
             const SizedBox(height: 28),
             const Text(
               'ปรึกษาบุคลากร',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppPalette.heading),
             ),
             const SizedBox(height: 12),
             _buildDoctors(),
             const SizedBox(height: 28),
             const Text(
               'คำถามของฉันในหมวดนี้',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppPalette.heading),
             ),
             const SizedBox(height: 12),
             _buildQuestions(),
@@ -404,7 +405,7 @@ class _DoctorRow extends StatelessWidget {
           children: [
             CircleAvatar(
               radius: 22,
-              backgroundColor: const Color(0xFFDCEBE6),
+              backgroundColor: AppPalette.soft,
               backgroundImage:
                   doctor.photoUrl != null ? NetworkImage(doctor.photoUrl!) : null,
               child: doctor.photoUrl == null
@@ -463,7 +464,7 @@ class QuestionCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                  color: answered ? const Color(0xFFE3F3EF) : const Color(0xFFFFF4E5),
+                  color: answered ? AppPalette.soft : AppPalette.warningSoft,
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
@@ -471,7 +472,7 @@ class QuestionCard extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w600,
-                    color: answered ? OnboardingColors.teal : const Color(0xFFB26A00),
+                    color: answered ? OnboardingColors.teal : AppPalette.warning,
                   ),
                 ),
               ),
@@ -500,7 +501,7 @@ class QuestionCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: const Color(0xFFF3F8F7),
+                color: AppPalette.soft,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Column(
@@ -603,7 +604,7 @@ class _AskQuestionSheetState extends State<_AskQuestionSheet> {
         children: [
           Text(
             'ถามเรื่อง${widget.topic.label}',
-            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: AppPalette.heading),
           ),
           const SizedBox(height: 4),
           const Text(
@@ -639,7 +640,7 @@ class _AskQuestionSheetState extends State<_AskQuestionSheet> {
           const SizedBox(height: 8),
           const Text(
             'หากเป็นเหตุฉุกเฉิน อย่ารอคำตอบในแอป — โทร 1669',
-            style: TextStyle(fontSize: 12, color: Color(0xFFC0392B)),
+            style: TextStyle(fontSize: 12, color: AppPalette.danger),
           ),
           const SizedBox(height: 16),
           OnboardingPrimaryButton(

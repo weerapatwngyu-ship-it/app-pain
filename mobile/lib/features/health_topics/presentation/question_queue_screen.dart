@@ -4,6 +4,7 @@ import '../../auth/presentation/onboarding/onboarding_theme.dart';
 import '../data/health_question_repository.dart';
 import '../domain/entities/health_question.dart';
 import '../domain/entities/health_topic.dart';
+import '../../../shared/theme/app_palette.dart';
 
 /// The doctor's side of "คลินิกออนไลน์": questions patients left, and the
 /// form to answer them.
@@ -55,14 +56,14 @@ class _QuestionQueueScreenState extends State<QuestionQueueScreen> {
           children: [
             Text(
               'ตอบคำถามของ ${item.patientName}',
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppPalette.heading),
             ),
             const SizedBox(height: 10),
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: const Color(0xFFF3F5F6),
+                color: AppPalette.soft,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Text(item.question.question,
@@ -120,7 +121,7 @@ class _QuestionQueueScreenState extends State<QuestionQueueScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppPalette.tint,
       appBar: AppBar(title: const Text('คำถามจากผู้ป่วย')),
       body: Column(
         children: [
@@ -230,7 +231,7 @@ class _QuestionCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                  color: answered ? const Color(0xFFE3F3EF) : const Color(0xFFFFF4E5),
+                  color: answered ? AppPalette.soft : AppPalette.warningSoft,
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
@@ -238,7 +239,7 @@ class _QuestionCard extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w600,
-                    color: answered ? OnboardingColors.teal : const Color(0xFFB26A00),
+                    color: answered ? OnboardingColors.teal : AppPalette.warning,
                   ),
                 ),
               ),
@@ -268,7 +269,7 @@ class _QuestionCard extends StatelessWidget {
               width: double.infinity,
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: const Color(0xFFEAF5F3),
+                color: AppPalette.soft,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Text(q.answer!,

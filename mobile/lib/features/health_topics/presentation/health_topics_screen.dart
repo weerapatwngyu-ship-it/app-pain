@@ -7,6 +7,7 @@ import '../data/health_question_repository.dart';
 import '../domain/entities/health_topic.dart';
 import 'health_topic_detail_screen.dart';
 import 'my_questions_screen.dart';
+import '../../../shared/theme/app_palette.dart';
 
 /// The full catalogue, as a grid of topics to read about and ask questions on.
 class HealthTopicsScreen extends StatelessWidget {
@@ -26,7 +27,7 @@ class HealthTopicsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppPalette.tint,
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -137,7 +138,7 @@ class _TopicTile extends StatelessWidget {
             width: 56,
             height: 56,
             decoration: const BoxDecoration(
-              color: Color(0xFFEAF5F3),
+              color: AppPalette.soft,
               shape: BoxShape.circle,
             ),
             child: Icon(topic.icon, color: OnboardingColors.teal, size: 28),

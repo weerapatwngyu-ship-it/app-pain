@@ -7,6 +7,7 @@ import '../data/patient_profile_repository.dart';
 import '../domain/entities/patient_profile.dart';
 import 'health_profile_screen.dart';
 import 'personal_info_edit_screen.dart';
+import '../../../shared/theme/app_palette.dart';
 
 const _genderLabels = {
   'female': 'หญิง',
@@ -114,7 +115,7 @@ class _PersonalInfoDetailScreenState extends State<PersonalInfoDetailScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppPalette.tint,
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
@@ -203,7 +204,7 @@ class _PersonalInfoDetailScreenState extends State<PersonalInfoDetailScreen> {
               const Expanded(
                 child: Text(
                   'ข้อมูลสุขภาพ',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppPalette.heading),
                 ),
               ),
               TextButton(
@@ -243,10 +244,10 @@ class _PersonalInfoDetailScreenState extends State<PersonalInfoDetailScreen> {
                           padding: const EdgeInsets.symmetric(
                               horizontal: 12, vertical: 6),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFFDECEC),
+                            color: AppPalette.dangerSoft,
                             borderRadius: BorderRadius.circular(20),
                             border: const Border.fromBorderSide(
-                                BorderSide(color: Color(0xFFF3B9B9))),
+                                BorderSide(color: AppPalette.dangerBorder)),
                           ),
                           child: Text(allergy,
                               style: const TextStyle(
@@ -296,7 +297,7 @@ class _PersonalInfoDetailScreenState extends State<PersonalInfoDetailScreen> {
         children: [
           const CircleAvatar(
             radius: 44,
-            backgroundColor: Color(0xFF2D6CDF),
+            backgroundColor: AppPalette.primary,
             child: Icon(Icons.person, color: Colors.white, size: 48),
           ),
           const SizedBox(height: 20),

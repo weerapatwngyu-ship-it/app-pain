@@ -5,6 +5,7 @@ import '../../chat/data/chat_repository.dart';
 import '../../chat/presentation/chat_screen.dart';
 import '../../symptom_tracking/domain/entities/symptom_category.dart';
 import '../data/caseload_repository.dart';
+import '../../../shared/theme/app_palette.dart';
 
 /// Every patient in the system, for clinical staff.
 ///
@@ -49,7 +50,7 @@ class _CaseloadScreenState extends State<CaseloadScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppPalette.tint,
       appBar: AppBar(title: const Text('ผู้ป่วยทั้งหมด')),
       body: Column(
         children: [
@@ -126,7 +127,7 @@ class _CaseloadScreenState extends State<CaseloadScreen> {
                       final patient = patients[index];
                       return ListTile(
                         leading: const CircleAvatar(
-                          backgroundColor: Color(0xFFDCEBE6),
+                          backgroundColor: AppPalette.soft,
                           child: Icon(Icons.person, color: OnboardingColors.teal),
                         ),
                         title: Text(patient.name),
@@ -232,7 +233,7 @@ class _PatientRecordScreenState extends State<PatientRecordScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppPalette.tint,
       appBar: AppBar(title: Text(widget.patient.name)),
       floatingActionButton: _canMessage
           ? FloatingActionButton.extended(
@@ -314,14 +315,14 @@ class _Header extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFFEAF5F3),
+        color: AppPalette.soft,
         borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(patient.name,
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppPalette.heading)),
           const SizedBox(height: 6),
           Text(
             [
@@ -344,22 +345,22 @@ class _Header extends StatelessWidget {
               width: double.infinity,
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               decoration: BoxDecoration(
-                color: const Color(0xFFFDECEC),
+                color: AppPalette.dangerSoft,
                 borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: const Color(0xFFE79A9A)),
+                border: Border.all(color: AppPalette.dangerBorder),
               ),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Icon(Icons.dangerous_outlined,
-                      size: 18, color: Color(0xFFC0392B)),
+                      size: 18, color: AppPalette.danger),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       'แพ้ยา: ${patient.drugAllergies.join(', ')}',
                       style: const TextStyle(
                         fontSize: 13,
-                        color: Color(0xFFC0392B),
+                        color: AppPalette.danger,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
@@ -373,13 +374,13 @@ class _Header extends StatelessWidget {
             Row(
               children: [
                 const Icon(Icons.warning_amber_rounded,
-                    size: 18, color: Color(0xFFC0392B)),
+                    size: 18, color: AppPalette.danger),
                 const SizedBox(width: 6),
                 Text(
                   'มีการแจ้งเตือนค้างอยู่ $openAlerts รายการ',
                   style: const TextStyle(
                     fontSize: 13,
-                    color: Color(0xFFC0392B),
+                    color: AppPalette.danger,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -400,7 +401,7 @@ class _SectionTitle extends StatelessWidget {
   Widget build(BuildContext context) => Padding(
         padding: const EdgeInsets.only(bottom: 10),
         child: Text(text,
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppPalette.heading)),
       );
 }
 
@@ -492,10 +493,10 @@ class _SymptomTile extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
               decoration: BoxDecoration(
                 color: score >= 7
-                    ? const Color(0xFFFDE7E4)
+                    ? AppPalette.dangerSoft
                     : score >= 4
-                        ? const Color(0xFFFFF4E5)
-                        : const Color(0xFFE3F3EF),
+                        ? AppPalette.warningSoft
+                        : AppPalette.soft,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Text(
@@ -504,9 +505,9 @@ class _SymptomTile extends StatelessWidget {
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
                   color: score >= 7
-                      ? const Color(0xFFC0392B)
+                      ? AppPalette.danger
                       : score >= 4
-                          ? const Color(0xFFB26A00)
+                          ? AppPalette.warning
                           : OnboardingColors.teal,
                 ),
               ),

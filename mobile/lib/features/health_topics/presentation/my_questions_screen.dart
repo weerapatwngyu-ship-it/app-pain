@@ -4,6 +4,7 @@ import '../../auth/presentation/onboarding/onboarding_theme.dart';
 import '../data/health_question_repository.dart';
 import '../domain/entities/health_question.dart';
 import 'health_topic_detail_screen.dart' show QuestionCard;
+import '../../../shared/theme/app_palette.dart';
 
 /// Every question the patient has asked, across all topics.
 class MyQuestionsScreen extends StatefulWidget {
@@ -39,7 +40,7 @@ class _MyQuestionsScreenState extends State<MyQuestionsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppPalette.tint,
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,

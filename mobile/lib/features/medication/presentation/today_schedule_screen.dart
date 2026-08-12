@@ -23,6 +23,7 @@ import '../domain/entities/dose_log.dart';
 import '../domain/entities/dose_schedule_item.dart';
 import '../domain/medication_repository.dart';
 import '../domain/usecases/log_dose_usecase.dart';
+import '../../../shared/theme/app_palette.dart';
 
 class TodayScheduleScreen extends StatefulWidget {
   const TodayScheduleScreen({
@@ -207,7 +208,7 @@ class _TodayScheduleScreenState extends State<TodayScheduleScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppPalette.tint,
       body: SafeArea(
         child: FutureBuilder<List<DoseScheduleItem>>(
           future: _scheduleFuture,
@@ -248,7 +249,7 @@ class _TodayScheduleScreenState extends State<TodayScheduleScreen> {
                     const Expanded(
                       child: Text(
                         'ตารางยาวันนี้',
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppPalette.heading),
                       ),
                     ),
                     TextButton.icon(
@@ -287,7 +288,7 @@ class _TodayScheduleScreenState extends State<TodayScheduleScreen> {
                   children: [
                     const Text(
                       'ปรึกษาแพทย์',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppPalette.heading),
                     ),
                     TextButton(
                       onPressed: _openDoctorList,
@@ -346,7 +347,7 @@ class _TodayScheduleScreenState extends State<TodayScheduleScreen> {
                   children: [
                     const Text(
                       'คลินิกออนไลน์',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppPalette.heading),
                     ),
                     TextButton(
                       onPressed: _openHealthTopics,
@@ -389,7 +390,7 @@ class _TodayScheduleScreenState extends State<TodayScheduleScreen> {
                   children: [
                     const Text(
                       'หมวดอาการ',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppPalette.heading),
                     ),
                     TextButton(
                       onPressed: () => _openCategory(null),
@@ -467,7 +468,7 @@ class _Header extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(greeting, style: const TextStyle(color: OnboardingColors.textMuted, fontSize: 13)),
-              Text(name, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+              Text(name, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppPalette.heading)),
             ],
           ),
         ),
@@ -550,7 +551,7 @@ class _HealthTopicTile extends StatelessWidget {
               width: 56,
               height: 56,
               decoration: const BoxDecoration(
-                color: Color(0xFFEAF5F3),
+                color: AppPalette.soft,
                 shape: BoxShape.circle,
               ),
               child: Icon(topic.icon, color: OnboardingColors.teal, size: 28),
@@ -710,7 +711,7 @@ class _DoseTile extends StatelessWidget {
       decoration: BoxDecoration(
         border: Border.all(color: OnboardingColors.border),
         borderRadius: BorderRadius.circular(14),
-        color: actioned ? const Color(0xFFF3FAF8) : Colors.white,
+        color: actioned ? AppPalette.tint : Colors.white,
       ),
       child: Row(
         children: [

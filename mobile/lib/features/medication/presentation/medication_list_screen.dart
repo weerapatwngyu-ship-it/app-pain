@@ -5,6 +5,7 @@ import '../../profile/data/patient_profile_repository.dart';
 import '../data/medication_list_repository.dart';
 import '../domain/entities/medication.dart';
 import 'medication_edit_sheet.dart';
+import '../../../shared/theme/app_palette.dart';
 
 /// The patient's medication list — what they are taking, and when.
 ///
@@ -108,7 +109,7 @@ class _MedicationListScreenState extends State<MedicationListScreen> {
           ),
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop('delete'),
-            child: const Text('ลบออก', style: TextStyle(color: Color(0xFFC0392B))),
+            child: const Text('ลบออก', style: TextStyle(color: AppPalette.danger)),
           ),
         ],
       ),
@@ -218,8 +219,9 @@ class _MedicationCard extends StatelessWidget {
           margin: const EdgeInsets.only(bottom: 12),
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            color: const Color(0xFFF7F7F7),
+            color: AppPalette.surface,
             borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: AppPalette.border),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -230,7 +232,7 @@ class _MedicationCard extends StatelessWidget {
                     child: Text(
                       medication.name,
                       style: const TextStyle(
-                          fontSize: 16, fontWeight: FontWeight.w700),
+                          fontSize: 16, fontWeight: FontWeight.w700, color: AppPalette.heading),
                     ),
                   ),
                   if (!medication.enteredBySelf)
@@ -238,7 +240,7 @@ class _MedicationCard extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFEAF5F3),
+                        color: AppPalette.soft,
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: const Text(

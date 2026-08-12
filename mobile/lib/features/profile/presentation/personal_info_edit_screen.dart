@@ -9,6 +9,7 @@ import '../../auth/presentation/onboarding/onboarding_theme.dart';
 import '../../../shared/validation/thai_phone.dart';
 import '../data/patient_profile_repository.dart';
 import '../domain/entities/patient_profile.dart';
+import '../../../shared/theme/app_palette.dart';
 
 class PersonalInfoEditScreen extends StatefulWidget {
   const PersonalInfoEditScreen({
@@ -151,7 +152,7 @@ class _PersonalInfoEditScreenState extends State<PersonalInfoEditScreen> {
         hintText: hint,
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         filled: true,
-        fillColor: const Color(0xFFF7F7F7),
+        fillColor: AppPalette.field,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide.none,
@@ -161,7 +162,7 @@ class _PersonalInfoEditScreenState extends State<PersonalInfoEditScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppPalette.tint,
       body: SafeArea(
         child: Form(
           key: _formKey,

@@ -4,6 +4,7 @@ import '../../auth/presentation/onboarding/onboarding_theme.dart';
 import '../../chat/data/chat_repository.dart';
 import '../../chat/presentation/chat_screen.dart';
 import '../domain/entities/doctor.dart';
+import '../../../shared/theme/app_palette.dart';
 
 /// Read-only for patients: the directory is maintained by an admin, and the
 /// only thing a patient does here is start (or continue) a chat.
@@ -67,7 +68,7 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
     final canChat = widget.patientId != null;
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppPalette.tint,
       appBar: AppBar(title: const Text('โปรไฟล์แพทย์')),
       body: ListView(
         padding: const EdgeInsets.all(24),
@@ -86,7 +87,7 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
           Text(
             doctor.name,
             textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: AppPalette.heading),
           ),
           const SizedBox(height: 4),
           Text(
@@ -121,7 +122,7 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
           const Text(
             'ข้อความในแอปไม่ใช่ช่องทางฉุกเฉิน — หากมีอาการรุนแรง โทร 1669',
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 12, color: Color(0xFFC0392B)),
+            style: TextStyle(fontSize: 12, color: AppPalette.danger),
           ),
         ],
       ),

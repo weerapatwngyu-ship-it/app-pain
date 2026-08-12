@@ -4,6 +4,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import '../../../core/notification/notification_service.dart';
 import '../../auth/presentation/onboarding/onboarding_theme.dart';
 import '../data/reminder_watch_service.dart';
+import '../../../shared/theme/app_palette.dart';
 
 /// Answers one question: when a reminder does not arrive, was the alarm never
 /// delivered, or was it delivered and the notification suppressed?
@@ -76,7 +77,7 @@ class _NotificationCheckScreenState extends State<NotificationCheckScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppPalette.tint,
       appBar: AppBar(title: const Text('ตรวจสอบระบบเตือน')),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
@@ -172,7 +173,7 @@ class _Card extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: warn ? const Color(0xFFFFF4E5) : const Color(0xFFF3F5F6),
+        color: warn ? AppPalette.warningSoft : AppPalette.tint,
         borderRadius: BorderRadius.circular(14),
       ),
       child: Column(

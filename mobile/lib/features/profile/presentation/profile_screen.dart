@@ -18,6 +18,7 @@ import '../data/patient_profile_repository.dart';
 import 'all_menu_screen.dart';
 import 'personal_info_detail_screen.dart';
 import 'settings_screen.dart';
+import '../../../shared/theme/app_palette.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({
@@ -91,7 +92,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppPalette.tint,
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
@@ -112,7 +113,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     children: [
                       Text(
                         user.name,
-                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppPalette.heading),
                       ),
                       const SizedBox(height: 2),
                       Text(
