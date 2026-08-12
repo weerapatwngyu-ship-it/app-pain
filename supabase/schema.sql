@@ -65,6 +65,40 @@ alter table public.patients drop constraint if exists patients_gender_check;
 alter table public.patients add constraint patients_gender_check
   check (gender is null or gender in ('female', 'male', 'unspecified'));
 
+-- Health details the patient enters about themselves.
+--
+-- Drug allergies are a list rather than one free-text field, because this is
+-- the one entry here that exists to be checked against something: "penicillin"
+-- sitting in a sentence alongside two other drugs cannot be compared to a
+-- prescription, and an allergy that cannot be checked is a note rather than a
+-- safeguard. The rest are single values and stay single values —
+-- primary_condition already exists above and is what staff see in the
+-- caseload list, so it is reused rather than duplicated by a second
+-- conditions column.
+alter table public.patients
+  add column if not exists drug_allergies text[] not null default '{}';
+alter table public.patients add column if not exists blood_type text;
+alter table public.patients add column if not exists weight_kg numeric(5,2);
+alter table public.patients add column if not exists height_cm numeric(5,2);
+
+-- patients_update has to be broad enough to let the owner write these, which
+-- means the client picks the values — so the bounds live here, where a client
+-- cannot skip them. The ranges are wide on purpose: they are there to catch a
+-- misread unit or a slipped decimal point (70 kg entered as 700), not to
+-- judge whether a body is plausible.
+alter table public.patients drop constraint if exists patients_blood_type_check;
+alter table public.patients add constraint patients_blood_type_check
+  check (blood_type is null or blood_type in
+    ('A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'));
+
+alter table public.patients drop constraint if exists patients_weight_check;
+alter table public.patients add constraint patients_weight_check
+  check (weight_kg is null or (weight_kg > 0 and weight_kg <= 500));
+
+alter table public.patients drop constraint if exists patients_height_check;
+alter table public.patients add constraint patients_height_check
+  check (height_cm is null or (height_cm > 0 and height_cm <= 300));
+
 -- Grants a caregiver access to someone else's patient record.
 create table if not exists public.patient_links (
   id uuid primary key default gen_random_uuid(),

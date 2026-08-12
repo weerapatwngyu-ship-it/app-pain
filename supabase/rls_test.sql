@@ -963,3 +963,88 @@ begin;
   rollback to savepoint before_bad_gender;
   reset role;
 rollback;
+
+\echo ''
+\echo '=== EXPLOIT 35: patient B edits patient A''s allergy list (must not) ==='
+begin;
+  select id as pa from public.patients
+   where owner_user_id='11111111-1111-1111-1111-111111111111' \gset
+  update public.patients
+     set drug_allergies = array['เพนิซิลลิน'], blood_type='O+'
+   where id = :'pa';
+
+  set local role authenticated;
+  select public.as_user('22222222-2222-2222-2222-222222222222');
+  -- Clearing someone's allergy list is the dangerous direction: a prescriber
+  -- reading the record would then see nothing rather than a wrong entry.
+  update public.patients
+     set drug_allergies = '{}', blood_type='A+'
+   where id = :'pa';
+
+  reset role;
+  \echo '  -- expect the allergy still there and blood type unchanged:'
+  select drug_allergies, blood_type from public.patients where id = :'pa';
+rollback;
+
+\echo ''
+\echo '=== EXPLOIT 36: a patient records their own health details (must succeed) ==='
+begin;
+  select id as pa from public.patients
+   where owner_user_id='11111111-1111-1111-1111-111111111111' \gset
+  set local role authenticated;
+  select public.as_user('11111111-1111-1111-1111-111111111111');
+  update public.patients
+     set primary_condition='เบาหวาน',
+         drug_allergies = array['เพนิซิลลิน','แอสไพริน'],
+         blood_type='B+', weight_kg=65.5, height_cm=170
+   where id = :'pa';
+  reset role;
+  \echo '  -- expect the values above:'
+  select primary_condition, drug_allergies, blood_type, weight_kg, height_cm
+    from public.patients where id = :'pa';
+rollback;
+
+\echo ''
+\echo '=== EXPLOIT 37: out-of-range measurements and a bogus blood type are refused ==='
+begin;
+  select id as pa from public.patients
+   where owner_user_id='11111111-1111-1111-1111-111111111111' \gset
+  set local role authenticated;
+  select public.as_user('11111111-1111-1111-1111-111111111111');
+
+  \echo '  -- 700 kg (a slipped decimal point) must be refused:'
+  savepoint s1;
+  update public.patients set weight_kg=700 where id = :'pa';
+  rollback to savepoint s1;
+
+  \echo '  -- 900 cm must be refused:'
+  savepoint s2;
+  update public.patients set height_cm=900 where id = :'pa';
+  rollback to savepoint s2;
+
+  \echo '  -- a blood type that is not one of the eight must be refused:'
+  savepoint s3;
+  update public.patients set blood_type='C+' where id = :'pa';
+  rollback to savepoint s3;
+
+  reset role;
+rollback;
+
+\echo ''
+\echo '=== CONTROL 38: a doctor can read a patient''s allergies (must return them) ==='
+begin;
+  select id as pa from public.patients
+   where owner_user_id='11111111-1111-1111-1111-111111111111' \gset
+  update public.patients set drug_allergies = array['เพนิซิลลิน'] where id = :'pa';
+  insert into auth.users (id, email)
+    values ('77777777-7777-7777-7777-777777777777','doc@test.com');
+  update public.profiles set role='provider'
+   where id='77777777-7777-7777-7777-777777777777';
+
+  set local role authenticated;
+  select public.as_user('77777777-7777-7777-7777-777777777777');
+  \echo '  -- expect the allergy: a prescriber who cannot see it is the point';
+  \echo '  -- of storing it at all:';
+  select drug_allergies from public.patients where id = :'pa';
+  reset role;
+rollback;

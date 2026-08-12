@@ -327,6 +327,7 @@ class _Header extends StatelessWidget {
             [
               'อายุ ${patient.age} ปี',
               if (patient.gender != null) patient.gender!,
+              if (patient.bloodType != null) 'กรุ๊ปเลือด ${patient.bloodType}',
             ].join(' · '),
             style: const TextStyle(fontSize: 13, color: OnboardingColors.textMuted),
           ),
@@ -334,6 +335,38 @@ class _Header extends StatelessWidget {
             const SizedBox(height: 4),
             Text('โรคประจำตัว: ${patient.primaryCondition}',
                 style: const TextStyle(fontSize: 13)),
+          ],
+          // Above the prescriptions and styled like a warning, because this is
+          // the one line on the screen that changes what may be prescribed.
+          if (patient.drugAllergies.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFDECEC),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: const Color(0xFFE79A9A)),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(Icons.dangerous_outlined,
+                      size: 18, color: Color(0xFFC0392B)),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'แพ้ยา: ${patient.drugAllergies.join(', ')}',
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: Color(0xFFC0392B),
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ],
           if (openAlerts > 0) ...[
             const SizedBox(height: 10),

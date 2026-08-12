@@ -16,6 +16,7 @@ import '../../pharmacy_finder/data/pharmacy_finder_repository.dart';
 import '../../symptom_tracking/data/symptom_repository_impl.dart';
 import '../data/patient_profile_repository.dart';
 import 'all_menu_screen.dart';
+import 'health_profile_screen.dart';
 import 'personal_info_detail_screen.dart';
 import 'settings_screen.dart';
 
@@ -179,7 +180,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
             _MenuTile(
               icon: Icons.favorite_border,
               label: 'ข้อมูลสุขภาพ',
-              onTap: () => _comingSoon(context),
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => HealthProfileScreen(
+                    patientId: widget.patientId,
+                    repository: widget.patientProfileRepository,
+                  ),
+                ),
+              ),
             ),
             _MenuTile(
               icon: Icons.payments_outlined,

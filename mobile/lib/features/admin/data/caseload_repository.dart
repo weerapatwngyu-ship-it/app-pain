@@ -8,6 +8,8 @@ class CaseloadPatient {
     required this.birthDate,
     this.gender,
     this.primaryCondition,
+    this.drugAllergies = const [],
+    this.bloodType,
   });
 
   final String id;
@@ -15,6 +17,12 @@ class CaseloadPatient {
   final DateTime birthDate;
   final String? gender;
   final String? primaryCondition;
+
+  /// Read here and not only on the patient's own profile: a drug allergy that
+  /// the prescriber cannot see is not doing the job it exists for.
+  final List<String> drugAllergies;
+
+  final String? bloodType;
 
   /// Whole years, which is what a chart shows. The birth date defaults to a
   /// placeholder at sign-up until the patient fills it in, so this can read
@@ -35,6 +43,12 @@ class CaseloadPatient {
       birthDate: DateTime.parse(row['birth_date'] as String),
       gender: row['gender'] as String?,
       primaryCondition: row['primary_condition'] as String?,
+      drugAllergies: (row['drug_allergies'] as List?)
+              ?.map((value) => value.toString())
+              .where((value) => value.trim().isNotEmpty)
+              .toList() ??
+          const [],
+      bloodType: row['blood_type'] as String?,
     );
   }
 }
@@ -107,7 +121,8 @@ class CaseloadRepository {
   Future<List<CaseloadPatient>> patients() async {
     final rows = await db
         .from('patients')
-        .select('id, name, birth_date, gender, primary_condition')
+        .select('id, name, birth_date, gender, primary_condition, '
+            'drug_allergies, blood_type')
         .order('name');
     return rows.map<CaseloadPatient>(CaseloadPatient.fromRow).toList();
   }
