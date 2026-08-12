@@ -6,7 +6,6 @@ import '../../chat/presentation/chat_screen.dart';
 import '../data/peer_chat_repository.dart';
 import '../domain/entities/peer_thread.dart';
 import 'peer_directory_screen.dart';
-import '../../../shared/theme/app_palette.dart';
 
 /// "คุยกับผู้ป่วยด้วยกัน" — the patient's own thread list, gated behind an
 /// explicit opt-in.
@@ -137,7 +136,7 @@ class _PeerChatScreenState extends State<PeerChatScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppPalette.tint,
+      backgroundColor: Colors.white,
       appBar: AppBar(title: const Text('คุยกับผู้ป่วยด้วยกัน')),
       body: _buildBody(),
       floatingActionButton: _enabled && !_loading

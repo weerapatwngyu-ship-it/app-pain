@@ -6,7 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../auth/presentation/onboarding/onboarding_theme.dart';
 import '../data/patient_profile_repository.dart';
-import '../../../shared/theme/app_palette.dart';
+import '../domain/entities/patient_profile.dart';
 
 /// The patient's own health details: conditions, drug allergies, blood type
 /// and measurements.
@@ -159,7 +159,7 @@ class _HealthProfileScreenState extends State<HealthProfileScreen> {
         hintText: hint,
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         filled: true,
-        fillColor: AppPalette.field,
+        fillColor: const Color(0xFFF7F7F7),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide.none,
@@ -169,7 +169,7 @@ class _HealthProfileScreenState extends State<HealthProfileScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppPalette.tint,
+      backgroundColor: Colors.white,
       appBar: AppBar(title: const Text('ข้อมูลสุขภาพ')),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
@@ -236,8 +236,8 @@ class _HealthProfileScreenState extends State<HealthProfileScreen> {
                                 for (final allergy in _allergies)
                                   Chip(
                                     label: Text(allergy),
-                                    backgroundColor: AppPalette.dangerSoft,
-                                    side: const BorderSide(color: AppPalette.dangerBorder),
+                                    backgroundColor: const Color(0xFFFDECEC),
+                                    side: const BorderSide(color: Color(0xFFF3B9B9)),
                                     onDeleted: () =>
                                         setState(() => _allergies.remove(allergy)),
                                   ),

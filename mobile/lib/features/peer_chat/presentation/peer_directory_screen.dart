@@ -7,7 +7,6 @@ import '../../auth/presentation/onboarding/onboarding_theme.dart';
 import '../../chat/presentation/chat_screen.dart';
 import '../data/peer_chat_repository.dart';
 import '../domain/entities/peer_thread.dart';
-import '../../../shared/theme/app_palette.dart';
 
 /// Finds another patient to message. Only people who switched peer chat on
 /// appear here, and only if the viewer switched it on too.
@@ -101,7 +100,7 @@ class _PeerDirectoryScreenState extends State<PeerDirectoryScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppPalette.tint,
+      backgroundColor: Colors.white,
       appBar: AppBar(title: const Text('หาเพื่อนคุย')),
       body: Column(
         children: [

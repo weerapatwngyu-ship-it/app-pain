@@ -11,7 +11,6 @@ import '../features/doctors/domain/entities/doctor.dart';
 import '../features/health_topics/data/health_question_repository.dart';
 import '../features/doctors/presentation/doctor_profile_screen.dart';
 import '../features/pharmacy_finder/data/pharmacy_finder_repository.dart';
-import '../shared/theme/app_palette.dart';
 
 /// What a signed-in doctor sees: the threads patients opened with them, and
 /// the full caseload. Not a cut-down copy of the patient app — a doctor has no
@@ -72,7 +71,7 @@ class _DoctorHomeShellState extends State<DoctorHomeShell> {
     ];
 
     return Scaffold(
-      backgroundColor: AppPalette.tint,
+      backgroundColor: Colors.white,
       appBar: AppBar(
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -130,7 +129,7 @@ class DoctorPendingScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppPalette.tint,
+      backgroundColor: Colors.white,
       appBar: AppBar(
         title: const Text('MediGo'),
         actions: [
@@ -151,7 +150,7 @@ class DoctorPendingScreen extends StatelessWidget {
               const SizedBox(height: 20),
               const Text(
                 'บัญชีนี้ยังไม่ได้รับการอนุมัติ',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppPalette.heading),
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: 12),
               Text(

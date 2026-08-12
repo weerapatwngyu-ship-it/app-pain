@@ -5,7 +5,6 @@ import '../../chat/data/chat_repository.dart';
 import '../data/doctor_repository.dart';
 import '../domain/entities/doctor.dart';
 import 'doctor_detail_screen.dart';
-import '../../../shared/theme/app_palette.dart';
 
 /// The directory as a patient sees it: browse and message only. Adding or
 /// editing a listing is an admin action — a patient publishing a doctor is how
@@ -50,7 +49,7 @@ class _DoctorListScreenState extends State<DoctorListScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppPalette.tint,
+      backgroundColor: Colors.white,
       appBar: AppBar(title: const Text('ปรึกษาแพทย์')),
       body: FutureBuilder<List<Doctor>>(
         future: _doctorsFuture,

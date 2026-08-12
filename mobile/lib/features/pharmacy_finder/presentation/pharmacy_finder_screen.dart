@@ -9,7 +9,6 @@ import '../../auth/presentation/onboarding/onboarding_theme.dart';
 import '../data/pharmacy_finder_repository.dart';
 import '../domain/entities/nearby_pharmacy.dart';
 import 'pharmacy_map_view.dart';
-import '../../../shared/theme/app_palette.dart';
 
 const _searchRadiusMeters = 1500;
 
@@ -119,7 +118,7 @@ class _PharmacyFinderScreenState extends State<PharmacyFinderScreen> {
   Widget build(BuildContext context) {
     final hasResults = !_loading && _error == null && _places.isNotEmpty;
     return Scaffold(
-      backgroundColor: AppPalette.tint,
+      backgroundColor: Colors.white,
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
@@ -406,7 +405,7 @@ class _PlaceCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               CircleAvatar(
-                backgroundColor: AppPalette.soft,
+                backgroundColor: const Color(0xFFDCEBE6),
                 child: Icon(
                   place.isPharmacy
                       ? Icons.local_pharmacy_outlined
@@ -533,7 +532,7 @@ class _DetailSheet extends StatelessWidget {
           Row(
             children: [
               CircleAvatar(
-                backgroundColor: AppPalette.soft,
+                backgroundColor: const Color(0xFFDCEBE6),
                 child: Icon(
                   place.isPharmacy
                       ? Icons.local_pharmacy_outlined
@@ -548,7 +547,7 @@ class _DetailSheet extends StatelessWidget {
                   children: [
                     Text(
                       place.name,
-                      style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: AppPalette.heading),
+                      style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
                     ),
                     Text(
                       '${place.kind.label} · ${place.formattedDistance}',

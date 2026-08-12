@@ -25,7 +25,6 @@ import '../../symptom_tracking/presentation/symptom_category_logs_screen.dart';
 import '../data/patient_profile_repository.dart';
 import 'personal_info_detail_screen.dart';
 import 'settings_screen.dart';
-import '../../../shared/theme/app_palette.dart';
 
 /// Grid menu of every real feature in the app, grouped like the reference
 /// design's "เมนูทั้งหมด" — every tile here opens a screen that actually
@@ -91,7 +90,7 @@ class AllMenuScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppPalette.tint,
+      backgroundColor: Colors.white,
       appBar: AppBar(title: const Text('เมนูทั้งหมด')),
       body: ListView(
         padding: const EdgeInsets.all(20),
@@ -265,7 +264,7 @@ class _SectionLabel extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 12),
       child: Text(
         label,
-        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppPalette.heading),
+        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
       ),
     );
   }
@@ -316,7 +315,7 @@ class _MenuTile extends StatelessWidget {
             height: 52,
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              color: AppPalette.soft,
+              color: const Color(0xFFEAF6F4),
               borderRadius: BorderRadius.circular(16),
             ),
             child: Icon(item.icon, color: OnboardingColors.teal),

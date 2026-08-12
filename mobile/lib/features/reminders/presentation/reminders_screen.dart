@@ -5,7 +5,6 @@ import '../../auth/presentation/onboarding/onboarding_theme.dart';
 import '../data/reminder_repository.dart';
 import '../data/system_alarm.dart';
 import '../domain/entities/medication_reminder.dart';
-import '../../../shared/theme/app_palette.dart';
 
 /// "เตือนกินยา" — the alarm list, laid out like the phone's own clock app so
 /// it needs no explaining: big time, when it repeats, a switch.
@@ -154,7 +153,7 @@ class _RemindersScreenState extends State<RemindersScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppPalette.tint,
+      backgroundColor: Colors.white,
       appBar: AppBar(title: const Text('เตือนกินยา')),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _edit(),
@@ -245,11 +244,8 @@ class _ReminderCard extends StatelessWidget {
     return Card(
       elevation: 0,
       margin: const EdgeInsets.only(bottom: 12),
-      color: AppPalette.surface,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(18),
-        side: const BorderSide(color: AppPalette.border),
-      ),
+      color: const Color(0xFFF6F8F8),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(18),
@@ -451,7 +447,7 @@ class _ReminderSheetState extends State<_ReminderSheet> {
                 ),
                 Text(
                   widget.existing == null ? 'ตั้งเวลาใหม่' : 'แก้ไขการเตือน',
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppPalette.heading),
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
                 ),
                 TextButton(onPressed: _submit, child: const Text('เสร็จสิ้น')),
               ],
@@ -464,16 +460,15 @@ class _ReminderSheetState extends State<_ReminderSheet> {
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(vertical: 22),
                 decoration: BoxDecoration(
-                  color: AppPalette.soft,
+                  color: const Color(0xFFF6F8F8),
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: AppPalette.softBorder),
                 ),
                 child: Column(
                   children: [
                     Text(
                       _time.format(context),
                       style: const TextStyle(
-                          fontSize: 40, fontWeight: FontWeight.w700, height: 1.1, color: AppPalette.heading),
+                          fontSize: 40, fontWeight: FontWeight.w700, height: 1.1),
                     ),
                     const SizedBox(height: 4),
                     Text(
@@ -546,9 +541,9 @@ class _ReminderSheetState extends State<_ReminderSheet> {
                 child: TextButton.icon(
                   onPressed: () =>
                       Navigator.of(context).pop(const _EditResult.remove()),
-                  icon: const Icon(Icons.delete_outline, color: AppPalette.danger),
+                  icon: const Icon(Icons.delete_outline, color: Color(0xFFC0392B)),
                   label: const Text('ลบการเตือนนี้',
-                      style: TextStyle(color: AppPalette.danger)),
+                      style: TextStyle(color: Color(0xFFC0392B))),
                 ),
               ),
             ],
@@ -603,19 +598,19 @@ class _StatusBanner extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AppPalette.warningSoft,
+        color: const Color(0xFFFFF4E5),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppPalette.warningBorder),
+        border: Border.all(color: const Color(0xFFF0D6A8)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.warning_amber_rounded, color: AppPalette.warning, size: 20),
+          const Icon(Icons.warning_amber_rounded, color: Color(0xFFB26A00), size: 20),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
               message,
-              style: const TextStyle(fontSize: 12.5, height: 1.5, color: AppPalette.warning),
+              style: const TextStyle(fontSize: 12.5, height: 1.5, color: Color(0xFF7A4A00)),
             ),
           ),
         ],

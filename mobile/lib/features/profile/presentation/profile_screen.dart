@@ -18,7 +18,6 @@ import '../data/patient_profile_repository.dart';
 import 'all_menu_screen.dart';
 import 'personal_info_detail_screen.dart';
 import 'settings_screen.dart';
-import '../../../shared/theme/app_palette.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({
@@ -92,7 +91,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppPalette.tint,
+      backgroundColor: Colors.white,
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
@@ -113,7 +112,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     children: [
                       Text(
                         user.name,
-                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppPalette.heading),
+                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
                       ),
                       const SizedBox(height: 2),
                       Text(
@@ -162,7 +161,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               onPressed: () => _comingSoon(context),
             ),
             const SizedBox(height: 24),
-            const _SectionLabel('บัญชีผู้ใช้'),
+            _SectionLabel('บัญชีผู้ใช้'),
             _MenuTile(
               icon: Icons.person_outline,
               label: 'แก้ไขข้อมูลส่วนตัว',
@@ -178,7 +177,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
             ),
             const SizedBox(height: 16),
-            const _SectionLabel('อื่นๆ'),
+            _SectionLabel('อื่นๆ'),
             _MenuTile(
               icon: Icons.logout,
               label: 'ออกจากระบบ',

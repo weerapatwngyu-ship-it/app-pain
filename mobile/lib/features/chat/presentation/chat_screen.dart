@@ -5,7 +5,6 @@ import '../../../core/supabase/supabase_refs.dart';
 import '../../auth/presentation/onboarding/onboarding_theme.dart';
 import '../domain/entities/conversation.dart';
 import '../domain/message_thread.dart';
-import '../../../shared/theme/app_palette.dart';
 
 /// One thread, used by both sides — a message renders the same whether the
 /// reader is the patient or the doctor; only which bubble is "mine" differs.
@@ -114,7 +113,7 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppPalette.tint,
+      backgroundColor: Colors.white,
       appBar: AppBar(
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -256,7 +255,7 @@ class _Bubble extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
         decoration: BoxDecoration(
-          color: isMine ? OnboardingColors.teal : AppPalette.field,
+          color: isMine ? OnboardingColors.teal : const Color(0xFFF1F1F1),
           borderRadius: BorderRadius.only(
             topLeft: const Radius.circular(16),
             topRight: const Radius.circular(16),

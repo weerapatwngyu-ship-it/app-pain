@@ -10,7 +10,6 @@ import '../../../shared/widgets/user_avatar.dart';
 import '../../auth/presentation/onboarding/onboarding_theme.dart';
 import '../../../shared/validation/thai_phone.dart';
 import '../data/patient_profile_repository.dart';
-import '../../../shared/theme/app_palette.dart';
 
 /// The form a new member fills in once, straight after signing up.
 ///
@@ -168,7 +167,7 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
         hintText: hint,
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         filled: true,
-        fillColor: AppPalette.field,
+        fillColor: const Color(0xFFF7F7F7),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide.none,
@@ -178,7 +177,7 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppPalette.tint,
+      backgroundColor: Colors.white,
       body: SafeArea(
         child: Form(
           key: _formKey,
@@ -191,7 +190,7 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
                     const Expanded(
                       child: Text(
                         'กรอกข้อมูลส่วนตัว',
-                        style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: AppPalette.heading),
+                        style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
                       ),
                     ),
                     TextButton(
@@ -242,7 +241,7 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
                       ),
                     ),
                     const SizedBox(height: 24),
-                    const _Label('ชื่อจริง*'),
+                    _Label('ชื่อจริง*'),
                     TextFormField(
                       controller: _firstNameController,
                       textCapitalization: TextCapitalization.words,
@@ -251,7 +250,7 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
                           (v == null || v.trim().isEmpty) ? 'กรอกชื่อจริง' : null,
                     ),
                     const SizedBox(height: 16),
-                    const _Label('นามสกุล*'),
+                    _Label('นามสกุล*'),
                     TextFormField(
                       controller: _lastNameController,
                       textCapitalization: TextCapitalization.words,
@@ -260,7 +259,7 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
                           (v == null || v.trim().isEmpty) ? 'กรอกนามสกุล' : null,
                     ),
                     const SizedBox(height: 16),
-                    const _Label('เบอร์โทรศัพท์*'),
+                    _Label('เบอร์โทรศัพท์*'),
                     TextFormField(
                       controller: _phoneController,
                       keyboardType: TextInputType.phone,
@@ -268,7 +267,7 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
                       validator: validateThaiPhone,
                     ),
                     const SizedBox(height: 16),
-                    const _Label('อีเมล*'),
+                    _Label('อีเมล*'),
                     TextFormField(
                       controller: _emailController,
                       keyboardType: TextInputType.emailAddress,
@@ -278,7 +277,7 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
                           : null,
                     ),
                     const SizedBox(height: 16),
-                    const _Label('วันเกิด*'),
+                    _Label('วันเกิด*'),
                     InkWell(
                       onTap: _saving ? null : _pickBirthDate,
                       child: InputDecorator(
@@ -296,7 +295,7 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
                       ),
                     ),
                     const SizedBox(height: 16),
-                    const _Label('เพศ'),
+                    _Label('เพศ'),
                     Row(
                       children: _genderOptions.entries.map((entry) {
                         final selected = _gender == entry.key;
@@ -307,7 +306,7 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
                               onPressed: () => setState(() => _gender = entry.key),
                               style: OutlinedButton.styleFrom(
                                 backgroundColor: selected
-                                    ? AppPalette.soft
+                                    ? OnboardingColors.teal.withOpacity(0.12)
                                     : null,
                                 side: BorderSide(
                                   color: selected

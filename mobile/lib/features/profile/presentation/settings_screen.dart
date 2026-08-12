@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../../auth/presentation/onboarding/onboarding_theme.dart';
 import '../../reminders/presentation/notification_check_screen.dart';
-import '../../../shared/theme/app_palette.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -26,7 +25,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppPalette.tint,
+      backgroundColor: Colors.white,
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
@@ -113,7 +112,7 @@ class _LanguageChip extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: selected ? AppPalette.soft : null,
+          color: selected ? OnboardingColors.teal.withOpacity(0.12) : null,
           border: Border.all(color: selected ? OnboardingColors.teal : OnboardingColors.border),
           borderRadius: BorderRadius.circular(10),
         ),

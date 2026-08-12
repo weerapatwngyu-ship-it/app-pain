@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../../auth/presentation/onboarding/onboarding_theme.dart';
-import '../../../shared/theme/app_palette.dart';
 
 /// What the form collected, handed back to the caller to save.
 class MedicationDraft {
@@ -138,7 +137,7 @@ class _MedicationEditSheetState extends State<MedicationEditSheet> {
         hintText: hint,
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         filled: true,
-        fillColor: AppPalette.field,
+        fillColor: const Color(0xFFF7F7F7),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide.none,
@@ -169,7 +168,7 @@ class _MedicationEditSheetState extends State<MedicationEditSheet> {
                   const Expanded(
                     child: Text(
                       'เพิ่มยา',
-                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: AppPalette.heading),
+                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
                     ),
                   ),
                   IconButton(
@@ -191,15 +190,15 @@ class _MedicationEditSheetState extends State<MedicationEditSheet> {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: AppPalette.dangerSoft,
+                    color: const Color(0xFFFDECEC),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppPalette.dangerBorder),
+                    border: Border.all(color: const Color(0xFFE79A9A)),
                   ),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Icon(Icons.warning_amber_rounded,
-                          color: AppPalette.danger),
+                          color: Color(0xFFC0392B)),
                       const SizedBox(width: 10),
                       Expanded(
                         child: Text(
@@ -207,7 +206,7 @@ class _MedicationEditSheetState extends State<MedicationEditSheet> {
                           '— ตรวจสอบกับแพทย์หรือเภสัชกรก่อนใช้ยานี้',
                           style: const TextStyle(
                             fontSize: 13,
-                            color: AppPalette.danger,
+                            color: Color(0xFFC0392B),
                             fontWeight: FontWeight.w600,
                             height: 1.5,
                           ),
