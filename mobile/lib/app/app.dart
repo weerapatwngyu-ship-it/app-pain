@@ -18,6 +18,7 @@ import '../features/medication/data/medication_repository_impl.dart';
 import '../features/peer_chat/data/peer_chat_repository.dart';
 import '../features/pharmacy_finder/data/pharmacy_finder_repository.dart';
 import '../features/profile/data/patient_profile_repository.dart';
+import '../features/profile/presentation/complete_profile_screen.dart';
 import '../features/symptom_tracking/data/symptom_repository_impl.dart';
 import '../shared/theme/app_theme.dart';
 import 'doctor_home_shell.dart';
@@ -165,6 +166,24 @@ class _MediGoAppState extends State<MediGoApp> {
   }
 
   Widget _buildSignedIn(AppUser user) {
+    // Sign-up establishes an identity and nothing else — the trigger behind it
+    // can only guess a name from the email and has to put a placeholder in the
+    // NOT NULL birth date. Ask for the real thing before letting anyone in,
+    // rather than letting a placeholder birth date reach a screen that reads
+    // as if it were true.
+    //
+    // Patients only: a doctor's details come from their `doctors` listing,
+    // which an admin fills in at approval time.
+    if (!user.profileCompleted && user.role != UserRole.provider) {
+      return CompleteProfileScreen(
+        user: user,
+        authRepository: _authRepository,
+        patientProfileRepository: _patientProfileRepository,
+        onCompleted: _handleUserUpdated,
+        onLogout: _logout,
+      );
+    }
+
     // A doctor gets the inbox, not a patient app with nobody's medication in
     // it. The listing — not the role — is what decides: role says which shell
     // to try, but threads hang off the `doctors` row, so an approved-but-

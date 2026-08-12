@@ -36,6 +36,35 @@ create table if not exists public.patients (
 );
 create index if not exists patients_owner_idx on public.patients (owner_user_id);
 
+-- Given and family name kept apart rather than parsed back out of `name`.
+-- Splitting a display name on whitespace guesses wrong on any name with more
+-- than two parts, and the form asks for the two separately — storing only the
+-- joined string would mean re-opening that form with the fields wrong.
+-- `name` stays as the single display value everything else already reads.
+alter table public.profiles add column if not exists first_name text;
+alter table public.profiles add column if not exists last_name text;
+
+-- Stamped when the user finishes the after-sign-up form. A null here is what
+-- sends them to that form, rather than inferring it from placeholder values:
+-- the sign-up trigger has to put *something* in patients.birth_date to satisfy
+-- NOT NULL, and a real user could genuinely have been born on whatever date
+-- was chosen as the placeholder.
+alter table public.profiles add column if not exists profile_completed_at timestamptz;
+
+-- The form offers exactly these three, so the column should hold exactly
+-- these three. patients_update is necessarily broad enough to let a client
+-- send any string here, and without the constraint a typo — or a client
+-- built against an older spelling — becomes a row that no screen renders.
+-- Existing values outside the set are cleared first so this is re-runnable
+-- on a database that already has data in it.
+update public.patients
+   set gender = null
+ where gender is not null
+   and gender not in ('female', 'male', 'unspecified');
+alter table public.patients drop constraint if exists patients_gender_check;
+alter table public.patients add constraint patients_gender_check
+  check (gender is null or gender in ('female', 'male', 'unspecified'));
+
 -- Grants a caregiver access to someone else's patient record.
 create table if not exists public.patient_links (
   id uuid primary key default gen_random_uuid(),

@@ -46,12 +46,20 @@ class _PersonalInfoDetailScreenState extends State<PersonalInfoDetailScreen> {
     _profileFuture = _user.patientId != null ? widget.repository.fetch(_user.patientId!) : null;
   }
 
+  /// Uses the stored given name, falling back to splitting the display name
+  /// for accounts created before the two were kept apart. The split guesses —
+  /// it treats everything after the first word as the surname — so it is only
+  /// ever a fallback, never what a save writes back.
   String _firstNameOf(AppUser user) {
+    final stored = user.firstName;
+    if (stored != null) return stored;
     final parts = user.name.trim().split(RegExp(r'\s+'));
     return parts.isEmpty ? '' : parts.first;
   }
 
   String _lastNameOf(AppUser user) {
+    final stored = user.lastName;
+    if (stored != null) return stored;
     final parts = user.name.trim().split(RegExp(r'\s+'));
     return parts.length > 1 ? parts.sublist(1).join(' ') : '';
   }

@@ -26,14 +26,43 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
-  Future<AppUser> updateProfile({String? name, String? email}) async {
+  Future<AppUser> updateProfile({
+    String? firstName,
+    String? lastName,
+    String? email,
+    String? phone,
+    bool markCompleted = false,
+  }) async {
     final userId = currentUserId;
     if (userId == null) throw StateError('ยังไม่ได้เข้าสู่ระบบ');
 
-    await db.from('profiles').update({
-      if (name != null) 'name': name,
+    final changes = <String, Object?>{
+      if (firstName != null) 'first_name': firstName,
+      if (lastName != null) 'last_name': lastName,
       if (email != null) 'email': email,
-    }).eq('id', userId);
+      if (phone != null) 'phone': phone,
+      if (markCompleted) 'profile_completed_at': DateTime.now().toUtc().toIso8601String(),
+    };
+
+    // The joined display name is derived here rather than at every call site,
+    // so `name` cannot drift away from the two parts it is built from.
+    if (firstName != null || lastName != null) {
+      changes['name'] = [firstName, lastName]
+          .map((part) => part?.trim() ?? '')
+          .where((part) => part.isNotEmpty)
+          .join(' ');
+    }
+
+    if (changes.isEmpty) return fetchCurrentUser();
+
+    // .select() is what makes a refused write visible. PostgREST reports an
+    // update that matched no rows as a success with an empty body, so without
+    // reading the result back an RLS refusal would look exactly like a save.
+    final updated =
+        await db.from('profiles').update(changes).eq('id', userId).select();
+    if (updated.isEmpty) {
+      throw StateError('บันทึกข้อมูลไม่สำเร็จ — เซิร์ฟเวอร์ปฏิเสธการแก้ไข');
+    }
 
     return fetchCurrentUser();
   }

@@ -890,3 +890,76 @@ begin;
   select count(*) as self_answered from public.health_questions
    where patient_id = :'pa' and answer is not null;
 rollback;
+
+\echo ''
+\echo '=== EXPLOIT 31: patient B rewrites patient A''s profile name and phone (must not) ==='
+begin;
+  set local role authenticated;
+  select public.as_user('22222222-2222-2222-2222-222222222222');
+  update public.profiles
+     set first_name='ถูก', last_name='แก้', phone='0999999999',
+         profile_completed_at=now()
+   where id='11111111-1111-1111-1111-111111111111';
+
+  reset role;
+  \echo '  -- expect all null: nothing of A''s was written:'
+  select first_name, last_name, phone, profile_completed_at
+    from public.profiles where id='11111111-1111-1111-1111-111111111111';
+rollback;
+
+\echo ''
+\echo '=== EXPLOIT 32: the profile form is not a way to become an admin (role must stay patient) ==='
+begin;
+  set local role authenticated;
+  select public.as_user('11111111-1111-1111-1111-111111111111');
+  -- The real form sends exactly these columns; role is smuggled in alongside
+  -- them, which is what a hand-rolled PostgREST call could do just as easily.
+  update public.profiles
+     set first_name='สมชาย', last_name='ใจดี', phone='0812345678',
+         profile_completed_at=now(), role='admin'
+   where id='11111111-1111-1111-1111-111111111111';
+
+  reset role;
+  \echo '  -- expect role=patient, and the name fields unwritten too (the whole';
+  \echo '  -- statement is refused, not just the role part):';
+  select role, first_name, last_name from public.profiles
+   where id='11111111-1111-1111-1111-111111111111';
+rollback;
+
+\echo ''
+\echo '=== EXPLOIT 33: a patient completes their own profile (must succeed) ==='
+begin;
+  set local role authenticated;
+  select public.as_user('11111111-1111-1111-1111-111111111111');
+  update public.profiles
+     set first_name='สมหญิง', last_name='รักดี', name='สมหญิง รักดี',
+         phone='0812345678', profile_completed_at=now()
+   where id='11111111-1111-1111-1111-111111111111';
+
+  select id as pid from public.patients
+   where owner_user_id='11111111-1111-1111-1111-111111111111' \gset
+  update public.patients
+     set birth_date='1990-05-20', gender='female', name='สมหญิง รักดี'
+   where id = :'pid';
+
+  reset role;
+  \echo '  -- expect the values above, proving the form is not blocked by RLS:'
+  select p.first_name, p.last_name, p.phone,
+         p.profile_completed_at is not null as completed
+    from public.profiles p where p.id='11111111-1111-1111-1111-111111111111';
+  select birth_date, gender from public.patients where id = :'pid';
+rollback;
+
+\echo ''
+\echo '=== EXPLOIT 34: gender outside the three offered options is refused ==='
+begin;
+  select id as pid from public.patients
+   where owner_user_id='11111111-1111-1111-1111-111111111111' \gset
+  set local role authenticated;
+  select public.as_user('11111111-1111-1111-1111-111111111111');
+  \echo '  -- expect a check-constraint violation, not a stored row:'
+  savepoint before_bad_gender;
+  update public.patients set gender='อื่นๆ' where id = :'pid';
+  rollback to savepoint before_bad_gender;
+  reset role;
+rollback;

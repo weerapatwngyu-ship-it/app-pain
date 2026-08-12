@@ -6,6 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../auth/domain/auth_repository.dart';
 import '../../auth/domain/entities/user.dart';
 import '../../auth/presentation/onboarding/onboarding_theme.dart';
+import '../../../shared/validation/thai_phone.dart';
 import '../data/patient_profile_repository.dart';
 import '../domain/entities/patient_profile.dart';
 
@@ -31,6 +32,7 @@ class _PersonalInfoEditScreenState extends State<PersonalInfoEditScreen> {
   final _formKey = GlobalKey<FormState>();
   late final _firstNameController = TextEditingController(text: _firstNameOf(widget.user));
   late final _lastNameController = TextEditingController(text: _lastNameOf(widget.user));
+  late final _phoneController = TextEditingController(text: widget.user.phone ?? '');
   late final _emailController = TextEditingController(text: widget.user.email);
   DateTime? _birthDate;
   late String _gender = widget.profile?.gender ?? 'unspecified';
@@ -55,12 +57,20 @@ class _PersonalInfoEditScreenState extends State<PersonalInfoEditScreen> {
     }
   }
 
+  /// Prefers the stored given name and only falls back to splitting the
+  /// display name for accounts created before the two were kept apart.
+  /// The split is a guess — it puts every part after the first into the
+  /// surname — which is why it is not what gets saved back.
   static String _firstNameOf(AppUser user) {
+    final stored = user.firstName;
+    if (stored != null) return stored;
     final parts = user.name.trim().split(RegExp(r'\s+'));
     return parts.isEmpty ? '' : parts.first;
   }
 
   static String _lastNameOf(AppUser user) {
+    final stored = user.lastName;
+    if (stored != null) return stored;
     final parts = user.name.trim().split(RegExp(r'\s+'));
     return parts.length > 1 ? parts.sublist(1).join(' ') : '';
   }
@@ -69,6 +79,7 @@ class _PersonalInfoEditScreenState extends State<PersonalInfoEditScreen> {
   void dispose() {
     _firstNameController.dispose();
     _lastNameController.dispose();
+    _phoneController.dispose();
     _emailController.dispose();
     super.dispose();
   }
@@ -96,11 +107,13 @@ class _PersonalInfoEditScreenState extends State<PersonalInfoEditScreen> {
       _error = null;
     });
     try {
-      final name = '${_firstNameController.text.trim()} ${_lastNameController.text.trim()}'.trim();
       final updatedUser = await widget.authRepository.updateProfile(
-        name: name,
+        firstName: _firstNameController.text.trim(),
+        lastName: _lastNameController.text.trim(),
         email: _emailController.text.trim(),
+        phone: _phoneController.text.trim(),
       );
+      final name = updatedUser.name;
 
       PatientProfile? updatedProfile;
       if (updatedUser.patientId != null) {
@@ -180,6 +193,15 @@ class _PersonalInfoEditScreenState extends State<PersonalInfoEditScreen> {
                       controller: _lastNameController,
                       decoration: _decoration('นามสกุล'),
                       validator: (v) => (v == null || v.trim().isEmpty) ? 'กรอกนามสกุล' : null,
+                    ),
+                    const SizedBox(height: 16),
+                    const Text('เบอร์โทรศัพท์*', style: TextStyle(fontWeight: FontWeight.w600)),
+                    const SizedBox(height: 8),
+                    TextFormField(
+                      controller: _phoneController,
+                      keyboardType: TextInputType.phone,
+                      decoration: _decoration('08xxxxxxxx'),
+                      validator: validateThaiPhone,
                     ),
                     const SizedBox(height: 16),
                     const Text('อีเมล*', style: TextStyle(fontWeight: FontWeight.w600)),
