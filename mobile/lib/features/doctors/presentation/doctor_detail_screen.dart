@@ -5,6 +5,7 @@ import '../../chat/data/chat_repository.dart';
 import '../../chat/presentation/chat_screen.dart';
 import '../data/doctor_repository.dart';
 import '../domain/entities/doctor.dart';
+import '../../../core/errors/friendly_error.dart';
 
 /// Read-only for patients: the directory is maintained by an admin, and the
 /// only thing a patient does here is start (or continue) a chat.
@@ -60,7 +61,7 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('เปิดแชทไม่สำเร็จ: $e')),
+        SnackBar(content: Text(friendlyError(e, whileDoing: 'เปิดแชทไม่สำเร็จ'))),
       );
     } finally {
       if (mounted) setState(() => _opening = false);

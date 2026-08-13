@@ -10,6 +10,7 @@ import '../../../shared/widgets/user_avatar.dart';
 import '../../auth/presentation/onboarding/onboarding_theme.dart';
 import '../../../shared/validation/thai_phone.dart';
 import '../data/patient_profile_repository.dart';
+import '../../../core/errors/friendly_error.dart';
 
 /// The form a new member fills in once, straight after signing up.
 ///
@@ -157,7 +158,7 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
     } on SocketException catch (_) {
       setState(() => _error = 'เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ ลองใหม่อีกครั้ง');
     } catch (e) {
-      setState(() => _error = 'บันทึกไม่สำเร็จ: $e');
+      setState(() => _error = friendlyError(e, whileDoing: 'บันทึกไม่สำเร็จ'));
     } finally {
       if (mounted) setState(() => _saving = false);
     }

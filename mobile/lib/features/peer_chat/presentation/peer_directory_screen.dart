@@ -7,6 +7,7 @@ import '../../auth/presentation/onboarding/onboarding_theme.dart';
 import '../../chat/presentation/chat_screen.dart';
 import '../data/peer_chat_repository.dart';
 import '../domain/entities/peer_thread.dart';
+import '../../../core/errors/friendly_error.dart';
 
 /// Finds another patient to message. Only people who switched peer chat on
 /// appear here, and only if the viewer switched it on too.
@@ -90,7 +91,7 @@ class _PeerDirectoryScreenState extends State<PeerDirectoryScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('เปิดแชทไม่สำเร็จ: $e')),
+        SnackBar(content: Text(friendlyError(e, whileDoing: 'เปิดแชทไม่สำเร็จ'))),
       );
     } finally {
       if (mounted) setState(() => _openingFor = null);

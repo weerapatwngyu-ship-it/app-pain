@@ -9,6 +9,7 @@ import '../../auth/presentation/onboarding/onboarding_theme.dart';
 import '../../../shared/validation/thai_phone.dart';
 import '../data/patient_profile_repository.dart';
 import '../domain/entities/patient_profile.dart';
+import '../../../core/errors/friendly_error.dart';
 
 class PersonalInfoEditScreen extends StatefulWidget {
   const PersonalInfoEditScreen({
@@ -141,7 +142,7 @@ class _PersonalInfoEditScreenState extends State<PersonalInfoEditScreen> {
     } on SocketException catch (_) {
       setState(() => _error = 'เชื่อมต่อเซิร์ฟเวอร์ไม่ได้');
     } catch (e) {
-      setState(() => _error = 'บันทึกไม่สำเร็จ: $e');
+      setState(() => _error = friendlyError(e, whileDoing: 'บันทึกไม่สำเร็จ'));
     } finally {
       if (mounted) setState(() => _loading = false);
     }

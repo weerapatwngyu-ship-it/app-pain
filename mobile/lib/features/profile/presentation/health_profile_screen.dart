@@ -7,6 +7,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../auth/presentation/onboarding/onboarding_theme.dart';
 import '../data/patient_profile_repository.dart';
 import '../domain/entities/patient_profile.dart';
+import '../../../core/errors/friendly_error.dart';
 
 /// The patient's own health details: conditions, drug allergies, blood type
 /// and measurements.
@@ -137,7 +138,7 @@ class _HealthProfileScreenState extends State<HealthProfileScreen> {
     } on SocketException catch (_) {
       setState(() => _error = 'เชื่อมต่อเซิร์ฟเวอร์ไม่ได้');
     } catch (e) {
-      setState(() => _error = 'บันทึกไม่สำเร็จ: $e');
+      setState(() => _error = friendlyError(e, whileDoing: 'บันทึกไม่สำเร็จ'));
     } finally {
       if (mounted) setState(() => _saving = false);
     }

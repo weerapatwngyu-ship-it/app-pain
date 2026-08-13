@@ -113,6 +113,7 @@ class _PatientHomeShellState extends State<PatientHomeShell> {
       SymptomLogScreen(
         patientId: widget.patientId,
         recordSymptomUseCase: RecordSymptomUseCase(widget.symptomRepository),
+        repository: widget.symptomRepository,
       ),
       RemindersScreen(repository: _reminderRepository),
       ProfileScreen(

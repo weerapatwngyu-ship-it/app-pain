@@ -5,6 +5,7 @@ import '../../../core/supabase/supabase_refs.dart';
 import '../../auth/presentation/onboarding/onboarding_theme.dart';
 import '../domain/entities/conversation.dart';
 import '../domain/message_thread.dart';
+import '../../../core/errors/friendly_error.dart';
 
 /// One thread, used by both sides — a message renders the same whether the
 /// reader is the patient or the doctor; only which bubble is "mine" differs.
@@ -103,7 +104,7 @@ class _ChatScreenState extends State<ChatScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('ส่งข้อความไม่สำเร็จ: $e')),
+        SnackBar(content: Text(friendlyError(e, whileDoing: 'ส่งข้อความไม่สำเร็จ'))),
       );
     } finally {
       if (mounted) setState(() => _sending = false);

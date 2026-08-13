@@ -5,6 +5,7 @@ import '../../auth/presentation/onboarding/onboarding_theme.dart';
 import '../data/reminder_repository.dart';
 import '../data/system_alarm.dart';
 import '../domain/entities/medication_reminder.dart';
+import '../../../core/errors/friendly_error.dart';
 
 /// "เตือนกินยา" — the alarm list, laid out like the phone's own clock app so
 /// it needs no explaining: big time, when it repeats, a switch.
@@ -51,7 +52,7 @@ class _RemindersScreenState extends State<RemindersScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = 'โหลดการเตือนไม่สำเร็จ: $e';
+        _error = friendlyError(e, whileDoing: 'โหลดการเตือนไม่สำเร็จ');
         _loading = false;
       });
     }
@@ -98,7 +99,7 @@ class _RemindersScreenState extends State<RemindersScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('ส่งไปนาฬิกาไม่สำเร็จ: $e')));
+          .showSnackBar(SnackBar(content: Text(friendlyError(e, whileDoing: 'ส่งไปนาฬิกาไม่สำเร็จ'))));
     }
   }
 
@@ -128,7 +129,7 @@ class _RemindersScreenState extends State<RemindersScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('บันทึกไม่สำเร็จ: $e')));
+          .showSnackBar(SnackBar(content: Text(friendlyError(e, whileDoing: 'บันทึกไม่สำเร็จ'))));
     }
   }
 
@@ -146,7 +147,7 @@ class _RemindersScreenState extends State<RemindersScreen> {
       await _load();
       if (!mounted) return;
       ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('เปลี่ยนสถานะไม่สำเร็จ: $e')));
+          .showSnackBar(SnackBar(content: Text(friendlyError(e, whileDoing: 'เปลี่ยนสถานะไม่สำเร็จ'))));
     }
   }
 

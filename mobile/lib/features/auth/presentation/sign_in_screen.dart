@@ -3,6 +3,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'onboarding/onboarding_theme.dart';
+import '../../../core/errors/friendly_error.dart';
 
 /// Email/password against Supabase Auth, plus Google when the build carries
 /// a GOOGLE_WEB_CLIENT_ID (see main.dart) — both against Supabase directly,
@@ -67,10 +68,8 @@ class _SignInScreenState extends State<SignInScreen> {
         );
         // Success updates app.dart's session listener — nothing more to do.
       }
-    } on AuthException catch (e) {
-      setState(() => _error = _readableAuthError(e));
     } catch (e) {
-      setState(() => _error = 'เข้าสู่ระบบไม่สำเร็จ: $e');
+      setState(() => _error = friendlyError(e, whileDoing: 'เข้าสู่ระบบไม่สำเร็จ'));
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -128,27 +127,13 @@ class _SignInScreenState extends State<SignInScreen> {
         accessToken: googleAuth.accessToken,
       );
       // Success updates app.dart's session listener — nothing more to do.
-    } on AuthException catch (e) {
-      setState(() => _error = _readableAuthError(e));
     } catch (e) {
-      setState(() => _error = 'เข้าสู่ระบบด้วย Google ไม่สำเร็จ: $e');
+      setState(() => _error = friendlyError(e, whileDoing: 'เข้าสู่ระบบด้วย Google ไม่สำเร็จ'));
     } finally {
       if (mounted) setState(() => _googleLoading = false);
     }
   }
 
-  String _readableAuthError(AuthException e) {
-    switch (e.message) {
-      case 'Invalid login credentials':
-        return 'อีเมลหรือรหัสผ่านไม่ถูกต้อง';
-      case 'User already registered':
-        return 'อีเมลนี้สมัครไว้แล้ว — ลองเข้าสู่ระบบแทน';
-      case 'Email not confirmed':
-        return 'ยังไม่ได้ยืนยันอีเมล — เปิดอีเมลแล้วกดลิงก์ยืนยันก่อน';
-      default:
-        return e.message;
-    }
-  }
 
   @override
   Widget build(BuildContext context) {

@@ -4,6 +4,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import '../../../core/notification/notification_service.dart';
 import '../../auth/presentation/onboarding/onboarding_theme.dart';
 import '../data/reminder_watch_service.dart';
+import '../../../core/errors/friendly_error.dart';
 
 /// Answers one question: when a reminder does not arrive, was the alarm never
 /// delivered, or was it delivered and the notification suppressed?
@@ -69,7 +70,7 @@ class _NotificationCheckScreenState extends State<NotificationCheckScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('ตั้งไม่สำเร็จ: $e')));
+          .showSnackBar(SnackBar(content: Text(friendlyError(e, whileDoing: 'ตั้งไม่สำเร็จ'))));
     }
   }
 

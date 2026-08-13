@@ -5,6 +5,7 @@ import '../../profile/data/patient_profile_repository.dart';
 import '../data/medication_list_repository.dart';
 import '../domain/entities/medication.dart';
 import 'medication_edit_sheet.dart';
+import '../../../core/errors/friendly_error.dart';
 
 /// The patient's medication list — what they are taking, and when.
 ///
@@ -84,7 +85,7 @@ class _MedicationListScreenState extends State<MedicationListScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('เพิ่มไม่สำเร็จ: $e')));
+          .showSnackBar(SnackBar(content: Text(friendlyError(e, whileDoing: 'เพิ่มยาไม่สำเร็จ'))));
     }
   }
 
@@ -123,10 +124,16 @@ class _MedicationListScreenState extends State<MedicationListScreen> {
       }
       if (!mounted) return;
       _reload();
-    } catch (e) {
+    } on StateError catch (e) {
+      // Thrown by the repository with a message already written for a patient
+      // ("this can only be changed by whoever added it"), so it is shown as is.
       if (!mounted) return;
       ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('$e')));
+          .showSnackBar(SnackBar(content: Text(e.message)));
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(friendlyError(e, whileDoing: 'ทำรายการไม่สำเร็จ'))));
     }
   }
 
@@ -151,7 +158,8 @@ class _MedicationListScreenState extends State<MedicationListScreen> {
               return const Center(child: CircularProgressIndicator());
             }
             if (snapshot.hasError) {
-              return _Message('โหลดรายการยาไม่สำเร็จ: ${snapshot.error}');
+              return _Message(friendlyError(snapshot.error!,
+                  whileDoing: 'โหลดรายการยาไม่สำเร็จ'));
             }
             final all = snapshot.data ?? const <Medication>[];
             final active = all.where((m) => m.isActive).toList();

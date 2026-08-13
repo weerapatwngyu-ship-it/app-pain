@@ -19,9 +19,13 @@ const symptomCategories = [
   SymptomCategory('other', 'อื่นๆ', Icons.more_horiz),
 ];
 
-String symptomCategoryLabel(String? key) {
+/// The category for a stored key, falling back to a neutral entry rather than
+/// throwing — an old log may carry a key this build no longer lists.
+SymptomCategory symptomCategoryFor(String? key) {
   return symptomCategories.firstWhere(
     (c) => c.key == key,
     orElse: () => const SymptomCategory('', 'ไม่ระบุหมวด', Icons.help_outline),
-  ).label;
+  );
 }
+
+String symptomCategoryLabel(String? key) => symptomCategoryFor(key).label;
