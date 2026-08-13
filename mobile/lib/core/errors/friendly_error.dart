@@ -18,7 +18,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 String friendlyError(Object error, {String? whileDoing, String? deniedMessage}) {
   debugPrint('friendlyError${whileDoing == null ? '' : ' ($whileDoing)'}: $error');
 
-  final prefix = whileDoing == null ? '' : '$whileDoing';
+  final prefix = whileDoing ?? '';
 
   String withPrefix(String message) =>
       prefix.isEmpty ? message : '$prefix — $message';

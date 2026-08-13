@@ -14,9 +14,10 @@ import 'features/reminders/data/reminder_watch_service.dart';
 /// SUPABASE_ANON_KEY takes whichever key the project issues: the newer
 /// publishable key (`sb_publishable_...`) or the legacy anon JWT (`eyJ...`).
 /// Both travel as the same request header, so the name is kept for the sake
-/// of existing config files. A project that has turned legacy keys off
-/// rejects the JWT with "Invalid API key" — reason enough to reach for the
-/// publishable key first.
+/// of existing config files — renaming it would break every dart_defines.json
+/// already written. A project that has turned legacy keys off rejects the JWT
+/// with "Invalid API key" — reason enough to reach for the publishable key
+/// first.
 ///
 /// Either way it is a public client key: safe to ship in the app, and on its
 /// own it grants nothing beyond what Supabase's own rules allow.
@@ -61,7 +62,13 @@ Future<void> main() async {
 
   // Supabase is the whole backend: auth, database and file storage. There
   // is no server of this app's own to point at.
-  await Supabase.initialize(url: _supabaseUrl, anonKey: _supabaseAnonKey);
+  // publishableKey, not the deprecated anonKey: the two are the same header
+  // under different names — Supabase renamed the concept when it retired the
+  // legacy JWT — so a project still issuing `eyJ...` keys keeps working here.
+  await Supabase.initialize(
+    url: _supabaseUrl,
+    publishableKey: _supabaseAnonKey,
+  );
 
   runApp(
     MediGoApp(

@@ -1028,12 +1028,12 @@ class _ReminderNote extends StatelessWidget {
           color: const Color(0xFFEAF5F3),
           borderRadius: BorderRadius.circular(14),
         ),
-        child: Row(
+        child: const Row(
           children: [
-            const Icon(Icons.notifications_active_outlined,
+            Icon(Icons.notifications_active_outlined,
                 size: 18, color: OnboardingColors.teal),
-            const SizedBox(width: 10),
-            const Expanded(
+            SizedBox(width: 10),
+            Expanded(
               child: Text(
                 'แพทย์ตั้งเวลาให้ แอปจะเตือนอัตโนมัติทุกวัน\n'
                 'กด "กินแล้ว" บนการแจ้งเตือนได้เลย ระบบบันทึกให้ทันที',
@@ -1044,7 +1044,7 @@ class _ReminderNote extends StatelessWidget {
                 ),
               ),
             ),
-            const Icon(Icons.chevron_right,
+            Icon(Icons.chevron_right,
                 size: 18, color: OnboardingColors.teal),
           ],
         ),

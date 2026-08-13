@@ -100,7 +100,7 @@ class NotificationService {
         // notification buzzes until it is cancelled. "กินแล้ว" also records
         // the dose — same wording as the native reminder's button, since to
         // the patient they are the same button.
-        actions: <AndroidNotificationAction>[
+        actions: const <AndroidNotificationAction>[
           AndroidNotificationAction(_takenActionId, 'กินแล้ว'),
           AndroidNotificationAction(_snoozeActionId, 'เลื่อน 10 นาที'),
         ],
