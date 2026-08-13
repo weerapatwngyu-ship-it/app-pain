@@ -17,10 +17,19 @@ class OnboardingColors {
 /// Rounded-square icon button used for the close/back control at the top
 /// of every onboarding screen.
 class OnboardingIconButton extends StatelessWidget {
-  const OnboardingIconButton({super.key, required this.icon, required this.onTap});
+  const OnboardingIconButton({
+    super.key,
+    required this.icon,
+    required this.onTap,
+    this.onDark = false,
+  });
 
   final IconData icon;
   final VoidCallback onTap;
+
+  /// Set when the button sits on the teal banner. The default grey outline and
+  /// near-black glyph all but disappear there.
+  final bool onDark;
 
   @override
   Widget build(BuildContext context) {
@@ -31,10 +40,13 @@ class OnboardingIconButton extends StatelessWidget {
         width: 48,
         height: 48,
         decoration: BoxDecoration(
-          border: Border.all(color: OnboardingColors.border),
+          color: onDark ? Colors.white.withValues(alpha: 0.18) : null,
+          border: Border.all(
+            color: onDark ? Colors.white54 : OnboardingColors.border,
+          ),
           borderRadius: BorderRadius.circular(14),
         ),
-        child: Icon(icon, color: OnboardingColors.text),
+        child: Icon(icon, color: onDark ? Colors.white : OnboardingColors.text),
       ),
     );
   }

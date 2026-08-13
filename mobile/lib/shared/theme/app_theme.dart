@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+
+import '../../features/auth/presentation/onboarding/onboarding_theme.dart';
 
 class AppColors {
   AppColors._();
@@ -24,10 +27,28 @@ class AppTheme {
         seedColor: AppColors.accent,
         brightness: Brightness.light,
       ),
+      // One coloured band across the top of every screen that has an app bar.
+      // They had drifted into a mix of white and teal, so a screen's header
+      // looked like a header or like nothing depending on which one you
+      // reached. Status bar icons are forced light, since they sit on the
+      // teal and would otherwise be dark-on-dark on most phones.
       appBarTheme: const AppBarTheme(
-        backgroundColor: AppColors.surface,
-        foregroundColor: AppColors.text,
+        backgroundColor: OnboardingColors.teal,
+        foregroundColor: Colors.white,
         elevation: 0,
+        scrolledUnderElevation: 0,
+        centerTitle: false,
+        titleTextStyle: TextStyle(
+          color: Colors.white,
+          fontSize: 19,
+          fontWeight: FontWeight.w700,
+        ),
+        iconTheme: IconThemeData(color: Colors.white),
+        systemOverlayStyle: SystemUiOverlayStyle(
+          statusBarColor: Colors.transparent,
+          statusBarIconBrightness: Brightness.light,
+          statusBarBrightness: Brightness.dark,
+        ),
       ),
     );
   }

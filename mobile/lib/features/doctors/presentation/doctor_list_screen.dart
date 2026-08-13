@@ -77,7 +77,6 @@ class _DoctorListScreenState extends State<DoctorListScreen> {
       backgroundColor: const Color(0xFFF7FAFA),
       appBar: AppBar(
         title: const Text('ปรึกษาแพทย์'),
-        backgroundColor: Colors.white,
       ),
       body: FutureBuilder<List<Doctor>>(
         future: _doctorsFuture,

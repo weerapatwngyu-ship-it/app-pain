@@ -69,10 +69,9 @@ class _SymptomCategoryLogsScreenState extends State<SymptomCategoryLogsScreen> {
     final title = widget.category != null ? symptomCategoryLabel(widget.category) : 'บันทึกอาการทั้งหมด';
     return Scaffold(
       backgroundColor: const Color(0xFFF7FAFA),
-      appBar: AppBar(title: Text(title), backgroundColor: Colors.white),
+      appBar: AppBar(title: Text(title)),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _record,
-        backgroundColor: OnboardingColors.teal,
         foregroundColor: Colors.white,
         icon: const Icon(Icons.add),
         label: const Text('บันทึกอาการ'),

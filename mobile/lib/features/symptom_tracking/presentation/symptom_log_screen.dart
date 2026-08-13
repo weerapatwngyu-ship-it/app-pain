@@ -116,7 +116,6 @@ class _SymptomLogScreenState extends State<SymptomLogScreen> {
       backgroundColor: const Color(0xFFF7FAFA),
       appBar: AppBar(
         title: const Text('บันทึกอาการวันนี้'),
-        backgroundColor: Colors.white,
       ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),

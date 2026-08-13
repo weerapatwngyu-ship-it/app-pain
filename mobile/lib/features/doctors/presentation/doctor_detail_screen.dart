@@ -93,7 +93,6 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
       backgroundColor: const Color(0xFFF7FAFA),
       appBar: AppBar(
         title: const Text('ประวัติแพทย์'),
-        backgroundColor: Colors.white,
       ),
       // The action sits on a bar of its own so it stays reachable however far
       // the profile scrolls — this is the one thing the page exists to do.

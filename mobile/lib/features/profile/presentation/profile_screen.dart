@@ -92,11 +92,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
+      // top: false so the banner can run under the status bar; it applies that
+      // inset itself.
       body: SafeArea(
+        top: false,
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+          padding: EdgeInsets.zero,
           children: [
-            Row(
+            Container(
+              decoration: const BoxDecoration(
+                color: OnboardingColors.teal,
+                borderRadius:
+                    BorderRadius.vertical(bottom: Radius.circular(28)),
+              ),
+              padding: EdgeInsets.fromLTRB(
+                20,
+                MediaQuery.of(context).padding.top + 12,
+                20,
+                22,
+              ),
+              child: Row(
               children: [
                 UserAvatar(
                   name: user.name,
@@ -112,17 +127,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     children: [
                       Text(
                         user.name,
-                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+                        style: const TextStyle(
+                            fontSize: 19,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white),
                       ),
                       const SizedBox(height: 2),
                       Text(
                         'รหัสผู้ใช้งาน: $_userCode',
-                        style: const TextStyle(color: OnboardingColors.textMuted, fontSize: 13),
+                        style: const TextStyle(color: Colors.white70, fontSize: 13),
                       ),
                     ],
                   ),
                 ),
                 OnboardingIconButton(
+                  onDark: true,
                   icon: Icons.grid_view_outlined,
                   onTap: () => Navigator.of(context).push(
                     MaterialPageRoute(
@@ -148,40 +167,49 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
                 const SizedBox(width: 8),
                 OnboardingIconButton(
+                  onDark: true,
                   icon: Icons.settings_outlined,
                   onTap: () => Navigator.of(context).push(
                     MaterialPageRoute(builder: (_) => const SettingsScreen()),
                   ),
                 ),
               ],
-            ),
-            const SizedBox(height: 20),
-            OnboardingPrimaryButton(
-              label: '+  เพิ่มสิทธิพิเศษ/กรมธรรม์',
-              onPressed: () => _comingSoon(context),
-            ),
-            const SizedBox(height: 24),
-            _SectionLabel('บัญชีผู้ใช้'),
-            _MenuTile(
-              icon: Icons.person_outline,
-              label: 'แก้ไขข้อมูลส่วนตัว',
-              onTap: () => Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => PersonalInfoDetailScreen(
-                    user: user,
-                    authRepository: widget.authRepository,
-                    repository: widget.patientProfileRepository,
-                    onUserUpdated: widget.onUserUpdated,
-                  ),
-                ),
               ),
             ),
-            const SizedBox(height: 16),
-            _SectionLabel('อื่นๆ'),
-            _MenuTile(
-              icon: Icons.logout,
-              label: 'ออกจากระบบ',
-              onTap: widget.onLogout,
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  OnboardingPrimaryButton(
+                    label: '+  เพิ่มสิทธิพิเศษ/กรมธรรม์',
+                    onPressed: () => _comingSoon(context),
+                  ),
+                  const SizedBox(height: 24),
+                  _SectionLabel('บัญชีผู้ใช้'),
+                  _MenuTile(
+                    icon: Icons.person_outline,
+                    label: 'แก้ไขข้อมูลส่วนตัว',
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => PersonalInfoDetailScreen(
+                          user: user,
+                          authRepository: widget.authRepository,
+                          repository: widget.patientProfileRepository,
+                          onUserUpdated: widget.onUserUpdated,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  _SectionLabel('อื่นๆ'),
+                  _MenuTile(
+                    icon: Icons.logout,
+                    label: 'ออกจากระบบ',
+                    onTap: widget.onLogout,
+                  ),
+                ],
+              ),
             ),
           ],
         ),

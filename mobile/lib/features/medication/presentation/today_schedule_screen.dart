@@ -209,7 +209,11 @@ class _TodayScheduleScreenState extends State<TodayScheduleScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
+      // top: false because the banner reaches under the status bar on purpose
+      // and applies that inset itself; SafeArea would push it down and leave a
+      // white strip above the colour.
       body: SafeArea(
+        top: false,
         child: FutureBuilder<List<DoseScheduleItem>>(
           future: _scheduleFuture,
           builder: (context, snapshot) {
@@ -235,24 +239,29 @@ class _TodayScheduleScreenState extends State<TodayScheduleScreen> {
             }
 
             return ListView(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+              padding: EdgeInsets.zero,
               children: [
-                _Header(
+                // Greeting and today's summary read as one coloured banner
+                // rather than a white strip above a green card. It also gives
+                // the status bar something to sit on, which was the point:
+                // the top of the screen should look like a header.
+                _HomeBanner(
                   greeting: _greeting,
                   name: widget.user.name,
-                  avatarUrl: widget.user.avatarUrl != null
-                      ? widget.user.avatarUrl!
-                      : null,
+                  avatarUrl: widget.user.avatarUrl,
                   uploadingAvatar: _uploadingAvatar,
                   onAvatarTap: _pickAndUploadAvatar,
-                ),
-                const SizedBox(height: 20),
-                _TodayHeroCard(
                   total: items.length,
                   done: doneCount,
                   nextDose: nextDose,
                   onOpenList: _openMedicationList,
                 ),
+                const SizedBox(height: 4),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
                 // With nothing scheduled the card above already says so and
                 // offers the one thing to do about it, so the section is left
                 // out entirely rather than repeating the message under an
@@ -375,6 +384,10 @@ class _TodayScheduleScreenState extends State<TodayScheduleScreen> {
                     );
                   },
                 ),
+                      const SizedBox(height: 24),
+                    ],
+                  ),
+                ),
               ],
             );
           },
@@ -403,13 +416,23 @@ String _thaiToday() {
   return 'วัน$weekday ${now.day} $month ${now.year + 543}';
 }
 
-class _Header extends StatelessWidget {
-  const _Header({
+/// The coloured top of the home screen: who is signed in, what day it is,
+/// and how today's doses stand — one band rather than a white strip above a
+/// green card.
+///
+/// Runs to the top of the display, behind the status bar, so the tinted area
+/// reads as a header instead of stopping short in a line across the screen.
+class _HomeBanner extends StatelessWidget {
+  const _HomeBanner({
     required this.greeting,
     required this.name,
     required this.avatarUrl,
     required this.uploadingAvatar,
     required this.onAvatarTap,
+    required this.total,
+    required this.done,
+    required this.nextDose,
+    required this.onOpenList,
   });
 
   final String greeting;
@@ -417,54 +440,85 @@ class _Header extends StatelessWidget {
   final String? avatarUrl;
   final bool uploadingAvatar;
   final VoidCallback onAvatarTap;
+  final int total;
+  final int done;
+  final DoseScheduleItem? nextDose;
+  final VoidCallback onOpenList;
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        UserAvatar(
-          name: name,
-          avatarUrl: avatarUrl,
-          radius: 24,
-          loading: uploadingAvatar,
-          onTap: onAvatarTap,
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
+    return Container(
+      decoration: const BoxDecoration(
+        color: OnboardingColors.teal,
+        borderRadius: BorderRadius.vertical(bottom: Radius.circular(28)),
+      ),
+      // Only the top inset: the rounded bottom is the banner's own edge, not
+      // a system boundary.
+      padding: EdgeInsets.fromLTRB(
+        20,
+        MediaQuery.of(context).padding.top + 12,
+        20,
+        20,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             children: [
-              Text(
-                greeting,
-                style: const TextStyle(
-                    color: OnboardingColors.textMuted, fontSize: 13),
+              UserAvatar(
+                name: name,
+                avatarUrl: avatarUrl,
+                radius: 24,
+                loading: uploadingAvatar,
+                onTap: onAvatarTap,
               ),
-              Text(
-                name,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontSize: 19,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: -0.2,
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                _thaiToday(),
-                style: const TextStyle(
-                  color: OnboardingColors.textMuted,
-                  fontSize: 12,
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      greeting,
+                      style: const TextStyle(color: Colors.white70, fontSize: 13),
+                    ),
+                    Text(
+                      name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 19,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                        letterSpacing: -0.2,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      _thaiToday(),
+                      style: const TextStyle(color: Colors.white70, fontSize: 12),
+                    ),
+                  ],
                 ),
               ),
             ],
           ),
-        ),
-      ],
+          const SizedBox(height: 18),
+          // Inside the banner the summary no longer needs its own colour, so
+          // it becomes a translucent panel — one tinted region instead of two
+          // greens stacked on each other.
+          _TodaySummaryPanel(
+            total: total,
+            done: done,
+            nextDose: nextDose,
+            onOpenList: onOpenList,
+          ),
+        ],
+      ),
     );
   }
 }
+
 
 class _DoctorTile extends StatelessWidget {
   const _DoctorTile({required this.doctor, required this.onTap});
@@ -653,8 +707,12 @@ class _CategoryTile extends StatelessWidget {
 /// already said; that space now carries the one useful action instead. With
 /// doses on it, the card answers the question actually being asked — how far
 /// through today am I, and what is next.
-class _TodayHeroCard extends StatelessWidget {
-  const _TodayHeroCard({
+/// Today's doses, as a panel inside the banner.
+///
+/// Sits on the banner's teal, so it carries a translucent white fill instead
+/// of a colour of its own — two greens stacked read as a mistake.
+class _TodaySummaryPanel extends StatelessWidget {
+  const _TodaySummaryPanel({
     required this.total,
     required this.done,
     required this.nextDose,
@@ -672,17 +730,11 @@ class _TodayHeroCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: OnboardingColors.teal,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: OnboardingColors.teal.withValues(alpha: 0.28),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-          ),
-        ],
+        color: Colors.white.withValues(alpha: 0.16),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white24),
       ),
       child: total == 0 ? _buildEmpty(context) : _buildProgress(context),
     );
@@ -692,37 +744,20 @@ class _TodayHeroCard extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.22),
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: const Icon(Icons.medication_liquid_outlined,
-                  color: Colors.white, size: 24),
-            ),
-            const SizedBox(width: 14),
-            const Expanded(
-              child: Text(
-                'ยังไม่มียาในระบบ',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 19,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
-          ],
+        const Text(
+          'ยังไม่มียาในระบบ',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 18,
+            fontWeight: FontWeight.w700,
+          ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 6),
         const Text(
           'เพิ่มยาที่กินอยู่พร้อมเวลา แล้วแอปจะเตือนให้ตามเวลานั้นทุกวัน',
-          style: TextStyle(color: Colors.white, fontSize: 13.5, height: 1.5),
+          style: TextStyle(color: Colors.white, fontSize: 13, height: 1.5),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 14),
         SizedBox(
           width: double.infinity,
           child: FilledButton.icon(
@@ -751,7 +786,6 @@ class _TodayHeroCard extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Expanded(
               child: Column(
@@ -804,34 +838,27 @@ class _TodayHeroCard extends StatelessWidget {
           ],
         ),
         if (nextDose != null) ...[
-          const SizedBox(height: 16),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.18),
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: Row(
-              children: [
-                const Icon(Icons.schedule, color: Colors.white, size: 18),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    'ถัดไป ${nextDose!.scheduledTime} · ${nextDose!.medicationName}',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 13.5,
-                      fontWeight: FontWeight.w600,
-                    ),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              const Icon(Icons.schedule, color: Colors.white, size: 18),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'ถัดไป ${nextDose!.scheduledTime} · ${nextDose!.medicationName}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ],
-        const SizedBox(height: 14),
+        const SizedBox(height: 12),
         InkWell(
           onTap: onOpenList,
           child: const Row(
