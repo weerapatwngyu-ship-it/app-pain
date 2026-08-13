@@ -4,6 +4,9 @@ import '../../auth/presentation/onboarding/onboarding_theme.dart';
 import '../../chat/data/chat_repository.dart';
 import '../../chat/presentation/chat_screen.dart';
 import '../../symptom_tracking/domain/entities/symptom_category.dart';
+import '../../../core/errors/friendly_error.dart';
+import '../../medication/data/medication_list_repository.dart';
+import '../../medication/presentation/medication_edit_sheet.dart';
 import '../data/caseload_repository.dart';
 
 /// Every patient in the system, for clinical staff.
@@ -17,6 +20,7 @@ class CaseloadScreen extends StatefulWidget {
     required this.repository,
     this.chatRepository,
     this.doctorId,
+    this.medicationRepository,
   });
 
   final CaseloadRepository repository;
@@ -26,6 +30,10 @@ class CaseloadScreen extends StatefulWidget {
   /// no message button rather than one that would fail at insert.
   final ChatRepository? chatRepository;
   final String? doctorId;
+
+  /// Passed through to the record screen, where prescribing happens. Null
+  /// hides the action rather than showing one the viewer cannot complete.
+  final MedicationListRepository? medicationRepository;
 
   @override
   State<CaseloadScreen> createState() => _CaseloadScreenState();
@@ -143,6 +151,7 @@ class _CaseloadScreenState extends State<CaseloadScreen> {
                         onTap: () => Navigator.of(context).push(
                           MaterialPageRoute(
                             builder: (_) => PatientRecordScreen(
+                              medicationRepository: widget.medicationRepository,
                               patient: patient,
                               repository: widget.repository,
                               chatRepository: widget.chatRepository,
@@ -170,12 +179,17 @@ class PatientRecordScreen extends StatefulWidget {
     required this.repository,
     this.chatRepository,
     this.doctorId,
+    this.medicationRepository,
   });
 
   final CaseloadPatient patient;
   final CaseloadRepository repository;
   final ChatRepository? chatRepository;
   final String? doctorId;
+
+  /// Null for a viewer who may read the record but not prescribe — the
+  /// prescribe action is hidden rather than shown and refused.
+  final MedicationListRepository? medicationRepository;
 
   @override
   State<PatientRecordScreen> createState() => _PatientRecordScreenState();
@@ -229,11 +243,66 @@ class _PatientRecordScreenState extends State<PatientRecordScreen> {
     }
   }
 
+  /// Prescribes for this patient.
+  ///
+  /// Reuses the medication form the patient once had, handed the recorded
+  /// allergies — the warning it carries belongs here more than it did there,
+  /// since this is where the drug is actually chosen.
+  Future<void> _prescribe() async {
+    final medicationRepository = widget.medicationRepository;
+    if (medicationRepository == null) return;
+
+    final draft = await showModalBottomSheet<MedicationDraft>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => MedicationEditSheet(
+        allergies: widget.patient.drugAllergies,
+        title: 'สั่งยาให้ ${widget.patient.name}',
+      ),
+    );
+    if (draft == null) return;
+
+    try {
+      await medicationRepository.add(
+        patientId: widget.patient.id,
+        name: draft.name,
+        dosage: draft.dosage,
+        frequency: draft.frequency,
+        startDate: draft.startDate,
+        endDate: draft.endDate,
+        times: draft.times,
+        // Written as the clinician's, which is what makes it read-only to the
+        // patient and marks it "จากแพทย์" on their list.
+        bySelf: false,
+      );
+      if (!mounted) return;
+      setState(() => _future = widget.repository.record(widget.patient));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('สั่ง ${draft.name} ให้ผู้ป่วยแล้ว')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(friendlyError(e, whileDoing: 'สั่งยาไม่สำเร็จ'))),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(title: Text(widget.patient.name)),
+      appBar: AppBar(
+        title: Text(widget.patient.name),
+        actions: [
+          if (widget.medicationRepository != null)
+            IconButton(
+              onPressed: _prescribe,
+              icon: const Icon(Icons.medication_outlined),
+              tooltip: 'สั่งยา',
+            ),
+        ],
+      ),
       floatingActionButton: _canMessage
           ? FloatingActionButton.extended(
               onPressed: _opening ? null : _message,

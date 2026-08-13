@@ -206,6 +206,7 @@ class _MediGoAppState extends State<MediGoApp> {
             doctor: doctor,
             chatRepository: _chatRepository,
             caseloadRepository: _caseloadRepository,
+            medicationListRepository: _medicationListRepository,
             pharmacyFinderRepository: _pharmacyFinderRepository,
             healthQuestionRepository: _healthQuestionRepository,
             doctorRepository: _doctorRepository,

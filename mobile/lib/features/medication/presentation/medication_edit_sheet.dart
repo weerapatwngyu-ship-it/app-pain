@@ -28,9 +28,18 @@ class MedicationDraft {
 /// as separate entries rather than as a sentence — this is the moment it pays
 /// for itself.
 class MedicationEditSheet extends StatefulWidget {
-  const MedicationEditSheet({super.key, this.allergies = const []});
+  const MedicationEditSheet({
+    super.key,
+    this.allergies = const [],
+    this.title = 'เพิ่มยา',
+  });
 
   final List<String> allergies;
+
+  /// Heading on the sheet. A doctor prescribing needs to see whose record
+  /// they are writing to; getting that wrong writes a drug onto the wrong
+  /// patient.
+  final String title;
 
   @override
   State<MedicationEditSheet> createState() => _MedicationEditSheetState();
@@ -193,10 +202,13 @@ class _MedicationEditSheetState extends State<MedicationEditSheet> {
             children: [
               Row(
                 children: [
-                  const Expanded(
+                  Expanded(
                     child: Text(
-                      'เพิ่มยา',
-                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+                      widget.title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                          fontSize: 20, fontWeight: FontWeight.w700),
                     ),
                   ),
                   IconButton(

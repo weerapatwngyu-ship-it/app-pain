@@ -69,10 +69,11 @@ class _TodayScheduleScreenState extends State<TodayScheduleScreen> {
   late Future<Map<String, int>> _categoryCountsFuture;
   late Future<List<Doctor>> _doctorsFuture;
 
-  /// Doses logged (taken or skipped) during this app session — the backend
-  /// doesn't return today's already-logged status alongside the schedule,
-  /// so this tracks only what's been actioned since the screen loaded, not
-  /// history from a prior session.
+  /// Doses already logged today, taken or skipped.
+  ///
+  /// Seeded from the database whenever the schedule loads. It used to hold
+  /// only what had been ticked since the screen opened, so reopening the app
+  /// showed the morning's doses untaken and invited a second one.
   final Set<String> _actionedScheduleIds = {};
 
   bool _uploadingAvatar = false;
@@ -80,7 +81,7 @@ class _TodayScheduleScreenState extends State<TodayScheduleScreen> {
   @override
   void initState() {
     super.initState();
-    _scheduleFuture = widget.medicationRepository.todaySchedule(widget.patientId);
+    _scheduleFuture = _loadSchedule();
     _categoryCountsFuture = widget.symptomRepository.categoryCounts(widget.patientId);
     _doctorsFuture = widget.doctorRepository.fetchAll();
   }
@@ -95,12 +96,31 @@ class _TodayScheduleScreenState extends State<TodayScheduleScreen> {
     setState(() => _doctorsFuture = widget.doctorRepository.fetchAll());
   }
 
+  /// Today's doses, plus which of them are already logged.
+  ///
+  /// The two are fetched together so the list never paints a dose as
+  /// outstanding for a frame before the log arrives and ticks it.
+  Future<List<DoseScheduleItem>> _loadSchedule() async {
+    final items =
+        await widget.medicationRepository.todaySchedule(widget.patientId);
+    try {
+      final logged = await widget.medicationRepository
+          .loggedToday(items.map((item) => item.scheduleId).toList());
+      _actionedScheduleIds
+        ..clear()
+        ..addAll(logged);
+    } catch (error) {
+      // Showing the schedule matters more than showing it ticked; a failure
+      // here means the day looks untaken, which the patient can correct, and
+      // logging again is harmless.
+      debugPrint('loggedToday failed: $error');
+    }
+    return items;
+  }
+
   void _reloadSchedule() {
     setState(() {
-      _scheduleFuture = widget.medicationRepository.todaySchedule(widget.patientId);
-      // Doses actioned against the old schedule no longer describe the new
-      // one, and a stale id here would grey out an unrelated row.
-      _actionedScheduleIds.clear();
+      _scheduleFuture = _loadSchedule();
     });
   }
 
@@ -178,7 +198,6 @@ class _TodayScheduleScreenState extends State<TodayScheduleScreen> {
         builder: (_) => MedicationListScreen(
           patientId: widget.patientId,
           repository: widget.medicationListRepository,
-          profileRepository: widget.patientProfileRepository,
         ),
       ),
     );
@@ -736,7 +755,7 @@ class _TodaySummaryPanel extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
-          'ยังไม่มียาในระบบ',
+          'ยังไม่มียาที่ต้องกินวันนี้',
           style: TextStyle(
             color: Colors.white,
             fontSize: 18,
@@ -744,8 +763,11 @@ class _TodaySummaryPanel extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 6),
+        // No "add" here any more: prescribing belongs to the doctor, and a
+        // button the patient cannot complete would only lead somewhere empty.
         const Text(
-          'เพิ่มยาที่กินอยู่พร้อมเวลา แล้วแอปจะเตือนให้ตามเวลานั้นทุกวัน',
+          'เมื่อแพทย์สั่งยาให้ ยาจะขึ้นที่นี่พร้อมเวลาที่ต้องกิน '
+          'และแอปจะเตือนตามเวลานั้นทุกวัน',
           style: TextStyle(color: Colors.white, fontSize: 13, height: 1.5),
         ),
         const SizedBox(height: 14),
@@ -753,8 +775,8 @@ class _TodaySummaryPanel extends StatelessWidget {
           width: double.infinity,
           child: FilledButton.icon(
             onPressed: onOpenList,
-            icon: const Icon(Icons.add, size: 20),
-            label: const Text('เพิ่มยาที่กินอยู่'),
+            icon: const Icon(Icons.medication_outlined, size: 20),
+            label: const Text('ดูรายการยาของฉัน'),
             style: FilledButton.styleFrom(
               backgroundColor: Colors.white,
               foregroundColor: OnboardingColors.teal,

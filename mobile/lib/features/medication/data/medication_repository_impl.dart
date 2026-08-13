@@ -47,6 +47,39 @@ class MedicationRepositoryImpl implements MedicationRepository {
     }
   }
 
+  @override
+  Future<Set<String>> loggedToday(List<String> scheduleIds) async {
+    if (scheduleIds.isEmpty) return {};
+    final now = DateTime.now();
+    final startOfDay = DateTime(now.year, now.month, now.day);
+
+    // Filtered by the ids the screen is showing rather than by patient: those
+    // are already the caller's own doses, and it keeps this off the joins that
+    // reaching patient_id from a log would otherwise need.
+    final rows = await db
+        .from('dose_logs')
+        .select('schedule_id')
+        .inFilter('schedule_id', scheduleIds)
+        .gte('actioned_at', startOfDay.toIso8601String());
+
+    final logged = rows.map<String>((row) => row['schedule_id'] as String).toSet();
+
+    // A dose logged while offline is still sitting in the local queue and has
+    // no row on the server yet. Leaving it out would untick it on restart —
+    // exactly the bug this method exists to fix, just rarer.
+    for (final row in await _localDb.pendingSyncItems()) {
+      if (row['entity_type'] != 'dose_log') continue;
+      final payload = jsonDecode(row['payload'] as String) as Map<String, dynamic>;
+      final scheduleId = payload['schedule_id'] as String?;
+      final scheduledAt = DateTime.tryParse(payload['scheduled_at'] as String? ?? '');
+      if (scheduleId == null || !scheduleIds.contains(scheduleId)) continue;
+      if (scheduledAt != null && scheduledAt.isBefore(startOfDay)) continue;
+      logged.add(scheduleId);
+    }
+
+    return logged;
+  }
+
   Future<void> syncPending() async {
     final pending = await _localDb.pendingSyncItems();
     for (final row in pending) {

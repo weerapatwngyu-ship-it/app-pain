@@ -11,6 +11,7 @@ import '../features/doctors/domain/entities/doctor.dart';
 import '../features/health_topics/data/health_question_repository.dart';
 import '../features/doctors/presentation/doctor_profile_screen.dart';
 import '../features/pharmacy_finder/data/pharmacy_finder_repository.dart';
+import '../features/medication/data/medication_list_repository.dart';
 
 /// What a signed-in doctor sees: the threads patients opened with them, and
 /// the full caseload. Not a cut-down copy of the patient app — a doctor has no
@@ -22,6 +23,7 @@ class DoctorHomeShell extends StatefulWidget {
     required this.doctor,
     required this.chatRepository,
     required this.caseloadRepository,
+    required this.medicationListRepository,
     required this.pharmacyFinderRepository,
     required this.healthQuestionRepository,
     required this.doctorRepository,
@@ -32,6 +34,9 @@ class DoctorHomeShell extends StatefulWidget {
   final Doctor doctor;
   final ChatRepository chatRepository;
   final CaseloadRepository caseloadRepository;
+
+  /// Used for prescribing from a patient's record.
+  final MedicationListRepository medicationListRepository;
   final PharmacyFinderRepository pharmacyFinderRepository;
   final HealthQuestionRepository healthQuestionRepository;
   final DoctorRepository doctorRepository;
@@ -58,6 +63,7 @@ class _DoctorHomeShellState extends State<DoctorHomeShell> {
         repository: widget.caseloadRepository,
         chatRepository: widget.chatRepository,
         doctorId: doctor.id,
+        medicationRepository: widget.medicationListRepository,
       ),
       DoctorProfileScreen(
         user: widget.user,

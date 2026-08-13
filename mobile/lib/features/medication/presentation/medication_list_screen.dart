@@ -1,32 +1,26 @@
 import 'package:flutter/material.dart';
 
 import '../../auth/presentation/onboarding/onboarding_theme.dart';
-import '../../profile/data/patient_profile_repository.dart';
 import '../data/medication_list_repository.dart';
 import '../domain/entities/medication.dart';
-import 'medication_edit_sheet.dart';
 import '../../../core/errors/friendly_error.dart';
 
 /// The patient's medication list — what they are taking, and when.
 ///
-/// This exists because nothing could put a medication into the app at all:
-/// prescriptions were writable by clinical staff only and no screen ever did,
-/// so every patient's "today" was permanently empty and the reminders had
-/// nothing to remind about.
+/// Read-only as far as adding goes: prescribing is the doctor's, and the
+/// allergy check that used to live on the patient's own entry form moved with
+/// it, to the screen where the person choosing the drug can act on it.
+/// Medication a patient entered themselves before that change is still theirs
+/// to stop or delete.
 class MedicationListScreen extends StatefulWidget {
   const MedicationListScreen({
     super.key,
     required this.patientId,
     required this.repository,
-    required this.profileRepository,
   });
 
   final String patientId;
   final MedicationListRepository repository;
-
-  /// Read for the allergy list, which is checked against the name being
-  /// added.
-  final PatientProfileRepository profileRepository;
 
   @override
   State<MedicationListScreen> createState() => _MedicationListScreenState();
@@ -34,23 +28,11 @@ class MedicationListScreen extends StatefulWidget {
 
 class _MedicationListScreenState extends State<MedicationListScreen> {
   late Future<List<Medication>> _future;
-  List<String> _allergies = const [];
 
   @override
   void initState() {
     super.initState();
     _future = widget.repository.forPatient(widget.patientId);
-    _loadAllergies();
-  }
-
-  Future<void> _loadAllergies() async {
-    try {
-      final profile = await widget.profileRepository.fetch(widget.patientId);
-      if (mounted) setState(() => _allergies = profile.drugAllergies);
-    } catch (_) {
-      // The list still works without it; the warning simply won't appear.
-      // Blocking the screen on this would be worse than losing the check.
-    }
   }
 
   void _reload() {
@@ -59,35 +41,6 @@ class _MedicationListScreenState extends State<MedicationListScreen> {
     });
   }
 
-  Future<void> _add() async {
-    final result = await showModalBottomSheet<MedicationDraft>(
-      context: context,
-      isScrollControlled: true,
-      builder: (_) => MedicationEditSheet(allergies: _allergies),
-    );
-    if (result == null) return;
-
-    try {
-      await widget.repository.add(
-        patientId: widget.patientId,
-        name: result.name,
-        dosage: result.dosage,
-        frequency: result.frequency,
-        startDate: result.startDate,
-        endDate: result.endDate,
-        times: result.times,
-      );
-      if (!mounted) return;
-      _reload();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('เพิ่ม ${result.name} แล้ว')),
-      );
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(friendlyError(e, whileDoing: 'เพิ่มยาไม่สำเร็จ'))));
-    }
-  }
 
   Future<void> _confirmRemove(Medication medication) async {
     final choice = await showDialog<String>(
@@ -141,11 +94,6 @@ class _MedicationListScreenState extends State<MedicationListScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('ยาของฉัน')),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _add,
-        icon: const Icon(Icons.add),
-        label: const Text('เพิ่มยา'),
-      ),
       body: RefreshIndicator(
         onRefresh: () async {
           _reload();
@@ -167,8 +115,10 @@ class _MedicationListScreenState extends State<MedicationListScreen> {
 
             if (all.isEmpty) {
               return const _Message(
-                'ยังไม่มียาในรายการ\n\nกด "เพิ่มยา" เพื่อใส่ยาที่กินอยู่ '
-                'แล้วระบบจะเตือนตามเวลาที่ตั้งไว้',
+                'ยังไม่มีรายการยา\n\n'
+                'แพทย์จะเป็นผู้สั่งยาให้ผ่านระบบ '
+                'เมื่อสั่งแล้วยาจะขึ้นที่นี่และแอปจะเตือนตามเวลาที่แพทย์กำหนด\n\n'
+                'หากมียาที่กินอยู่ ปรึกษาแพทย์ในแอปเพื่อให้บันทึกให้',
               );
             }
 

@@ -21,9 +21,10 @@ class MedicationListRepository {
 
   /// Adds a medication and its times. Returns the stored row.
   ///
-  /// `source` is sent explicitly because the column defaults to 'clinician'
-  /// for the rows that already existed — leaving it off here would create a
-  /// row the patient is then refused permission to edit.
+  /// [bySelf] decides who the row belongs to, and the database enforces the
+  /// difference: a patient may only write rows marked 'self', and only a
+  /// clinician's policy accepts 'clinician'. Passing the wrong one is refused
+  /// rather than silently mislabelled.
   Future<Medication> add({
     required String patientId,
     required String name,
@@ -32,6 +33,7 @@ class MedicationListRepository {
     required DateTime startDate,
     DateTime? endDate,
     required List<String> times,
+    bool bySelf = true,
   }) async {
     final row = await db
         .from('prescriptions')
@@ -42,7 +44,7 @@ class MedicationListRepository {
           'frequency': frequency,
           'start_date': _isoDate(startDate),
           'end_date': endDate == null ? null : _isoDate(endDate),
-          'source': 'self',
+          'source': bySelf ? 'self' : 'clinician',
         })
         .select('id')
         .single();
