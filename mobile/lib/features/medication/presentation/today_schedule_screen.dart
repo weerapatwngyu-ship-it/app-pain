@@ -310,20 +310,16 @@ class _TodayScheduleScreenState extends State<TodayScheduleScreen> {
                         ),
                       );
                     }
-                    return SizedBox(
+                    return AutoScrollStrip(
                       height: 148,
-                      child: ListView.separated(
-                        scrollDirection: Axis.horizontal,
-                        itemCount: doctors.length,
-                        separatorBuilder: (_, __) => const SizedBox(width: 12),
-                        itemBuilder: (context, index) {
-                          final doctor = doctors[index];
-                          return _DoctorTile(
-                            doctor: doctor,
-                            onTap: () => _openDoctor(doctor),
-                          );
-                        },
-                      ),
+                      itemCount: doctors.length,
+                      itemBuilder: (context, index) {
+                        final doctor = doctors[index];
+                        return _DoctorTile(
+                          doctor: doctor,
+                          onTap: () => _openDoctor(doctor),
+                        );
+                      },
                     );
                   },
                 ),
@@ -365,21 +361,17 @@ class _TodayScheduleScreenState extends State<TodayScheduleScreen> {
                   future: _categoryCountsFuture,
                   builder: (context, snapshot) {
                     final counts = snapshot.data ?? const {};
-                    return SizedBox(
+                    return AutoScrollStrip(
                       height: 96,
-                      child: ListView.separated(
-                        scrollDirection: Axis.horizontal,
-                        itemCount: symptomCategories.length,
-                        separatorBuilder: (_, __) => const SizedBox(width: 12),
-                        itemBuilder: (context, index) {
-                          final category = symptomCategories[index];
-                          return _CategoryTile(
-                            category: category,
-                            count: counts[category.key] ?? 0,
-                            onTap: () => _openCategory(category.key),
-                          );
-                        },
-                      ),
+                      itemCount: symptomCategories.length,
+                      itemBuilder: (context, index) {
+                        final category = symptomCategories[index];
+                        return _CategoryTile(
+                          category: category,
+                          count: counts[category.key] ?? 0,
+                          onTap: () => _openCategory(category.key),
+                        );
+                      },
                     );
                   },
                 ),

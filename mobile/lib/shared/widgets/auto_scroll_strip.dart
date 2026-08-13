@@ -47,13 +47,25 @@ class AutoScrollStrip extends StatefulWidget {
   State<AutoScrollStrip> createState() => _AutoScrollStripState();
 }
 
+// TickerProviderStateMixin, not the Single variant: the ticker is thrown away
+// and rebuilt when the item count changes, and the single-ticker mixin asserts
+// on the second createTicker for the life of the State.
 class _AutoScrollStripState extends State<AutoScrollStrip>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   /// Enough repeats that neither end is reachable by drifting or by a person
   /// swiping for as long as they care to.
   static const _loops = 1000;
 
   final _controller = ScrollController();
+
+  /// Whether the real items overflow the row.
+  ///
+  /// Decided after the first layout rather than guessed from a count: two wide
+  /// tiles can overflow where six narrow ones do not. Until it is known the
+  /// list holds the real items only — repeating them first would make a row
+  /// that fits on screen scrollable, and it would then drift through copies of
+  /// the same two entries.
+  bool _looping = false;
 
   /// A ticker rather than a periodic timer: the framework mutes tickers when
   /// the route is not showing, so pushing another screen stops the drift
@@ -71,6 +83,21 @@ class _AutoScrollStripState extends State<AutoScrollStrip>
   }
 
   @override
+  void didUpdateWidget(AutoScrollStrip oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // The count can change under us — a directory that arrives after the first
+    // frame, or a row that gains an entry. Whether the items overflow has to
+    // be decided again, and the old ticker was started against the old length.
+    if (oldWidget.itemCount != widget.itemCount) {
+      _ticker?.dispose();
+      _ticker = null;
+      _looping = false;
+      _lastTick = Duration.zero;
+      WidgetsBinding.instance.addPostFrameCallback((_) => _start());
+    }
+  }
+
+  @override
   void dispose() {
     _ticker?.dispose();
     _resumeTimer?.cancel();
@@ -79,19 +106,27 @@ class _AutoScrollStripState extends State<AutoScrollStrip>
   }
 
   void _start() {
-    if (!mounted) return;
+    if (!mounted || _looping) return;
     // Someone who has asked the system to reduce motion should not be handed a
     // row that moves by itself.
     if (MediaQuery.maybeOf(context)?.disableAnimations ?? false) return;
     if (widget.itemCount < 2) return;
+    if (!_controller.hasClients) return;
 
-    // Start partway in so a backwards swipe has somewhere to go.
-    if (_controller.hasClients) {
+    // Everything already visible: nothing is hidden past the edge, so there is
+    // nothing for movement to reveal.
+    if (_controller.position.maxScrollExtent <= 0) return;
+
+    setState(() => _looping = true);
+
+    // Once repeated, start partway in so a backwards swipe has somewhere to go.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_controller.hasClients) return;
       final middle = _controller.position.maxScrollExtent / 2;
       if (middle.isFinite && middle > 0) _controller.jumpTo(middle);
-    }
-
-    _ticker = createTicker(_onTick)..start();
+      _ticker?.dispose();
+      _ticker = createTicker(_onTick)..start();
+    });
   }
 
   void _onTick(Duration elapsed) {
@@ -140,12 +175,14 @@ class _AutoScrollStripState extends State<AutoScrollStrip>
         child: ListView.separated(
           controller: _controller,
           scrollDirection: Axis.horizontal,
-          itemCount: widget.itemCount < 2
-              ? widget.itemCount
-              : widget.itemCount * _loops,
+          itemCount: _looping ? widget.itemCount * _loops : widget.itemCount,
           separatorBuilder: (_, __) => SizedBox(width: widget.separatorWidth),
           itemBuilder: (context, index) =>
               widget.itemBuilder(context, index % widget.itemCount),
+          // A row that fits should not offer to scroll at all.
+          physics: _looping
+              ? const AlwaysScrollableScrollPhysics()
+              : const ClampingScrollPhysics(),
         ),
       ),
     );
