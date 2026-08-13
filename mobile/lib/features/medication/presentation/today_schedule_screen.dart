@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../shared/widgets/auto_scroll_strip.dart';
 import '../../../shared/widgets/avatar_picker.dart';
 import '../../profile/data/patient_profile_repository.dart';
 import '../data/medication_list_repository.dart';
@@ -333,13 +334,12 @@ class _TodayScheduleScreenState extends State<TodayScheduleScreen> {
                   onAction: _openHealthTopics,
                 ),
                 const SizedBox(height: 10),
-                SizedBox(
+                // Drifts on its own: there are more topics than fit, and a row
+                // that sits still gives no sign it continues past the edge.
+                AutoScrollStrip(
                   height: 108,
-                  child: ListView.separated(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: healthTopics.length,
-                    separatorBuilder: (_, __) => const SizedBox(width: 12),
-                    itemBuilder: (context, index) {
+                  itemCount: healthTopics.length,
+                  itemBuilder: (context, index) {
                       final topic = healthTopics[index];
                       return _HealthTopicTile(
                         topic: topic,
@@ -353,7 +353,6 @@ class _TodayScheduleScreenState extends State<TodayScheduleScreen> {
                         ),
                       );
                     },
-                  ),
                 ),
                 const SizedBox(height: 28),
                 _SectionHeader(
