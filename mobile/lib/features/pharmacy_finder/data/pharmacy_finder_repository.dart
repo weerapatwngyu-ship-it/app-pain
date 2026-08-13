@@ -22,6 +22,24 @@ const _userAgent = 'MediGo/0.1 (https://github.com/weerapatwngyu-ship-it/app-pai
 
 const _earthRadiusMeters = 6371000.0;
 
+/// What one outward search found, and how far it had to reach to find it.
+class PharmacySearchResult {
+  const PharmacySearchResult({
+    required this.places,
+    required this.radiusMeters,
+    required this.truncated,
+  });
+
+  /// Nearest first.
+  final List<NearbyPharmacy> places;
+
+  /// The ring that produced these, so the screen can say how far it looked.
+  final int radiusMeters;
+
+  /// True when more were found than are being shown.
+  final bool truncated;
+}
+
 /// Looks up nearby pharmacies and clinics straight from OpenStreetMap's
 /// Overpass API — it is public and needs no key, so there is nothing for a
 /// server of ours to add here beyond a hop.
@@ -30,6 +48,49 @@ class PharmacyFinderRepository {
       : _httpClient = httpClient ?? http.Client();
 
   final http.Client _httpClient;
+
+  /// How far each attempt reaches, in metres.
+  ///
+  /// Overpass will not answer an unbounded query — every request has to name
+  /// an area — so "no limit" is served by asking repeatedly and stopping at
+  /// the first ring that returns anything. Someone in a city gets an answer on
+  /// the first call; someone rural keeps widening until the nearest pharmacy
+  /// is found, however far that turns out to be, rather than being told there
+  /// are none because the only one is 4 km away.
+  static const searchRings = <int>[3000, 10000, 30000, 100000];
+
+  /// The nearest places, searched outward until something is found.
+  ///
+  /// Returns nearest-first. [wanted] is a floor, not a page size: a ring that
+  /// yields fewer than this is accepted anyway once the last ring is reached,
+  /// since a single pharmacy 40 km away is still the answer to the question.
+  Future<PharmacySearchResult> findNearest({
+    required double lat,
+    required double lng,
+    int wanted = 5,
+    int limit = 60,
+  }) async {
+    for (var i = 0; i < searchRings.length; i++) {
+      final radius = searchRings[i];
+      final results = await findNearby(lat: lat, lng: lng, radiusMeters: radius);
+      final lastRing = i == searchRings.length - 1;
+      if (results.length >= wanted || (lastRing && results.isNotEmpty)) {
+        return PharmacySearchResult(
+          places: results.take(limit).toList(),
+          radiusMeters: radius,
+          // A city centre can return hundreds; the far ones are noise on both
+          // the list and the map, so say the list was cut rather than implying
+          // that is all there is.
+          truncated: results.length > limit,
+        );
+      }
+    }
+    return PharmacySearchResult(
+      places: const [],
+      radiusMeters: searchRings.last,
+      truncated: false,
+    );
+  }
 
   Future<List<NearbyPharmacy>> findNearby({
     required double lat,

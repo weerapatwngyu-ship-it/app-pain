@@ -10,7 +10,9 @@ import '../data/pharmacy_finder_repository.dart';
 import '../domain/entities/nearby_pharmacy.dart';
 import 'pharmacy_map_view.dart';
 
-const _searchRadiusMeters = 1500;
+/// How far the last search actually reached, and whether it was cut short.
+/// Both come back from the search rather than being fixed here — the point of
+/// widening is that the distance is not known in advance.
 
 class PharmacyFinderScreen extends StatefulWidget {
   const PharmacyFinderScreen({super.key, required this.repository});
@@ -27,6 +29,11 @@ class _PharmacyFinderScreenState extends State<PharmacyFinderScreen> {
   bool _showOpenAppSettings = false;
   bool _showMap = true;
   List<NearbyPharmacy> _places = const [];
+
+  /// How far the last successful search reached. Starts at the first ring so
+  /// the status line has something sensible to say before results arrive.
+  int _searchedRadiusMeters = PharmacyFinderRepository.searchRings.first;
+  bool _truncated = false;
   PlaceKind? _filter;
   double? _userLat;
   double? _userLng;
@@ -74,14 +81,15 @@ class _PharmacyFinderScreenState extends State<PharmacyFinderScreen> {
       final position = await Geolocator.getCurrentPosition(
         locationSettings: const LocationSettings(timeLimit: Duration(seconds: 15)),
       );
-      final results = await widget.repository.findNearby(
+      final search = await widget.repository.findNearest(
         lat: position.latitude,
         lng: position.longitude,
-        radiusMeters: _searchRadiusMeters,
       );
       if (!mounted) return;
       setState(() {
-        _places = results;
+        _places = search.places;
+        _searchedRadiusMeters = search.radiusMeters;
+        _truncated = search.truncated;
         _userLat = position.latitude;
         _userLng = position.longitude;
         _loading = false;
@@ -146,7 +154,8 @@ class _PharmacyFinderScreenState extends State<PharmacyFinderScreen> {
                 loading: _loading,
                 error: _error,
                 count: _visiblePlaces.length,
-                radiusMeters: _searchRadiusMeters,
+                radiusMeters: _searchedRadiusMeters,
+                truncated: _truncated,
               ),
               if (hasResults) ...[
                 const SizedBox(height: 12),
@@ -190,7 +199,17 @@ class _PharmacyFinderScreenState extends State<PharmacyFinderScreen> {
       );
     }
     if (_places.isEmpty) {
-      return const Center(child: Text('ไม่พบร้านยา/คลินิกใกล้เคียง'));
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(32),
+          child: Text(
+            'ค้นหาออกไปไกลถึง 100 กม. แล้วยังไม่พบ\n'
+            'พื้นที่นี้อาจยังไม่มีข้อมูลใน OpenStreetMap',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: OnboardingColors.textMuted, height: 1.5),
+          ),
+        ),
+      );
     }
 
     final visible = _visiblePlaces;
@@ -219,8 +238,8 @@ class _PharmacyFinderScreenState extends State<PharmacyFinderScreen> {
               ? Center(
                   child: Text(
                     _filter == PlaceKind.pharmacy
-                        ? 'ไม่พบร้านขายยาในรัศมีนี้'
-                        : 'ไม่พบคลินิกในรัศมีนี้',
+                        ? 'ผลการค้นหานี้ไม่มีร้านขายยา'
+                        : 'ผลการค้นหานี้ไม่มีคลินิก',
                     style: const TextStyle(color: OnboardingColors.textMuted),
                   ),
                 )
@@ -263,12 +282,17 @@ class _StatusLine extends StatelessWidget {
     required this.error,
     required this.count,
     required this.radiusMeters,
+    required this.truncated,
   });
 
   final bool loading;
   final String? error;
   final int count;
   final int radiusMeters;
+
+  /// More were found than are listed, so the count is a page rather than a
+  /// total and should not read as one.
+  final bool truncated;
 
   @override
   Widget build(BuildContext context) {
@@ -285,7 +309,14 @@ class _StatusLine extends StatelessWidget {
       text = 'ค้นหาไม่สำเร็จ';
     } else {
       icon = Icons.place_outlined;
-      text = 'พบ $count แห่ง ในรัศมี ${(radiusMeters / 1000).toStringAsFixed(1)} กม.';
+      // The radius is what the search had to reach, not a limit the user
+      // chose, so it reads as "within" rather than "we only looked this far".
+      final km = radiusMeters >= 1000
+          ? '${(radiusMeters / 1000).round()} กม.'
+          : '$radiusMeters ม.';
+      text = truncated
+          ? 'ใกล้ที่สุด $count แห่ง (ในรัศมี $km มีมากกว่านี้)'
+          : 'พบ $count แห่ง ในรัศมี $km';
     }
 
     return Row(

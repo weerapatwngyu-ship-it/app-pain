@@ -22,11 +22,30 @@ class PharmacyMapView extends StatelessWidget {
   final List<NearbyPharmacy> pharmacies;
   final ValueChanged<NearbyPharmacy> onTapPharmacy;
 
+  /// A zoom that fits the farthest result on screen.
+  ///
+  /// The search widens until it finds something, so results are no longer
+  /// always within walking distance — a fixed zoom left every pin off the map
+  /// as soon as the nearest pharmacy was in the next district. Chosen from a
+  /// table rather than computed from the viewport, which would need the map's
+  /// size before it has been laid out.
+  double get _initialZoom {
+    if (pharmacies.isEmpty) return 15;
+    final farthest = pharmacies
+        .map((p) => p.distanceMeters)
+        .reduce((a, b) => a > b ? a : b);
+    if (farthest <= 1000) return 15;
+    if (farthest <= 3000) return 13;
+    if (farthest <= 10000) return 12;
+    if (farthest <= 30000) return 10;
+    return 8;
+  }
+
   @override
   Widget build(BuildContext context) {
     final userLocation = LatLng(userLat, userLng);
     return FlutterMap(
-      options: MapOptions(initialCenter: userLocation, initialZoom: 15),
+      options: MapOptions(initialCenter: userLocation, initialZoom: _initialZoom),
       children: [
         TileLayer(
           urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
