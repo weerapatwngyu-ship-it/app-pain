@@ -242,7 +242,7 @@ class _PersonalInfoEditScreenState extends State<PersonalInfoEditScreen> {
                               onPressed: () => setState(() => _gender = entry.key),
                               style: OutlinedButton.styleFrom(
                                 backgroundColor:
-                                    selected ? OnboardingColors.teal.withOpacity(0.12) : null,
+                                    selected ? OnboardingColors.teal.withValues(alpha: 0.12) : null,
                                 side: BorderSide(
                                   color: selected ? OnboardingColors.teal : OnboardingColors.border,
                                 ),

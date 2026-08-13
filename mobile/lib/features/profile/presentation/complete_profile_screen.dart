@@ -307,7 +307,7 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
                               onPressed: () => setState(() => _gender = entry.key),
                               style: OutlinedButton.styleFrom(
                                 backgroundColor: selected
-                                    ? OnboardingColors.teal.withOpacity(0.12)
+                                    ? OnboardingColors.teal.withValues(alpha: 0.12)
                                     : null,
                                 side: BorderSide(
                                   color: selected
