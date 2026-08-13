@@ -283,7 +283,19 @@ class _PatientRecordScreenState extends State<PatientRecordScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(friendlyError(e, whileDoing: 'สั่งยาไม่สำเร็จ'))),
+        SnackBar(
+          content: Text(friendlyError(
+            e,
+            whileDoing: 'สั่งยาไม่สำเร็จ',
+            // A doctor takes charge of a patient by opening a conversation
+            // with them; until then the record is read-only. Saying that is
+            // more use than "no permission", because it is something the
+            // doctor can do from this very screen.
+            deniedMessage: 'ต้องเริ่มสนทนากับผู้ป่วยรายนี้ก่อน '
+                'จึงจะสั่งยาให้ได้ (กดปุ่ม ส่งข้อความ)',
+          )),
+          duration: const Duration(seconds: 6),
+        ),
       );
     }
   }

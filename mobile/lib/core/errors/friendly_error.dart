@@ -12,7 +12,10 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 ///
 /// The original is still printed to the log, because the developer does need
 /// the constraint name.
-String friendlyError(Object error, {String? whileDoing}) {
+/// [deniedMessage] replaces the wording used when the backend refuses on
+/// permissions. "ไม่มีสิทธิ์แก้ไขรายการนี้" is true but leaves the user with
+/// nothing to do; a screen that knows *why* it would be refused can say so.
+String friendlyError(Object error, {String? whileDoing, String? deniedMessage}) {
   debugPrint('friendlyError${whileDoing == null ? '' : ' ($whileDoing)'}: $error');
 
   final prefix = whileDoing == null ? '' : '$whileDoing';
@@ -43,7 +46,7 @@ String friendlyError(Object error, {String? whileDoing}) {
     // server refused, and no amount of retrying will change that.
     final message = error.message.toLowerCase();
     if (error.code == '42501' || message.contains('row-level security')) {
-      return withPrefix('ไม่มีสิทธิ์แก้ไขรายการนี้');
+      return withPrefix(deniedMessage ?? 'ไม่มีสิทธิ์แก้ไขรายการนี้');
     }
     if (message.contains('duplicate key')) {
       return withPrefix('มีรายการนี้อยู่แล้ว');

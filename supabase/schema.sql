@@ -287,6 +287,62 @@ as $$
    where doctor_id = target_doctor_id;
 $$;
 
+-- Opening a thread puts that doctor in charge of that patient.
+--
+-- Reading a record and writing to one are separate rights here: any approved
+-- doctor can read the whole caseload, but prescribing needs
+-- can_manage_patient_care, which asks for an active provider link. Nothing in
+-- the app created one, so no doctor could prescribe for anyone — the check
+-- was unreachable rather than strict.
+--
+-- A conversation is the moment the two are actually connected, so it is what
+-- establishes the link. Done in the database rather than the client because
+-- neither side has permission to write a link for the other, and because a
+-- rule about who may prescribe should not be skippable by a client that
+-- forgets to call it.
+create or replace function public.link_doctor_on_conversation()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  doctor_user uuid;
+begin
+  select user_id into doctor_user
+    from public.doctors where id = new.doctor_id;
+
+  -- A directory entry with no account behind it cannot be given care of
+  -- anyone; there is no one to hold the permission.
+  if doctor_user is null then
+    return new;
+  end if;
+
+  insert into public.patient_links (patient_id, user_id, role, status)
+  values (new.patient_id, doctor_user, 'provider', 'active')
+  on conflict (patient_id, user_id) do update
+    set role = 'provider', status = 'active';
+
+  return new;
+end;
+$$;
+
+drop trigger if exists link_doctor_on_conversation on public.conversations;
+create trigger link_doctor_on_conversation
+  after insert on public.conversations
+  for each row execute function public.link_doctor_on_conversation();
+
+-- Conversations that already existed when the trigger was added get the same
+-- link, so a doctor who has been chatting with a patient for weeks does not
+-- have to start a second thread to be allowed to prescribe.
+insert into public.patient_links (patient_id, user_id, role, status)
+select distinct c.patient_id, d.user_id, 'provider', 'active'
+  from public.conversations c
+  join public.doctors d on d.id = c.doctor_id
+ where d.user_id is not null
+on conflict (patient_id, user_id) do update
+  set role = 'provider', status = 'active';
+
 create table if not exists public.messages (
   id uuid primary key default gen_random_uuid(),
   conversation_id uuid not null references public.conversations (id) on delete cascade,

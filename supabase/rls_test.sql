@@ -1191,3 +1191,91 @@ begin;
   select count(*) as visible_threads from public.conversations;
   reset role;
 rollback;
+
+\echo ''
+\echo '=== CONTROL 46: หมอสั่งยาได้หลังเริ่มสนทนากับผู้ป่วย ==='
+begin;
+  select id as pa from public.patients
+   where owner_user_id='11111111-1111-1111-1111-111111111111' \gset
+
+  insert into auth.users (id, email)
+    values ('33333333-3333-3333-3333-333333333333','rx-doc@test.com');
+  update public.profiles set role='provider'
+   where id='33333333-3333-3333-3333-333333333333';
+  insert into public.doctors (user_id, name, specialty)
+  values ('33333333-3333-3333-3333-333333333333','นพ.ทดสอบสั่งยา','ทั่วไป');
+  select id as doc from public.doctors
+   where user_id='33333333-3333-3333-3333-333333333333' \gset
+
+  \echo '  -- ก่อนมีการสนทนา expect f:'
+  set local role authenticated;
+  select public.as_user('33333333-3333-3333-3333-333333333333');
+  select public.can_manage_patient_care(:'pa'::uuid) as before_chat;
+  reset role;
+
+  insert into public.conversations (patient_id, doctor_id) values (:'pa', :'doc');
+
+  \echo '  -- หลังเริ่มสนทนา expect t:'
+  set local role authenticated;
+  select public.as_user('33333333-3333-3333-3333-333333333333');
+  select public.can_manage_patient_care(:'pa'::uuid) as after_chat;
+
+  \echo '  -- และสั่งยาได้จริง expect INSERT 0 1:'
+  insert into public.prescriptions
+    (patient_id, medication_name, dosage, frequency, start_date, source)
+  values (:'pa','ยาที่หมอสั่ง','500 mg','วันละ 3 ครั้ง', current_date, 'clinician');
+  reset role;
+  select medication_name, source from public.prescriptions
+   where patient_id = :'pa' and medication_name='ยาที่หมอสั่ง';
+rollback;
+
+\echo ''
+\echo '=== EXPLOIT 47: หมอที่ไม่เคยคุยกับผู้ป่วยรายนั้น สั่งยาให้ (ต้องไม่ได้) ==='
+begin;
+  select id as pa from public.patients
+   where owner_user_id='11111111-1111-1111-1111-111111111111' \gset
+  select id as pb from public.patients
+   where owner_user_id='22222222-2222-2222-2222-222222222222' \gset
+
+  insert into auth.users (id, email)
+    values ('33333333-3333-3333-3333-333333333333','rx-doc@test.com');
+  update public.profiles set role='provider'
+   where id='33333333-3333-3333-3333-333333333333';
+  insert into public.doctors (user_id, name, specialty)
+  values ('33333333-3333-3333-3333-333333333333','นพ.ทดสอบสั่งยา','ทั่วไป');
+  select id as doc from public.doctors
+   where user_id='33333333-3333-3333-3333-333333333333' \gset
+
+  -- คุยกับ A เท่านั้น ไม่เคยคุยกับ B
+  insert into public.conversations (patient_id, doctor_id) values (:'pa', :'doc');
+
+  set local role authenticated;
+  select public.as_user('33333333-3333-3333-3333-333333333333');
+  \echo '  -- ดูแล A ได้ expect t:'
+  select public.can_manage_patient_care(:'pa'::uuid) as manages_a;
+  \echo '  -- แต่ B ไม่ได้ expect f:'
+  select public.can_manage_patient_care(:'pb'::uuid) as manages_b;
+  \echo '  -- สั่งยาให้ B expect RLS refusal:'
+  savepoint s1;
+  insert into public.prescriptions
+    (patient_id, medication_name, dosage, frequency, start_date, source)
+  values (:'pb','ยาที่ไม่ควรสั่งได้','1 เม็ด','วันละครั้ง', current_date, 'clinician');
+  rollback to savepoint s1;
+  reset role;
+rollback;
+
+\echo ''
+\echo '=== EXPLOIT 48: ผู้ป่วยติดป้ายยาตัวเองว่าหมอสั่ง (ต้องไม่ได้) ==='
+begin;
+  select id as pa from public.patients
+   where owner_user_id='11111111-1111-1111-1111-111111111111' \gset
+  set local role authenticated;
+  select public.as_user('11111111-1111-1111-1111-111111111111');
+  \echo '  -- expect RLS refusal:'
+  savepoint s1;
+  insert into public.prescriptions
+    (patient_id, medication_name, dosage, frequency, start_date, source)
+  values (:'pa','แอบอ้างว่าหมอสั่ง','1 เม็ด','วันละครั้ง', current_date, 'clinician');
+  rollback to savepoint s1;
+  reset role;
+rollback;
