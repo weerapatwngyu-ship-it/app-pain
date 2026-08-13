@@ -44,6 +44,12 @@ class MainActivity : FlutterActivity() {
                         ReminderService.stop(applicationContext)
                         result.success(true)
                     }
+                    // Every "กินแล้ว" pressed on a notification since the last
+                    // call, so Dart can write the dose logs. Destructive:
+                    // whatever comes back is no longer stored here.
+                    "drainTaken" -> {
+                        result.success(Reminders.drainTaken(applicationContext))
+                    }
                     // Rings in [seconds], to prove the path end to end without
                     // waiting out a real reminder time.
                     "test" -> {

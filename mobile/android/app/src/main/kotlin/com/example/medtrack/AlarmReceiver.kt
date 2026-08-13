@@ -17,10 +17,16 @@ class AlarmReceiver : BroadcastReceiver() {
         val app = context.applicationContext
         // Ringing comes first and is never skipped. Everything after it is
         // upkeep, and upkeep failing must not cost the reminder itself.
-        if (intent?.action == Reminders.ACTION_TEST) {
-            Reminders.ringTest(app)
-        } else {
-            Reminders.fireDue(app)
+        when (intent?.action) {
+            Reminders.ACTION_TEST -> Reminders.ringTest(app)
+            // A dose the patient pushed back by ten minutes, come round again.
+            // Rung by id rather than by time, since its slot has long passed
+            // and fireDue would rightly ignore it.
+            Reminders.ACTION_SNOOZE_RING -> Reminders.ringById(
+                app,
+                intent?.getIntExtra(Reminders.EXTRA_REMINDER_ID, -1) ?: -1,
+            )
+            else -> Reminders.fireDue(app)
         }
         try {
             Reminders.armNext(app)

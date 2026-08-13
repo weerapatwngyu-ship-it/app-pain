@@ -14,6 +14,7 @@ import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import org.json.JSONArray
+import org.json.JSONObject
 import java.util.Calendar
 
 /**
@@ -57,6 +58,16 @@ object Reminders {
     private const val PREFS = "medigo_reminders"
     private const val KEY_PAYLOAD = "payload"
     private const val KEY_FIRED_PREFIX = "fired_"
+
+    /**
+     * "กินแล้ว" presses live in their own file, not in [PREFS].
+     *
+     * [sync] wipes that one whenever the reminder list changes, and a dose the
+     * patient has confirmed must not be lost because the doctor happened to
+     * change the schedule before the app was next opened.
+     */
+    private const val ACTIONS_PREFS = "medigo_dose_actions"
+    private const val KEY_TAKEN = "taken"
 
     /** Channel ids are versioned because Android freezes a channel's sound and
      *  vibration at creation and silently ignores every later change. A
@@ -275,6 +286,85 @@ object Reminders {
     private const val TEST_REQUEST_CODE = 909
     private const val TEST_NOTIFICATION_ID = 999_002
 
+    // -------------------------------------------------------- answering a dose
+
+    const val ACTION_TAKEN = "com.example.medtrack.DOSE_TAKEN"
+    const val ACTION_SNOOZE = "com.example.medtrack.DOSE_SNOOZE"
+    const val ACTION_SNOOZE_RING = "com.example.medtrack.DOSE_SNOOZE_RING"
+    const val EXTRA_REMINDER_ID = "reminder_id"
+
+    /** How far "เลื่อน 10 นาที" pushes the alarm back. */
+    private const val SNOOZE_MINUTES = 10
+
+    /** Keeps the two action PendingIntents of one reminder apart. Larger than
+     *  any reminder id in use — the generated ones sit at 800000 + minute of
+     *  day, so they stop at 801439. */
+    private const val SNOOZE_REQUEST_OFFSET = 2_000_000
+
+    private fun actionPrefs(context: Context): SharedPreferences =
+        context.getSharedPreferences(ACTIONS_PREFS, Context.MODE_PRIVATE)
+
+    /**
+     * Remembers that the patient pressed "กินแล้ว", for Dart to turn into a
+     * dose log next time it runs.
+     *
+     * Recorded here rather than written straight to the record because there
+     * is no app to write it: the button is answered from the tray, usually
+     * with the process not running and often with no network. Parking it means
+     * a dose confirmed at 08:00 and an app opened at 20:00 still record the
+     * 08:00 answer, with the time it was actually given.
+     */
+    fun recordTaken(context: Context, reminderId: Int, at: Long = System.currentTimeMillis()) {
+        val store = actionPrefs(context)
+        val marks = try {
+            JSONArray(store.getString(KEY_TAKEN, "[]"))
+        } catch (error: Exception) {
+            JSONArray()
+        }
+        marks.put(
+            JSONObject().apply {
+                put("id", reminderId)
+                put("at", at)
+            }
+        )
+        // commit, not apply: this runs in a receiver that may be torn down the
+        // moment it returns, and an asynchronous write can lose the race.
+        store.edit().putString(KEY_TAKEN, marks.toString()).commit()
+    }
+
+    /** Hands the collected presses to Dart and forgets them. */
+    fun drainTaken(context: Context): String {
+        val store = actionPrefs(context)
+        val marks = store.getString(KEY_TAKEN, "[]") ?: "[]"
+        store.edit().remove(KEY_TAKEN).commit()
+        return marks
+    }
+
+    /** Rings [reminderId] again in ten minutes. */
+    fun snooze(context: Context, reminderId: Int) {
+        val alarms = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        val at = System.currentTimeMillis() + SNOOZE_MINUTES * 60_000L
+        val intent = PendingIntent.getBroadcast(
+            context,
+            reminderId,
+            Intent(context, AlarmReceiver::class.java)
+                .setAction(ACTION_SNOOZE_RING)
+                .putExtra(EXTRA_REMINDER_ID, reminderId),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+        try {
+            alarms.setAlarmClock(AlarmManager.AlarmClockInfo(at, intent), intent)
+        } catch (error: SecurityException) {
+            alarms.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, intent)
+        }
+    }
+
+    /** Rings one stored reminder by id — used when a snooze comes back. */
+    fun ringById(context: Context, reminderId: Int) {
+        val reminder = load(context).firstOrNull { it.id == reminderId } ?: return
+        ring(context, reminder)
+    }
+
     // ------------------------------------------------------------ notification
 
     fun ensureChannels(context: Context) {
@@ -345,6 +435,30 @@ object Reminders {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
 
+        // Two ways to answer without opening the app. Both cancel the
+        // notification, which is what stops an insistent alarm — and the first
+        // is also how the dose gets into the record, so the patient is not
+        // asked to confirm the same dose twice in two places.
+        val taken = PendingIntent.getBroadcast(
+            context,
+            reminder.id,
+            Intent(context, DoseActionReceiver::class.java)
+                .setAction(ACTION_TAKEN)
+                .putExtra(EXTRA_REMINDER_ID, reminder.id),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+        val snooze = PendingIntent.getBroadcast(
+            context,
+            // Offset so the two actions of one reminder do not share a
+            // PendingIntent — same request code and component would make the
+            // second overwrite the first.
+            reminder.id + SNOOZE_REQUEST_OFFSET,
+            Intent(context, DoseActionReceiver::class.java)
+                .setAction(ACTION_SNOOZE)
+                .putExtra(EXTRA_REMINDER_ID, reminder.id),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+
         val body = reminder.label.trim().ifEmpty { "ถึงเวลากินยาแล้ว" }
         val notification = NotificationCompat.Builder(context, CHANNEL_ALARM)
             .setContentTitle("ถึงเวลากินยา")
@@ -356,6 +470,8 @@ object Reminders {
             .setContentIntent(open)
             .setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM))
             .setVibrate(longArrayOf(0, 800, 400, 800, 400, 800))
+            .addAction(0, "กินแล้ว", taken)
+            .addAction(0, "เลื่อน 10 นาที", snooze)
             .build()
 
         // Keeps sound and vibration repeating until the notification is dealt

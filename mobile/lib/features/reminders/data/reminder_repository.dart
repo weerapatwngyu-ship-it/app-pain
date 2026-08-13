@@ -1,7 +1,10 @@
 import 'dart:io';
 
+import 'package:sqflite/sqflite.dart' show ConflictAlgorithm;
+
 import '../../../core/notification/notification_service.dart';
 import '../../../core/storage/local_database.dart';
+import '../../medication/domain/entities/dose_schedule_item.dart';
 import '../domain/entities/medication_reminder.dart';
 import 'reminder_watch_service.dart';
 
@@ -64,6 +67,148 @@ class ReminderRepository {
     bool enabled,
   ) =>
       save(reminder.copyWith(enabled: enabled));
+
+  // ------------------------------------------------------- doctor's schedule
+
+  /// Base for the ids of prescription reminders.
+  ///
+  /// Their id is derived from the time rather than handed out by SQLite, so
+  /// that re-syncing the same schedule produces the same row every time. The
+  /// Android service remembers which id has already rung today, and an id that
+  /// changed on each sync would let this morning's dose ring again the moment
+  /// the schedule was refreshed. Far above any autoincremented id, and below
+  /// the 999xxx block the self-test notifications use.
+  static const _prescriptionIdBase = 800000;
+
+  static int _prescriptionId(int hour, int minute) =>
+      _prescriptionIdBase + hour * 60 + minute;
+
+  /// Rebuilds the reminders that mirror the doctor's dose schedule.
+  ///
+  /// The patient no longer enters their own medication — the doctor prescribes
+  /// it — so making them retype every time as an alarm would be asking them to
+  /// copy out a schedule they were already given, and any typo in the copy is
+  /// a dose at the wrong hour. These rows are generated instead, and are
+  /// rebuilt from [items] on every call so a stopped medication stops ringing.
+  ///
+  /// Doses that fall at the same time become one reminder, not several: three
+  /// insistent alarms going off together at 08:00 is not three times the
+  /// reminder, it is noise, and the patient answers them all with one action
+  /// anyway.
+  ///
+  /// Reminders the patient typed themselves are left alone.
+  Future<void> syncFromSchedule(List<DoseScheduleItem> items) async {
+    final db = await LocalDatabase.instance.database;
+
+    // Grouped by time-of-day, in the order they come due.
+    final byMinute = <int, List<DoseScheduleItem>>{};
+    for (final item in items) {
+      // A PRN ("เมื่อมีอาการ") dose is taken when it is needed, not on the
+      // clock, so ringing for it would be telling the patient to take
+      // something the prescription says to decide about themselves.
+      if (item.isPrn) continue;
+      final time = _parseTime(item.scheduledTime);
+      if (time == null) continue;
+      byMinute.putIfAbsent(time.$1 * 60 + time.$2, () => []).add(item);
+    }
+
+    final existing = await db.query(
+      'medication_reminders',
+      where: 'source = ?',
+      whereArgs: [ReminderSource.prescription.name],
+    );
+    final existingById = {
+      for (final row in existing)
+        row['id'] as int: MedicationReminder.fromRow(row),
+    };
+
+    final wanted = <int, MedicationReminder>{};
+    for (final entry in byMinute.entries) {
+      final hour = entry.key ~/ 60;
+      final minute = entry.key % 60;
+      final id = _prescriptionId(hour, minute);
+      wanted[id] = MedicationReminder(
+        id: id,
+        label: _label(entry.value),
+        hour: hour,
+        minute: minute,
+        // Every day: the schedule query already drops a prescription that has
+        // not started or has ended, so "which days" is answered by whether the
+        // dose is in [items] at all.
+        days: const {1, 2, 3, 4, 5, 6, 7},
+        // A patient who switched this off keeps it off. The doctor decides
+        // what to take and when; whether the phone makes a noise about it at
+        // 06:00 is the patient's to decide.
+        enabled: existingById[id]?.enabled ?? true,
+        source: ReminderSource.prescription,
+        scheduleIds: [for (final item in entry.value) item.scheduleId],
+      );
+    }
+
+    for (final id in existingById.keys) {
+      if (!wanted.containsKey(id)) {
+        await db.delete('medication_reminders', where: 'id = ?', whereArgs: [id]);
+        await _cancelAll(id);
+      }
+    }
+    for (final reminder in wanted.values) {
+      // insert-or-replace rather than update: the row may be new, and the id
+      // is ours to set either way.
+      await db.insert(
+        'medication_reminders',
+        reminder.toRow(),
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+      await _reschedule(reminder);
+    }
+
+    await _syncWatchService();
+  }
+
+  /// "ยาความดัน 1 เม็ด" — or the names joined, when several fall together.
+  static String _label(List<DoseScheduleItem> items) {
+    if (items.length == 1) {
+      final item = items.first;
+      return [item.medicationName, item.dosage]
+          .where((part) => part.trim().isNotEmpty)
+          .join(' ');
+    }
+    return items.map((item) => item.medicationName).join(' · ');
+  }
+
+  /// 'HH:mm' or 'HH:mm:ss' as Postgres returns it.
+  static (int, int)? _parseTime(String raw) {
+    final parts = raw.split(':');
+    if (parts.length < 2) return null;
+    final hour = int.tryParse(parts[0]);
+    final minute = int.tryParse(parts[1]);
+    if (hour == null || minute == null) return null;
+    if (hour < 0 || hour > 23 || minute < 0 || minute > 59) return null;
+    return (hour, minute);
+  }
+
+  /// Doses answered with "กินแล้ว" from the notification itself, taken out of
+  /// the platform's hands and translated back into schedule ids.
+  ///
+  /// Each mark names a reminder and the moment it was answered; a reminder
+  /// covering three medications yields three doses, since one tap at 08:00
+  /// answers for everything due then. Draining is destructive on the platform
+  /// side, so whatever this returns must be recorded by the caller.
+  Future<List<TakenDose>> drainTakenDoses() async {
+    final marks = await ReminderWatchService.drainTaken();
+    if (marks.isEmpty) return const [];
+
+    final byId = {for (final reminder in await all()) reminder.id: reminder};
+    final doses = <TakenDose>[];
+    for (final mark in marks) {
+      final reminder = byId[mark.reminderId];
+      if (reminder == null) continue;
+      for (final scheduleId in reminder.scheduleIds) {
+        doses.add(TakenDose(scheduleId: scheduleId, at: mark.at));
+      }
+    }
+    return doses;
+  }
 
   /// Re-applies every alarm the device should be holding.
   ///
@@ -137,4 +282,16 @@ class ReminderRepository {
       await _notifications.cancel(_notificationId(reminderId, offset));
     }
   }
+}
+
+/// One dose the patient confirmed from the notification, before it has been
+/// turned into a dose log.
+class TakenDose {
+  const TakenDose({required this.scheduleId, required this.at});
+
+  final String scheduleId;
+
+  /// When the patient pressed the button, not when the app got around to
+  /// reading it — the two can be hours apart if the phone was never opened.
+  final DateTime at;
 }

@@ -63,6 +63,12 @@
             android:name=".AlarmReceiver"
             android:exported="false"/>
 
+        <!-- The "กินแล้ว" and "เลื่อน 10 นาที" buttons on a dose reminder.
+             Not exported: only our own notification triggers it. -->
+        <receiver
+            android:name=".DoseActionReceiver"
+            android:exported="false"/>
+
         <receiver
             android:name=".BootReceiver"
             android:exported="true">

@@ -1,3 +1,17 @@
+/// Where a reminder came from.
+enum ReminderSource {
+  /// Typed by the patient on the reminders screen.
+  self,
+
+  /// Mirrored from a doctor's dose schedule. The patient does not own the
+  /// time — the prescription does — so these are rebuilt on every sync and
+  /// cannot be edited or deleted here.
+  prescription;
+
+  static ReminderSource parse(String? raw) =>
+      raw == 'prescription' ? ReminderSource.prescription : ReminderSource.self;
+}
+
 /// One "กินยาตอนนี้" alarm, modelled on the phone's own clock app.
 ///
 /// Stored on the device rather than in Supabase on purpose: the notification
@@ -12,12 +26,23 @@ class MedicationReminder {
     required this.minute,
     required this.days,
     required this.enabled,
+    this.source = ReminderSource.self,
+    this.scheduleIds = const [],
   });
 
   final int id;
   final String label;
   final int hour;
   final int minute;
+
+  final ReminderSource source;
+
+  /// The dose_schedules rows this reminder rings for, empty for a self-made
+  /// one. Several medications can fall on the same time, so answering
+  /// "กินแล้ว" once records a dose against every id here.
+  final List<String> scheduleIds;
+
+  bool get fromDoctor => source == ReminderSource.prescription;
 
   /// Weekdays this repeats on, 1 = Monday … 7 = Sunday (matching
   /// DateTime.weekday). Empty means it fires once and then stops.
@@ -86,6 +111,8 @@ class MedicationReminder {
     int? minute,
     Set<int>? days,
     bool? enabled,
+    ReminderSource? source,
+    List<String>? scheduleIds,
   }) {
     return MedicationReminder(
       id: id ?? this.id,
@@ -94,6 +121,8 @@ class MedicationReminder {
       minute: minute ?? this.minute,
       days: days ?? this.days,
       enabled: enabled ?? this.enabled,
+      source: source ?? this.source,
+      scheduleIds: scheduleIds ?? this.scheduleIds,
     );
   }
 
@@ -104,10 +133,13 @@ class MedicationReminder {
         'minute': minute,
         'days': (days.toList()..sort()).join(','),
         'enabled': enabled ? 1 : 0,
+        'source': source.name,
+        'schedule_ids': scheduleIds.join(','),
       };
 
   factory MedicationReminder.fromRow(Map<String, Object?> row) {
     final raw = (row['days'] as String?) ?? '';
+    final schedules = (row['schedule_ids'] as String?) ?? '';
     return MedicationReminder(
       id: row['id'] as int,
       label: (row['label'] as String?) ?? '',
@@ -117,6 +149,8 @@ class MedicationReminder {
           ? <int>{}
           : raw.split(',').map(int.parse).toSet(),
       enabled: (row['enabled'] as int? ?? 1) == 1,
+      source: ReminderSource.parse(row['source'] as String?),
+      scheduleIds: schedules.isEmpty ? const [] : schedules.split(','),
     );
   }
 }

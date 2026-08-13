@@ -1,9 +1,12 @@
 import 'dart:typed_data';
+import 'dart:ui' show DartPluginRegistrant;
 
 import 'package:flutter/services.dart' show PlatformException;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest_all.dart' as tz_data;
 import 'package:timezone/timezone.dart' as tz;
+
+import '../storage/dose_action_inbox.dart';
 
 /// What the OS currently allows, and what it is actually holding for us.
 ///
@@ -94,9 +97,11 @@ class NotificationService {
 
         // Two ways to answer without hunting for the app. Both stop the
         // ringing: cancelNotification defaults to true, and an insistent
-        // notification buzzes until it is cancelled.
+        // notification buzzes until it is cancelled. "กินแล้ว" also records
+        // the dose — same wording as the native reminder's button, since to
+        // the patient they are the same button.
         actions: <AndroidNotificationAction>[
-          AndroidNotificationAction(_takenActionId, 'ทานยาแล้ว'),
+          AndroidNotificationAction(_takenActionId, 'กินแล้ว'),
           AndroidNotificationAction(_snoozeActionId, 'เลื่อน 10 นาที'),
         ],
       );
@@ -175,10 +180,12 @@ class NotificationService {
   }
 
   static void _handleResponse(NotificationResponse response) {
+    // Fire and forget in both branches: nothing on screen is waiting on these,
+    // and a throw out of a notification callback helps no one.
     if (response.actionId == _snoozeActionId) {
-      // Fire and forget: nothing on screen is waiting on this, and failing to
-      // snooze should not throw out of a notification callback.
       instance.snooze(response.id ?? 0);
+    } else if (response.actionId == _takenActionId) {
+      recordTakenFromNotification(response.id ?? 0);
     }
   }
 
@@ -377,8 +384,17 @@ class NotificationService {
 /// do nothing.
 @pragma('vm:entry-point')
 void notificationBackgroundHandler(NotificationResponse response) {
-  if (response.actionId != 'snooze') return;
-  // "ทานยาแล้ว" needs no work: the action cancels the notification, which is
-  // what stops an insistent alarm.
-  NotificationService.instance.snooze(response.id ?? 0);
+  // Without this the isolate has no plugin registrations, so the sqflite call
+  // below has nothing to talk to and the dose is silently dropped.
+  DartPluginRegistrant.ensureInitialized();
+
+  if (response.actionId == NotificationService._snoozeActionId) {
+    NotificationService.instance.snooze(response.id ?? 0);
+  } else if (response.actionId == NotificationService._takenActionId) {
+    // Cancelling the notification is what stops the ringing, and the action
+    // does that by itself; this is the other half — recording that the dose
+    // was actually taken, so answering the reminder answers it once and for
+    // all rather than leaving it to be confirmed again in the app.
+    recordTakenFromNotification(response.id ?? 0);
+  }
 }

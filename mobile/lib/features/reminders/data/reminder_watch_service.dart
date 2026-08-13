@@ -46,6 +46,43 @@ class ReminderWatchService {
   /// stored reminders are already what the service should be watching.
   static Future<void> start() => _invoke('start', null);
 
+  /// Takes the "กินแล้ว" presses the service has collected and clears them.
+  ///
+  /// The button is answered while the app is not running — that is the whole
+  /// point of it — so the confirmation is parked on the platform side until
+  /// there is a Dart process to hand it to. Destructive by design: the caller
+  /// records what it gets, and a mark handed over twice would log the dose
+  /// twice.
+  static Future<List<TakenMark>> drainTaken() async {
+    if (!_supported) return const [];
+    String? raw;
+    try {
+      raw = await _channel.invokeMethod<String>('drainTaken');
+    } on PlatformException {
+      return const [];
+    } on MissingPluginException {
+      // Older build without the action buttons in it.
+      return const [];
+    }
+    if (raw == null || raw.isEmpty) return const [];
+
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is! List) return const [];
+      return [
+        for (final entry in decoded)
+          if (entry is Map)
+            TakenMark(
+              reminderId: (entry['id'] as num?)?.toInt() ?? 0,
+              at: DateTime.fromMillisecondsSinceEpoch(
+                  (entry['at'] as num?)?.toInt() ?? 0),
+            ),
+      ];
+    } on FormatException {
+      return const [];
+    }
+  }
+
   /// Rings once after [seconds], through the same code a real reminder uses.
   static Future<void> test({int seconds = 30}) =>
       _invoke('test', <String, Object?>{'seconds': seconds});
@@ -61,4 +98,12 @@ class ReminderWatchService {
       // Older build without the service in it.
     }
   }
+}
+
+/// A "กินแล้ว" press, as the platform recorded it.
+class TakenMark {
+  const TakenMark({required this.reminderId, required this.at});
+
+  final int reminderId;
+  final DateTime at;
 }

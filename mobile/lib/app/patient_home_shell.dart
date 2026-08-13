@@ -108,6 +108,8 @@ class _PatientHomeShellState extends State<PatientHomeShell> {
         doctorRepository: widget.doctorRepository,
         healthQuestionRepository: widget.healthQuestionRepository,
         chatRepository: widget.chatRepository,
+        reminderRepository: _reminderRepository,
+        onOpenReminders: () => setState(() => _index = 2),
         onUserUpdated: widget.onUserUpdated,
       ),
       SymptomLogScreen(
@@ -115,7 +117,11 @@ class _PatientHomeShellState extends State<PatientHomeShell> {
         recordSymptomUseCase: RecordSymptomUseCase(widget.symptomRepository),
         repository: widget.symptomRepository,
       ),
-      RemindersScreen(repository: _reminderRepository),
+      RemindersScreen(
+        repository: _reminderRepository,
+        medicationRepository: widget.medicationRepository,
+        patientId: widget.patientId,
+      ),
       ProfileScreen(
         user: widget.user,
         patientId: widget.patientId,

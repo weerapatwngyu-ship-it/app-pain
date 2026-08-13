@@ -19,13 +19,14 @@ class LocalDatabase {
     final path = join(await getDatabasesPath(), 'medtrack.db');
     return openDatabase(
       path,
-      version: 2,
+      version: 3,
       // Existing installs already carry a v1 database, so the reminders table
       // has to arrive through an upgrade as well as through a fresh create —
       // otherwise anyone who had the app before this feature would hit
       // "no such table" instead of an empty list.
       onUpgrade: (db, oldVersion, newVersion) async {
         if (oldVersion < 2) await _createReminders(db);
+        if (oldVersion < 3) await _addPrescriptionColumns(db);
       },
       onCreate: (db, version) async {
         await db.execute('''
@@ -53,6 +54,12 @@ class LocalDatabase {
 
   /// Medication reminders — local alarms, see MedicationReminder for why they
   /// do not live in Supabase.
+  ///
+  /// `source` says who put the row here: 'self' for one the patient typed,
+  /// 'prescription' for one mirrored from a doctor's dose schedule.
+  /// `schedule_ids` are the dose_schedules rows a prescription reminder stands
+  /// for — comma separated, because several medications can share one time and
+  /// answering "กินแล้ว" at that time answers for all of them.
   static Future<void> _createReminders(Database db) async {
     await db.execute('''
       CREATE TABLE IF NOT EXISTS medication_reminders (
@@ -61,9 +68,34 @@ class LocalDatabase {
         hour INTEGER NOT NULL,
         minute INTEGER NOT NULL,
         days TEXT NOT NULL DEFAULT '',
-        enabled INTEGER NOT NULL DEFAULT 1
+        enabled INTEGER NOT NULL DEFAULT 1,
+        source TEXT NOT NULL DEFAULT 'self',
+        schedule_ids TEXT NOT NULL DEFAULT ''
       )
     ''');
+  }
+
+  /// Adds the two columns above to a reminders table created by v2.
+  ///
+  /// Guarded per column rather than wrapped in one try: a half-applied upgrade
+  /// would otherwise leave the second column missing for good, since the
+  /// version is bumped either way.
+  static Future<void> _addPrescriptionColumns(Database db) async {
+    // The table may not exist yet on a v1 database, where _createReminders
+    // above has just built it with both columns already in place.
+    await _createReminders(db);
+    final columns = await db.rawQuery('PRAGMA table_info(medication_reminders)');
+    final names = columns.map((row) => row['name'] as String?).toSet();
+    if (!names.contains('source')) {
+      await db.execute(
+        "ALTER TABLE medication_reminders ADD COLUMN source TEXT NOT NULL DEFAULT 'self'",
+      );
+    }
+    if (!names.contains('schedule_ids')) {
+      await db.execute(
+        "ALTER TABLE medication_reminders ADD COLUMN schedule_ids TEXT NOT NULL DEFAULT ''",
+      );
+    }
   }
 
   Future<void> enqueue(String id, String entityType, String jsonPayload) async {

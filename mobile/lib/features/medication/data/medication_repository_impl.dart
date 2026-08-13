@@ -80,6 +80,7 @@ class MedicationRepositoryImpl implements MedicationRepository {
     return logged;
   }
 
+  @override
   Future<void> syncPending() async {
     final pending = await _localDb.pendingSyncItems();
     for (final row in pending) {

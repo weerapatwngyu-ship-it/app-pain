@@ -17,6 +17,7 @@ import '../../doctors/presentation/doctor_list_screen.dart';
 import '../../health_topics/data/health_question_repository.dart';
 import '../../health_topics/domain/entities/health_topic.dart';
 import '../../health_topics/presentation/health_topics_screen.dart';
+import '../../reminders/data/reminder_repository.dart';
 import '../../symptom_tracking/domain/entities/symptom_category.dart';
 import '../../symptom_tracking/domain/symptom_repository.dart';
 import '../../symptom_tracking/presentation/symptom_category_logs_screen.dart';
@@ -40,6 +41,8 @@ class TodayScheduleScreen extends StatefulWidget {
     required this.chatRepository,
     required this.medicationListRepository,
     required this.patientProfileRepository,
+    required this.reminderRepository,
+    required this.onOpenReminders,
     required this.onUserUpdated,
   });
 
@@ -58,6 +61,17 @@ class TodayScheduleScreen extends StatefulWidget {
   final ChatRepository chatRepository;
   final MedicationListRepository medicationListRepository;
   final PatientProfileRepository patientProfileRepository;
+
+  /// The phone's alarms. This screen owns keeping them in step with the
+  /// doctor's schedule, because it is the one place that reads that schedule
+  /// on every app open.
+  final ReminderRepository reminderRepository;
+
+  /// Switches to the เตือนกินยา tab. The alarms are generated from the
+  /// schedule shown here, so the two screens are one feature and the list
+  /// links straight through to them.
+  final VoidCallback onOpenReminders;
+
   final ValueChanged<AppUser> onUserUpdated;
 
   @override
@@ -98,11 +112,58 @@ class _TodayScheduleScreenState extends State<TodayScheduleScreen> {
 
   /// Today's doses, plus which of them are already logged.
   ///
-  /// The two are fetched together so the list never paints a dose as
-  /// outstanding for a frame before the log arrives and ticks it.
+  /// Also the point where the three halves of the reminder loop meet: the
+  /// doctor's schedule becomes the phone's alarms, any dose answered from a
+  /// notification while the app was closed becomes a dose log, and the result
+  /// is what the list paints. Doing it here rather than at launch means it
+  /// happens on every app open and on every pull to refresh, without a second
+  /// place that has to remember to.
+  ///
+  /// The schedule is fetched together with what has been logged, so the list
+  /// never paints a dose as outstanding for a frame before the log arrives and
+  /// ticks it.
   Future<List<DoseScheduleItem>> _loadSchedule() async {
     final items =
         await widget.medicationRepository.todaySchedule(widget.patientId);
+
+    // Doses confirmed from the notification itself. They were parked on the
+    // platform side with the time they were actually answered, since there was
+    // no app running to record them.
+    //
+    // Before the sync below, not after: a mark names a reminder, and the sync
+    // deletes the reminders of any medication the doctor has since stopped —
+    // which would throw away a dose the patient had already confirmed.
+    try {
+      for (final dose in await widget.reminderRepository.drainTakenDoses()) {
+        await widget.logDoseUseCase(DoseLog(
+          scheduleId: dose.scheduleId,
+          scheduledAt: dose.at,
+          actionedAt: dose.at,
+          status: DoseLogStatus.taken,
+        ));
+      }
+    } catch (error) {
+      debugPrint('drainTakenDoses failed: $error');
+    }
+
+    // The times the doctor set become the alarms the phone rings. Failing here
+    // must not cost the schedule on screen: an alarm that did not get set is a
+    // missed reminder, but a blank screen is a patient who cannot see their
+    // medication at all.
+    try {
+      await widget.reminderRepository.syncFromSchedule(items);
+    } catch (error) {
+      debugPrint('syncFromSchedule failed: $error');
+    }
+
+    // Anything still queued from an earlier offline write. Until this runs the
+    // dose is recorded on the phone only, and the doctor cannot see it.
+    try {
+      await widget.medicationRepository.syncPending();
+    } catch (error) {
+      debugPrint('syncPending failed: $error');
+    }
+
     try {
       final logged = await widget.medicationRepository
           .loggedToday(items.map((item) => item.scheduleId).toList());
@@ -294,6 +355,8 @@ class _TodayScheduleScreenState extends State<TodayScheduleScreen> {
                     actionIcon: Icons.medication_outlined,
                     onAction: _openMedicationList,
                   ),
+                  const SizedBox(height: 10),
+                  _ReminderNote(onTap: widget.onOpenReminders),
                   const SizedBox(height: 12),
                   ...items.map((item) => _DoseTile(
                         item: item,
@@ -939,6 +1002,53 @@ class _SectionHeader extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// Says where these times came from and that the phone will ring for them.
+///
+/// Worth a line of its own: the patient never entered any of this, so without
+/// being told, a schedule that appeared by itself looks like something they
+/// still have to set an alarm for by hand — which is exactly the double work
+/// the generated reminders exist to remove.
+class _ReminderNote extends StatelessWidget {
+  const _ReminderNote({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+        decoration: BoxDecoration(
+          color: const Color(0xFFEAF5F3),
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.notifications_active_outlined,
+                size: 18, color: OnboardingColors.teal),
+            const SizedBox(width: 10),
+            const Expanded(
+              child: Text(
+                'แพทย์ตั้งเวลาให้ แอปจะเตือนอัตโนมัติทุกวัน\n'
+                'กด "กินแล้ว" บนการแจ้งเตือนได้เลย ระบบบันทึกให้ทันที',
+                style: TextStyle(
+                  fontSize: 12,
+                  height: 1.5,
+                  color: OnboardingColors.teal,
+                ),
+              ),
+            ),
+            const Icon(Icons.chevron_right,
+                size: 18, color: OnboardingColors.teal),
+          ],
+        ),
+      ),
     );
   }
 }

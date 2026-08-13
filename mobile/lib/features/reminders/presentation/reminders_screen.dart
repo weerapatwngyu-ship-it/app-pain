@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../../core/notification/notification_service.dart';
 import '../../auth/presentation/onboarding/onboarding_theme.dart';
+import '../../medication/domain/entities/dose_log.dart';
+import '../../medication/domain/medication_repository.dart';
 import '../data/reminder_repository.dart';
 import '../data/system_alarm.dart';
 import '../domain/entities/medication_reminder.dart';
@@ -9,10 +11,25 @@ import '../../../core/errors/friendly_error.dart';
 
 /// "เตือนกินยา" — the alarm list, laid out like the phone's own clock app so
 /// it needs no explaining: big time, when it repeats, a switch.
+///
+/// Most of the rows are not the patient's own: they are generated from the
+/// dose schedule the doctor prescribed, refreshed each time this opens, and
+/// marked "จากแพทย์". They can be switched off but not retimed or deleted —
+/// the time belongs to the prescription, and letting it be edited here would
+/// produce an alarm that disagrees with the record without either side knowing.
 class RemindersScreen extends StatefulWidget {
-  const RemindersScreen({super.key, required this.repository});
+  const RemindersScreen({
+    super.key,
+    required this.repository,
+    required this.medicationRepository,
+    required this.patientId,
+  });
 
   final ReminderRepository repository;
+
+  /// Read only to re-derive the generated reminders from today's doses.
+  final MedicationRepository medicationRepository;
+  final String patientId;
 
   @override
   State<RemindersScreen> createState() => _RemindersScreenState();
@@ -36,6 +53,38 @@ class _RemindersScreenState extends State<RemindersScreen> {
       // the notification permission, and asking here means the prompt shows
       // up while the user is looking at the reminders screen.
       await NotificationService.instance.requestPermissions();
+
+      // Doses answered straight from a notification, before the sync below
+      // can delete the reminder they were answered against. The home screen
+      // does this too — whichever the patient opens first wins, and draining
+      // is destructive so the second finds nothing left to do.
+      try {
+        for (final dose in await widget.repository.drainTakenDoses()) {
+          await widget.medicationRepository.logDose(DoseLog(
+            scheduleId: dose.scheduleId,
+            scheduledAt: dose.at,
+            actionedAt: dose.at,
+            status: DoseLogStatus.taken,
+          ));
+        }
+      } catch (error) {
+        debugPrint('drainTakenDoses failed: $error');
+      }
+
+      // Re-derive the doctor's reminders before listing. Opening this screen
+      // is the moment the patient asks "what will I be reminded of", so it is
+      // also the moment to make sure the answer matches the current
+      // prescription rather than the one in force when they last looked.
+      try {
+        final schedule = await widget.medicationRepository
+            .todaySchedule(widget.patientId);
+        await widget.repository.syncFromSchedule(schedule);
+      } catch (error) {
+        // Offline, most likely. The stored reminders are still the last known
+        // schedule and still ring, which is far better than an empty list.
+        debugPrint('syncFromSchedule failed: $error');
+      }
+
       // Alarms do not survive a reboot, so re-apply them whenever this opens.
       await widget.repository.rescheduleAll();
       final reminders = await widget.repository.all();
@@ -104,6 +153,20 @@ class _RemindersScreenState extends State<RemindersScreen> {
   }
 
   Future<void> _edit([MedicationReminder? existing]) async {
+    // A generated reminder has no editable time of its own — it is a copy of
+    // the prescription. Saying so beats opening a form whose "เสร็จสิ้น" would
+    // be undone by the next sync.
+    if (existing != null && existing.fromDoctor) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('เวลานี้แพทย์เป็นผู้กำหนด แก้ไขเองไม่ได้ '
+              'หากต้องการเปลี่ยน ปรึกษาแพทย์ในแอป'),
+          duration: Duration(seconds: 5),
+        ),
+      );
+      return;
+    }
+
     final result = await showModalBottomSheet<_EditResult>(
       context: context,
       isScrollControlled: true,
@@ -196,7 +259,10 @@ class _RemindersScreenState extends State<RemindersScreen> {
           const Padding(
             padding: EdgeInsets.all(32),
             child: Text(
-              'ยังไม่มีการเตือน\nกดปุ่ม + เพื่อตั้งเวลากินยา',
+              'ยังไม่มีการเตือน\n\n'
+              'เมื่อแพทย์สั่งยาให้ ระบบจะตั้งเวลาเตือนตามที่แพทย์กำหนดให้เอง '
+              'ไม่ต้องตั้งเอง\n\n'
+              'หรือกดปุ่ม + เพื่อเพิ่มการเตือนของตัวเอง',
               textAlign: TextAlign.center,
               style: TextStyle(color: OnboardingColors.textMuted, height: 1.6),
             ),
@@ -280,6 +346,22 @@ class _ReminderCard extends StatelessWidget {
                         color: OnboardingColors.textMuted,
                       ),
                     ),
+                    if (reminder.fromDoctor) ...[
+                      const SizedBox(height: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFEAF5F3),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: const Text(
+                          'จากแพทย์ · ตั้งให้อัตโนมัติ',
+                          style: TextStyle(
+                              fontSize: 11, color: OnboardingColors.teal),
+                        ),
+                      ),
+                    ],
                     if (reminder.enabled) ...[
                       const SizedBox(height: 2),
                       Text(
