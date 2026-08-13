@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../shared/format/thai_date.dart';
 import '../../../shared/widgets/auto_scroll_strip.dart';
 import '../../../shared/widgets/avatar_picker.dart';
 import '../../profile/data/patient_profile_repository.dart';
@@ -470,23 +471,11 @@ class _TodayScheduleScreenState extends State<TodayScheduleScreen> {
   }
 }
 
-/// Thai weekday and month names. Written out rather than pulled from
-/// intl, which the project does not depend on and which would be a lot of
-/// weight for one line of text.
-const _thaiWeekdays = ['จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์', 'อาทิตย์'];
-const _thaiMonths = [
-  'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.',
-  'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.',
-];
-
-/// Today, as "วันอังคาร 12 ส.ค." — a screen headed "ยาวันนี้" should say
-/// which day that is, and the Buddhist year is added because that is what a
-/// Thai reader expects to see next to a date.
+/// Today, as "วันอังคาร 12 ส.ค. 2568" — a screen headed "ยาวันนี้" should say
+/// which day that is.
 String _thaiToday() {
   final now = DateTime.now();
-  final weekday = _thaiWeekdays[now.weekday - 1];
-  final month = _thaiMonths[now.month - 1];
-  return 'วัน$weekday ${now.day} $month ${now.year + 543}';
+  return 'วัน${thaiWeekdays[now.weekday - 1]} ${thaiDate(now)}';
 }
 
 /// The coloured top of the home screen: who is signed in, what day it is,

@@ -5,6 +5,7 @@ import '../../chat/data/chat_repository.dart';
 import '../../chat/presentation/chat_screen.dart';
 import '../../symptom_tracking/domain/entities/symptom_category.dart';
 import '../../../core/errors/friendly_error.dart';
+import '../../../shared/format/thai_date.dart';
 import '../../medication/data/medication_list_repository.dart';
 import '../../medication/presentation/medication_edit_sheet.dart';
 import '../data/caseload_repository.dart';
@@ -141,7 +142,11 @@ class _CaseloadScreenState extends State<CaseloadScreen> {
                         subtitle: Text(
                           [
                             'อายุ ${patient.age} ปี',
-                            if (patient.gender != null) patient.gender!,
+                            // genderLabel, not the raw column: the database
+                            // stores 'female'/'male', which is not what a Thai
+                            // clinician should be reading off a caseload.
+                            if (patient.genderLabel != null)
+                              patient.genderLabel!,
                             if (patient.primaryCondition != null)
                               patient.primaryCondition!,
                           ].join(' · '),
@@ -199,10 +204,27 @@ class _PatientRecordScreenState extends State<PatientRecordScreen> {
   late Future<PatientRecord> _future;
   bool _opening = false;
 
+  /// The freshest copy of the patient this screen has seen.
+  ///
+  /// [PatientRecordScreen.patient] is the row the caseload list happened to
+  /// hold when it was last pulled, which can be hours old. Everything that
+  /// depends on the details — the allergy check when prescribing, above all —
+  /// reads this instead.
+  late CaseloadPatient _patient;
+
   @override
   void initState() {
     super.initState();
-    _future = widget.repository.record(widget.patient);
+    _patient = widget.patient;
+    _future = _load();
+  }
+
+  Future<PatientRecord> _load() async {
+    final record = await widget.repository.record(widget.patient);
+    // No setState: returning from this future is what rebuilds the tree, and
+    // calling it here would schedule a second build for the same change.
+    _patient = record.patient;
+    return record;
   }
 
   bool get _canMessage =>
@@ -227,7 +249,7 @@ class _PatientRecordScreenState extends State<PatientRecordScreen> {
         MaterialPageRoute(
           builder: (_) => ChatScreen(
             conversationId: conversation.id,
-            title: widget.patient.name,
+            title: _patient.name,
             subtitle: 'ผู้ป่วย',
             repository: chat,
           ),
@@ -256,8 +278,8 @@ class _PatientRecordScreenState extends State<PatientRecordScreen> {
       context: context,
       isScrollControlled: true,
       builder: (_) => MedicationEditSheet(
-        allergies: widget.patient.drugAllergies,
-        title: 'สั่งยาให้ ${widget.patient.name}',
+        allergies: _patient.drugAllergies,
+        title: 'สั่งยาให้ ${_patient.name}',
       ),
     );
     if (draft == null) return;
@@ -276,7 +298,7 @@ class _PatientRecordScreenState extends State<PatientRecordScreen> {
         bySelf: false,
       );
       if (!mounted) return;
-      setState(() => _future = widget.repository.record(widget.patient));
+      setState(() => _future = _load());
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('สั่ง ${draft.name} ให้ผู้ป่วยแล้ว')),
       );
@@ -305,7 +327,7 @@ class _PatientRecordScreenState extends State<PatientRecordScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        title: Text(widget.patient.name),
+        title: Text(_patient.name),
         actions: [
           if (widget.medicationRepository != null)
             IconButton(
@@ -354,6 +376,9 @@ class _PatientRecordScreenState extends State<PatientRecordScreen> {
             padding: const EdgeInsets.fromLTRB(20, 20, 20, 96),
             children: [
               _Header(patient: record.patient, openAlerts: record.openAlerts),
+              const SizedBox(height: 24),
+              const _SectionTitle('ข้อมูลผู้ป่วย'),
+              _ProfileCard(patient: record.patient),
               const SizedBox(height: 24),
               const _SectionTitle('ยาที่ใช้อยู่'),
               if (active.isEmpty)
@@ -407,7 +432,7 @@ class _Header extends StatelessWidget {
           Text(
             [
               'อายุ ${patient.age} ปี',
-              if (patient.gender != null) patient.gender!,
+              if (patient.genderLabel != null) patient.genderLabel!,
               if (patient.bloodType != null) 'กรุ๊ปเลือด ${patient.bloodType}',
             ].join(' · '),
             style: const TextStyle(fontSize: 13, color: OnboardingColors.textMuted),
@@ -421,32 +446,25 @@ class _Header extends StatelessWidget {
           // the one line on the screen that changes what may be prescribed.
           if (patient.drugAllergies.isNotEmpty) ...[
             const SizedBox(height: 10),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              decoration: BoxDecoration(
-                color: const Color(0xFFFDECEC),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: const Color(0xFFE79A9A)),
-              ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Icon(Icons.dangerous_outlined,
-                      size: 18, color: Color(0xFFC0392B)),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'แพ้ยา: ${patient.drugAllergies.join(', ')}',
-                      style: const TextStyle(
-                        fontSize: 13,
-                        color: Color(0xFFC0392B),
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+            _AllergyBanner(
+              icon: Icons.dangerous_outlined,
+              text: 'แพ้ยา: ${patient.drugAllergies.join(', ')}',
+              background: const Color(0xFFFDECEC),
+              border: const Color(0xFFE79A9A),
+              foreground: const Color(0xFFC0392B),
+            ),
+          ],
+          // Amber rather than red: it matters, and it is not the line that
+          // stops a prescription — keeping them the same colour would make
+          // the drug allergy easier to skim past.
+          if (patient.foodAllergies.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            _AllergyBanner(
+              icon: Icons.restaurant_outlined,
+              text: 'แพ้อาหาร: ${patient.foodAllergies.join(', ')}',
+              background: const Color(0xFFFFF4E5),
+              border: const Color(0xFFF0D6A8),
+              foreground: const Color(0xFF7A4A00),
             ),
           ],
           if (openAlerts > 0) ...[
@@ -467,6 +485,208 @@ class _Header extends StatelessWidget {
               ],
             ),
           ],
+        ],
+      ),
+    );
+  }
+}
+
+class _AllergyBanner extends StatelessWidget {
+  const _AllergyBanner({
+    required this.icon,
+    required this.text,
+    required this.background,
+    required this.border,
+    required this.foreground,
+  });
+
+  final IconData icon;
+  final String text;
+  final Color background;
+  final Color border;
+  final Color foreground;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: border),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 18, color: foreground),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(
+                fontSize: 13,
+                color: foreground,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// The patient's own particulars, as a chart's front page.
+///
+/// Every row is present whether or not it has a value: "ยังไม่ได้ระบุ" is a
+/// clinical answer and a blank space is not. A doctor who cannot see that
+/// nothing was recorded for allergies has no way to tell it apart from a
+/// patient who recorded none.
+class _ProfileCard extends StatelessWidget {
+  const _ProfileCard({required this.patient});
+
+  final CaseloadPatient patient;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: OnboardingColors.border),
+      ),
+      child: Column(
+        children: [
+          _ProfileRow(label: 'ชื่อ-นามสกุล', value: patient.name),
+          _ProfileRow(
+            label: 'วันเกิด',
+            value: '${thaiDateFull(patient.birthDate)} '
+                '(อายุ ${patient.age} ปี)',
+            note: patient.birthDateUnconfirmed
+                ? 'ค่าเริ่มต้นของระบบ — ผู้ป่วยอาจยังไม่ได้กรอกวันเกิดจริง'
+                : null,
+          ),
+          _ProfileRow(label: 'เพศ', value: patient.genderLabel),
+          _ProfileRow(label: 'กรุ๊ปเลือด', value: patient.bloodType),
+          _ProfileRow(
+            label: 'น้ำหนัก / ส่วนสูง',
+            value: _measurements(),
+          ),
+          _ProfileRow(
+            label: 'โรคประจำตัว',
+            value: patient.primaryCondition,
+          ),
+          _ProfileRow(
+            label: 'แพ้ยา',
+            value: patient.drugAllergies.isEmpty
+                ? null
+                : patient.drugAllergies.join(', '),
+            emphasis: patient.drugAllergies.isNotEmpty,
+          ),
+          _ProfileRow(
+            label: 'แพ้อาหาร',
+            value: patient.foodAllergies.isEmpty
+                ? null
+                : patient.foodAllergies.join(', '),
+            last: true,
+          ),
+        ],
+      ),
+    );
+  }
+
+  String? _measurements() {
+    final parts = [
+      if (patient.weightKg != null) '${_number(patient.weightKg!)} กก.',
+      if (patient.heightCm != null) '${_number(patient.heightCm!)} ซม.',
+    ];
+    if (parts.isEmpty) return null;
+    final bmi = patient.bmi;
+    if (bmi != null) parts.add('BMI ${bmi.toStringAsFixed(1)}');
+    return parts.join(' · ');
+  }
+
+  /// Drops a trailing `.0` so 65 kilos does not read as 65.0.
+  static String _number(double value) => value == value.roundToDouble()
+      ? value.round().toString()
+      : value.toString();
+}
+
+class _ProfileRow extends StatelessWidget {
+  const _ProfileRow({
+    required this.label,
+    required this.value,
+    this.note,
+    this.emphasis = false,
+    this.last = false,
+  });
+
+  final String label;
+
+  /// Null means the patient has not filled this in, which is shown as such
+  /// rather than left blank.
+  final String? value;
+
+  final String? note;
+  final bool emphasis;
+  final bool last;
+
+  @override
+  Widget build(BuildContext context) {
+    final missing = value == null || value!.trim().isEmpty;
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      decoration: last
+          ? null
+          : const BoxDecoration(
+              border: Border(
+                bottom: BorderSide(color: OnboardingColors.border),
+              ),
+            ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 116,
+            child: Text(
+              label,
+              style: const TextStyle(
+                  fontSize: 13, color: OnboardingColors.textMuted),
+            ),
+          ),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  missing ? 'ยังไม่ได้ระบุ' : value!,
+                  style: TextStyle(
+                    fontSize: 14,
+                    height: 1.4,
+                    fontStyle: missing ? FontStyle.italic : FontStyle.normal,
+                    fontWeight: emphasis ? FontWeight.w700 : FontWeight.w500,
+                    color: missing
+                        ? OnboardingColors.textMuted
+                        : emphasis
+                            ? const Color(0xFFC0392B)
+                            : OnboardingColors.text,
+                  ),
+                ),
+                if (note != null) ...[
+                  const SizedBox(height: 3),
+                  Text(
+                    note!,
+                    style: const TextStyle(
+                        fontSize: 11.5,
+                        height: 1.4,
+                        color: Color(0xFFB26A00)),
+                  ),
+                ],
+              ],
+            ),
+          ),
         ],
       ),
     );

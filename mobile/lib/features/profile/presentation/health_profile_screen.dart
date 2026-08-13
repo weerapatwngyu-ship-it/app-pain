@@ -33,10 +33,12 @@ class HealthProfileScreen extends StatefulWidget {
 class _HealthProfileScreenState extends State<HealthProfileScreen> {
   final _conditionController = TextEditingController();
   final _allergyController = TextEditingController();
+  final _foodAllergyController = TextEditingController();
   final _weightController = TextEditingController();
   final _heightController = TextEditingController();
 
   final List<String> _allergies = [];
+  final List<String> _foodAllergies = [];
   String? _bloodType;
 
   bool _loading = true;
@@ -55,6 +57,7 @@ class _HealthProfileScreenState extends State<HealthProfileScreen> {
   void dispose() {
     _conditionController.dispose();
     _allergyController.dispose();
+    _foodAllergyController.dispose();
     _weightController.dispose();
     _heightController.dispose();
     super.dispose();
@@ -69,6 +72,9 @@ class _HealthProfileScreenState extends State<HealthProfileScreen> {
         _allergies
           ..clear()
           ..addAll(profile.drugAllergies);
+        _foodAllergies
+          ..clear()
+          ..addAll(profile.foodAllergies);
         _bloodType = profile.bloodType;
         _weightController.text = _numberText(profile.weightKg);
         _heightController.text = _numberText(profile.heightCm);
@@ -91,17 +97,17 @@ class _HealthProfileScreenState extends State<HealthProfileScreen> {
         : value.toString();
   }
 
-  void _addAllergy() {
-    final name = _allergyController.text.trim();
+  void _addTo(List<String> list, TextEditingController controller) {
+    final name = controller.text.trim();
     if (name.isEmpty) return;
     // Case-insensitive, so "Penicillin" cannot sit next to "penicillin" and
     // read as two different allergies.
-    final already = _allergies.any(
+    final already = list.any(
       (existing) => existing.toLowerCase() == name.toLowerCase(),
     );
     setState(() {
-      if (!already) _allergies.add(name);
-      _allergyController.clear();
+      if (!already) list.add(name);
+      controller.clear();
     });
   }
 
@@ -123,6 +129,7 @@ class _HealthProfileScreenState extends State<HealthProfileScreen> {
         widget.patientId,
         primaryCondition: condition.isEmpty ? null : condition,
         drugAllergies: _allergies,
+        foodAllergies: _foodAllergies,
         bloodType: _bloodType,
         weightKg: weight,
         heightCm: height,
@@ -153,6 +160,84 @@ class _HealthProfileScreenState extends State<HealthProfileScreen> {
     final value = double.tryParse(text);
     if (value == null || value <= 0 || value > max) return _invalid;
     return value;
+  }
+
+  /// A "type one, press +, it becomes a chip" list.
+  ///
+  /// Shared by the two allergy fields rather than written twice: they behave
+  /// identically and only differ in wording and colour, and a fix to one that
+  /// missed the other would be a bug nobody notices until a prescription is
+  /// checked against half a list.
+  Widget _allergyField({
+    required String label,
+    required String help,
+    required String hint,
+    required String emptyNote,
+    required TextEditingController controller,
+    required List<String> values,
+    required Color chipColor,
+    required Color chipBorder,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _Label(label),
+        Text(
+          help,
+          style: const TextStyle(
+            fontSize: 12,
+            color: OnboardingColors.textMuted,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            Expanded(
+              child: TextField(
+                controller: controller,
+                decoration: _decoration(hint),
+                textInputAction: TextInputAction.done,
+                onSubmitted: (_) => _addTo(values, controller),
+              ),
+            ),
+            const SizedBox(width: 8),
+            IconButton.filled(
+              onPressed: () => _addTo(values, controller),
+              icon: const Icon(Icons.add),
+              tooltip: 'เพิ่ม',
+            ),
+          ],
+        ),
+        if (values.isEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: 12),
+            child: Text(
+              emptyNote,
+              style: const TextStyle(
+                fontSize: 12,
+                color: OnboardingColors.textMuted,
+              ),
+            ),
+          )
+        else
+          Padding(
+            padding: const EdgeInsets.only(top: 12),
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final value in values)
+                  Chip(
+                    label: Text(value),
+                    backgroundColor: chipColor,
+                    side: BorderSide(color: chipBorder),
+                    onDeleted: () => setState(() => values.remove(value)),
+                  ),
+              ],
+            ),
+          ),
+      ],
+    );
   }
 
   InputDecoration _decoration(String hint) => InputDecoration(
@@ -188,62 +273,27 @@ class _HealthProfileScreenState extends State<HealthProfileScreen> {
                           decoration: _decoration('เช่น เบาหวาน ความดันโลหิตสูง'),
                         ),
                         const SizedBox(height: 24),
-                        const _Label('ยาที่แพ้'),
-                        const Text(
-                          'ใส่ทีละชื่อ เพื่อให้ระบบนำไปตรวจสอบกับยาที่ใช้ได้',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: OnboardingColors.textMuted,
-                          ),
+                        _allergyField(
+                          label: 'ยาที่แพ้',
+                          help: 'ใส่ทีละชื่อ เพื่อให้ระบบนำไปตรวจสอบกับยาที่ใช้ได้',
+                          hint: 'เช่น เพนิซิลลิน',
+                          emptyNote: 'ยังไม่ได้ระบุ — ถ้าไม่แพ้ยาใดเลย ปล่อยว่างไว้ได้',
+                          controller: _allergyController,
+                          values: _allergies,
+                          chipColor: const Color(0xFFFDECEC),
+                          chipBorder: const Color(0xFFF3B9B9),
                         ),
-                        const SizedBox(height: 8),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: TextField(
-                                controller: _allergyController,
-                                decoration: _decoration('เช่น เพนิซิลลิน'),
-                                textInputAction: TextInputAction.done,
-                                onSubmitted: (_) => _addAllergy(),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            IconButton.filled(
-                              onPressed: _addAllergy,
-                              icon: const Icon(Icons.add),
-                              tooltip: 'เพิ่ม',
-                            ),
-                          ],
+                        const SizedBox(height: 24),
+                        _allergyField(
+                          label: 'อาหารที่แพ้',
+                          help: 'ใส่ทีละอย่าง แพทย์จะเห็นในประวัติของคุณ',
+                          hint: 'เช่น กุ้ง ถั่วลิสง',
+                          emptyNote: 'ยังไม่ได้ระบุ — ถ้าไม่แพ้อาหารใดเลย ปล่อยว่างไว้ได้',
+                          controller: _foodAllergyController,
+                          values: _foodAllergies,
+                          chipColor: const Color(0xFFFFF4E5),
+                          chipBorder: const Color(0xFFF0D6A8),
                         ),
-                        if (_allergies.isEmpty)
-                          const Padding(
-                            padding: EdgeInsets.only(top: 12),
-                            child: Text(
-                              'ยังไม่ได้ระบุ — ถ้าไม่แพ้ยาใดเลย ปล่อยว่างไว้ได้',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: OnboardingColors.textMuted,
-                              ),
-                            ),
-                          )
-                        else
-                          Padding(
-                            padding: const EdgeInsets.only(top: 12),
-                            child: Wrap(
-                              spacing: 8,
-                              runSpacing: 8,
-                              children: [
-                                for (final allergy in _allergies)
-                                  Chip(
-                                    label: Text(allergy),
-                                    backgroundColor: const Color(0xFFFDECEC),
-                                    side: const BorderSide(color: Color(0xFFF3B9B9)),
-                                    onDeleted: () =>
-                                        setState(() => _allergies.remove(allergy)),
-                                  ),
-                              ],
-                            ),
-                          ),
                         const SizedBox(height: 24),
                         const _Label('กรุ๊ปเลือด'),
                         Wrap(

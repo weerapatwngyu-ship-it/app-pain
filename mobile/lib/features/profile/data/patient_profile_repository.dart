@@ -37,6 +37,7 @@ class PatientProfileRepository {
     String patientId, {
     required String? primaryCondition,
     required List<String> drugAllergies,
+    required List<String> foodAllergies,
     required String? bloodType,
     required double? weightKg,
     required double? heightCm,
@@ -46,6 +47,7 @@ class PatientProfileRepository {
         .update({
           'primary_condition': primaryCondition,
           'drug_allergies': drugAllergies,
+          'food_allergies': foodAllergies,
           'blood_type': bloodType,
           'weight_kg': weightKg,
           'height_cm': heightCm,

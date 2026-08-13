@@ -1,4 +1,5 @@
 import '../../../core/supabase/supabase_refs.dart';
+import '../../../shared/format/thai_date.dart';
 
 /// A patient as clinical staff see them in the caseload list.
 class CaseloadPatient {
@@ -9,7 +10,10 @@ class CaseloadPatient {
     this.gender,
     this.primaryCondition,
     this.drugAllergies = const [],
+    this.foodAllergies = const [],
     this.bloodType,
+    this.weightKg,
+    this.heightCm,
   });
 
   final String id;
@@ -22,19 +26,45 @@ class CaseloadPatient {
   /// the prescriber cannot see is not doing the job it exists for.
   final List<String> drugAllergies;
 
+  final List<String> foodAllergies;
+
   final String? bloodType;
+  final double? weightKg;
+  final double? heightCm;
+
+  /// Whether the birth date is still the placeholder written at sign-up.
+  ///
+  /// The column is NOT NULL, so an account that never completed its profile
+  /// carries 2000-01-01 — which reads on screen as a real date of birth and an
+  /// age to match. Someone genuinely born that day is flagged too; being told
+  /// a date is unconfirmed when it is fine costs nothing next to treating a
+  /// placeholder as fact.
+  bool get birthDateUnconfirmed =>
+      birthDate.year == 2000 && birthDate.month == 1 && birthDate.day == 1;
+
+  /// Thai reading of the gender stored in the database, which uses the English
+  /// values the check constraint allows.
+  String? get genderLabel => switch (gender) {
+        'female' => 'หญิง',
+        'male' => 'ชาย',
+        'unspecified' => 'ไม่ระบุ',
+        _ => gender,
+      };
+
+  /// Body mass index, or null when either measurement is missing.
+  double? get bmi {
+    final weight = weightKg;
+    final height = heightCm;
+    if (weight == null || height == null || height <= 0) return null;
+    final metres = height / 100;
+    return weight / (metres * metres);
+  }
 
   /// Whole years, which is what a chart shows. The birth date defaults to a
   /// placeholder at sign-up until the patient fills it in, so this can read
-  /// oddly for accounts that never completed their profile.
-  int get age {
-    final now = DateTime.now();
-    var years = now.year - birthDate.year;
-    final hadBirthday = now.month > birthDate.month ||
-        (now.month == birthDate.month && now.day >= birthDate.day);
-    if (!hadBirthday) years -= 1;
-    return years;
-  }
+  /// oddly for accounts that never completed their profile — see
+  /// [birthDateUnconfirmed].
+  int get age => ageFrom(birthDate);
 
   factory CaseloadPatient.fromRow(Map<String, dynamic> row) {
     return CaseloadPatient(
@@ -42,14 +72,34 @@ class CaseloadPatient {
       name: row['name'] as String? ?? '',
       birthDate: DateTime.parse(row['birth_date'] as String),
       gender: row['gender'] as String?,
-      primaryCondition: row['primary_condition'] as String?,
-      drugAllergies: (row['drug_allergies'] as List?)
-              ?.map((value) => value.toString())
-              .where((value) => value.trim().isNotEmpty)
-              .toList() ??
-          const [],
-      bloodType: row['blood_type'] as String?,
+      primaryCondition: _trimmedOrNull(row['primary_condition']),
+      drugAllergies: _textList(row['drug_allergies']),
+      foodAllergies: _textList(row['food_allergies']),
+      bloodType: _trimmedOrNull(row['blood_type']),
+      weightKg: _asDouble(row['weight_kg']),
+      heightCm: _asDouble(row['height_cm']),
     );
+  }
+
+  static List<String> _textList(Object? value) {
+    if (value is! List) return const [];
+    return value
+        .map((entry) => entry.toString().trim())
+        .where((entry) => entry.isNotEmpty)
+        .toList();
+  }
+
+  static String? _trimmedOrNull(Object? value) {
+    final text = (value as String?)?.trim();
+    return (text == null || text.isEmpty) ? null : text;
+  }
+
+  /// Postgres numeric arrives as either num or String depending on how the
+  /// driver handles precision, so neither is assumed.
+  static double? _asDouble(Object? value) {
+    if (value == null) return null;
+    if (value is num) return value.toDouble();
+    return double.tryParse(value.toString());
   }
 }
 
@@ -122,12 +172,37 @@ class CaseloadRepository {
     final rows = await db
         .from('patients')
         .select('id, name, birth_date, gender, primary_condition, '
-            'drug_allergies, blood_type')
+            'drug_allergies, food_allergies, blood_type, weight_kg, height_cm')
         .order('name');
     return rows.map<CaseloadPatient>(CaseloadPatient.fromRow).toList();
   }
 
+  /// Re-reads one patient.
+  ///
+  /// The list hands its own copy to the record screen, and that copy is as old
+  /// as the last time the list was loaded. A record opened to check an allergy
+  /// has to show what the patient has entered by now, not what they had
+  /// entered when the caseload was last pulled.
+  Future<CaseloadPatient> patient(String patientId) async {
+    final row = await db
+        .from('patients')
+        .select('id, name, birth_date, gender, primary_condition, '
+            'drug_allergies, food_allergies, blood_type, weight_kg, height_cm')
+        .eq('id', patientId)
+        .single();
+    return CaseloadPatient.fromRow(row);
+  }
+
   Future<PatientRecord> record(CaseloadPatient patient) async {
+    // Falls back to the copy passed in: a refresh that fails should not empty
+    // a record the caller could already display.
+    CaseloadPatient current = patient;
+    try {
+      current = await this.patient(patient.id);
+    } catch (_) {
+      // Left as it was.
+    }
+
     final prescriptions = await db
         .from('prescriptions')
         .select('medication_name, dosage, frequency, start_date, end_date')
@@ -148,7 +223,7 @@ class CaseloadRepository {
         .eq('status', 'open');
 
     return PatientRecord(
-      patient: patient,
+      patient: current,
       prescriptions:
           prescriptions.map<PrescriptionSummary>(PrescriptionSummary.fromRow).toList(),
       symptomLogs: symptoms.map<SymptomEntry>(SymptomEntry.fromRow).toList(),

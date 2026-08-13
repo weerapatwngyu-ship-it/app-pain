@@ -189,6 +189,7 @@ class _PersonalInfoDetailScreenState extends State<PersonalInfoDetailScreen> {
 
   Widget _buildHealthCard(BuildContext context, PatientProfile? profile) {
     final allergies = profile?.drugAllergies ?? const <String>[];
+    final foodAllergies = profile?.foodAllergies ?? const <String>[];
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -220,42 +221,17 @@ class _PersonalInfoDetailScreenState extends State<PersonalInfoDetailScreen> {
           ),
           // Shown before the rest because it is the entry the app actually
           // acts on — it is checked against every medication being added.
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('ยาที่แพ้',
-                    style: TextStyle(
-                        color: OnboardingColors.textMuted, fontSize: 13)),
-                const SizedBox(height: 6),
-                if (allergies.isEmpty)
-                  const Text('-',
-                      style: TextStyle(
-                          fontSize: 16, fontWeight: FontWeight.w600))
-                else
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      for (final allergy in allergies)
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFFDECEC),
-                            borderRadius: BorderRadius.circular(20),
-                            border: const Border.fromBorderSide(
-                                BorderSide(color: Color(0xFFF3B9B9))),
-                          ),
-                          child: Text(allergy,
-                              style: const TextStyle(
-                                  fontSize: 14, fontWeight: FontWeight.w600)),
-                        ),
-                    ],
-                  ),
-              ],
-            ),
+          _chipList(
+            label: 'ยาที่แพ้',
+            values: allergies,
+            background: const Color(0xFFFDECEC),
+            border: const Color(0xFFF3B9B9),
+          ),
+          _chipList(
+            label: 'อาหารที่แพ้',
+            values: foodAllergies,
+            background: const Color(0xFFFFF4E5),
+            border: const Color(0xFFF0D6A8),
           ),
           const Divider(color: OnboardingColors.border, height: 1),
           _InfoRow(label: 'กรุ๊ปเลือด', value: profile?.bloodType ?? '-'),
@@ -272,6 +248,50 @@ class _PersonalInfoDetailScreenState extends State<PersonalInfoDetailScreen> {
                 : '${_numberText(profile!.heightCm)} ซม.',
             showDivider: false,
           ),
+        ],
+      ),
+    );
+  }
+
+  /// One labelled row of allergy chips, or a dash when nothing is recorded.
+  static Widget _chipList({
+    required String label,
+    required List<String> values,
+    required Color background,
+    required Color border,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label,
+              style: const TextStyle(
+                  color: OnboardingColors.textMuted, fontSize: 13)),
+          const SizedBox(height: 6),
+          if (values.isEmpty)
+            const Text('-',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600))
+          else
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final value in values)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: background,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.fromBorderSide(BorderSide(color: border)),
+                    ),
+                    child: Text(value,
+                        style: const TextStyle(
+                            fontSize: 14, fontWeight: FontWeight.w600)),
+                  ),
+              ],
+            ),
         ],
       ),
     );

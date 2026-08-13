@@ -1279,3 +1279,45 @@ begin;
   rollback to savepoint s1;
   reset role;
 rollback;
+
+\echo ''
+\echo '=== CONTROL 49: หมออ่านประวัติผู้ป่วยได้ครบ (วันเกิด กรุ๊ปเลือด แพ้ยา แพ้อาหาร) ==='
+begin;
+  select id as pa from public.patients
+   where owner_user_id='11111111-1111-1111-1111-111111111111' \gset
+  update public.patients
+     set birth_date = '1987-03-12',
+         blood_type = 'O+',
+         drug_allergies = array['เพนิซิลลิน'],
+         food_allergies = array['กุ้ง','ถั่วลิสง'],
+         primary_condition = 'เบาหวาน'
+   where id = :'pa';
+
+  insert into auth.users (id, email)
+    values ('88888888-8888-8888-8888-888888888888','doc2@test.com');
+  update public.profiles set role='provider'
+   where id='88888888-8888-8888-8888-888888888888';
+
+  set local role authenticated;
+  select public.as_user('88888888-8888-8888-8888-888888888888');
+  \echo '  -- expect ทุกช่องมีค่า: ประวัติที่หมออ่านไม่ได้ ก็ไม่ต่างจากไม่มี:'
+  select birth_date, blood_type, primary_condition,
+         drug_allergies, food_allergies
+    from public.patients where id = :'pa';
+  reset role;
+rollback;
+
+\echo ''
+\echo '=== EXPLOIT 50: ผู้ใช้ทั่วไป (ไม่ใช่หมอ) อ่านประวัติคนอื่น (ต้องได้ 0 แถว) ==='
+begin;
+  select id as pa from public.patients
+   where owner_user_id='11111111-1111-1111-1111-111111111111' \gset
+  update public.patients set food_allergies = array['กุ้ง'] where id = :'pa';
+
+  set local role authenticated;
+  -- ผู้ป่วยอีกคนหนึ่ง ไม่ได้เป็น provider และไม่ได้ถูกมอบสิทธิ์ดูแล
+  select public.as_user('22222222-2222-2222-2222-222222222222');
+  \echo '  -- expect 0 rows:'
+  select name, food_allergies from public.patients where id = :'pa';
+  reset role;
+rollback;

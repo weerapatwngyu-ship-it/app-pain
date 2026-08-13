@@ -77,6 +77,14 @@ alter table public.patients add constraint patients_gender_check
 -- conditions column.
 alter table public.patients
   add column if not exists drug_allergies text[] not null default '{}';
+
+-- Food allergies, kept apart from drug allergies rather than mixed into one
+-- list. They are answers to different questions — one decides what may be
+-- prescribed, the other what may be eaten — and a prescriber scanning for
+-- "penicillin" should not have to read past "กุ้ง" to find it.
+alter table public.patients
+  add column if not exists food_allergies text[] not null default '{}';
+
 alter table public.patients add column if not exists blood_type text;
 alter table public.patients add column if not exists weight_kg numeric(5,2);
 alter table public.patients add column if not exists height_cm numeric(5,2);
