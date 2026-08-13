@@ -4,6 +4,7 @@ import '../../auth/presentation/onboarding/onboarding_theme.dart';
 import '../../chat/data/chat_repository.dart';
 import '../data/doctor_repository.dart';
 import '../domain/entities/doctor.dart';
+import 'doctor_card.dart';
 import 'doctor_detail_screen.dart';
 
 /// The directory as a patient sees it: browse and message only. Adding or
@@ -28,10 +29,33 @@ class DoctorListScreen extends StatefulWidget {
 class _DoctorListScreenState extends State<DoctorListScreen> {
   late Future<List<Doctor>> _doctorsFuture;
 
+  /// Consultation totals, filled in per doctor as they arrive.
+  ///
+  /// Fetched after the list rather than as part of it, so a slow count — or a
+  /// failing one — delays a number on a card instead of the whole directory.
+  final Map<String, int> _consultCounts = {};
+
   @override
   void initState() {
     super.initState();
-    _doctorsFuture = widget.repository.fetchAll();
+    _doctorsFuture = widget.repository.fetchAll().then((doctors) {
+      _loadCounts(doctors);
+      return doctors;
+    });
+  }
+
+  Future<void> _loadCounts(List<Doctor> doctors) async {
+    for (final doctor in doctors) {
+      try {
+        final count = await widget.repository.consultCount(doctor.id);
+        if (!mounted) return;
+        setState(() => _consultCounts[doctor.id] = count);
+      } catch (_) {
+        // A missing count leaves that row off the card, which is the same as
+        // a doctor nobody has consulted yet — better than showing a zero the
+        // app is not sure about.
+      }
+    }
   }
 
   Future<void> _openDoctor(Doctor doctor) async {
@@ -40,6 +64,7 @@ class _DoctorListScreenState extends State<DoctorListScreen> {
         builder: (_) => DoctorDetailScreen(
           doctor: doctor,
           chatRepository: widget.chatRepository,
+          doctorRepository: widget.repository,
           patientId: widget.patientId,
         ),
       ),
@@ -49,8 +74,11 @@ class _DoctorListScreenState extends State<DoctorListScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(title: const Text('ปรึกษาแพทย์')),
+      backgroundColor: const Color(0xFFF7FAFA),
+      appBar: AppBar(
+        title: const Text('ปรึกษาแพทย์'),
+        backgroundColor: Colors.white,
+      ),
       body: FutureBuilder<List<Doctor>>(
         future: _doctorsFuture,
         builder: (context, snapshot) {
@@ -74,25 +102,15 @@ class _DoctorListScreenState extends State<DoctorListScreen> {
             );
           }
           return ListView.separated(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
             itemCount: doctors.length,
-            separatorBuilder: (_, __) => const Divider(color: OnboardingColors.border),
+            separatorBuilder: (_, __) => const SizedBox(height: 14),
             itemBuilder: (context, index) {
               final doctor = doctors[index];
-              final photoUrl = doctor.photoUrl;
-              return ListTile(
+              return DoctorCard(
+                doctor: doctor,
+                consultCount: _consultCounts[doctor.id],
                 onTap: () => _openDoctor(doctor),
-                leading: CircleAvatar(
-                  backgroundColor: OnboardingColors.teal,
-                  backgroundImage: photoUrl != null ? NetworkImage(photoUrl) : null,
-                  child: photoUrl == null
-                      ? const Icon(Icons.medical_services_outlined,
-                          color: Colors.white, size: 20)
-                      : null,
-                ),
-                title: Text(doctor.name),
-                subtitle: Text(doctor.specialty),
-                trailing: const Icon(Icons.chat_bubble_outline, size: 20),
               );
             },
           );

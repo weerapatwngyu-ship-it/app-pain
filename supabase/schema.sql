@@ -205,6 +205,28 @@ create table if not exists public.doctors (
 alter table public.doctors
   add column if not exists user_id uuid unique references auth.users (id) on delete set null;
 
+-- Details a directory entry needs to be worth reading.
+--
+-- All nullable on purpose: a listing with none of them filled in shows fewer
+-- lines rather than placeholder text, and nothing here is ever invented on
+-- the client. These describe a real person's practice, so they are typed in
+-- by an admin and stay empty until someone does.
+alter table public.doctors add column if not exists credential text;
+alter table public.doctors add column if not exists workplace text;
+alter table public.doctors add column if not exists languages text[] not null default '{}';
+alter table public.doctors add column if not exists conditions text[] not null default '{}';
+alter table public.doctors add column if not exists consult_fee numeric(8,2);
+alter table public.doctors add column if not exists consult_minutes integer;
+
+alter table public.doctors drop constraint if exists doctors_consult_fee_check;
+alter table public.doctors add constraint doctors_consult_fee_check
+  check (consult_fee is null or (consult_fee >= 0 and consult_fee <= 1000000));
+
+alter table public.doctors drop constraint if exists doctors_consult_minutes_check;
+alter table public.doctors add constraint doctors_consult_minutes_check
+  check (consult_minutes is null or (consult_minutes > 0 and consult_minutes <= 480));
+
+
 -- A patient's question about a health topic, plus the reply once staff answer
 -- it. Deliberately not a chat: the doctors table above is a directory, not
 -- accounts — no doctor can sign in yet — so this records the question durably
@@ -245,6 +267,25 @@ create index if not exists conversations_patient_idx
   on public.conversations (patient_id, last_message_at desc);
 create index if not exists conversations_doctor_idx
   on public.conversations (doctor_id, last_message_at desc);
+
+-- How many patients have consulted this doctor.
+--
+-- Counted from real threads rather than stored as a number someone can type,
+-- because a figure like this on a doctor's card is a claim about them and an
+-- editable one would be a claim nobody checked. Runs as definer so a patient
+-- can read the total without being able to read the conversations behind it —
+-- an aggregate reveals how busy a doctor is, never who they saw.
+create or replace function public.doctor_consult_count(target_doctor_id uuid)
+returns integer
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select count(*)::integer
+    from public.conversations
+   where doctor_id = target_doctor_id;
+$$;
 
 create table if not exists public.messages (
   id uuid primary key default gen_random_uuid(),

@@ -1151,3 +1151,43 @@ begin;
   rollback to savepoint s1;
   reset role;
 rollback;
+
+\echo ''
+\echo '=== CONTROL 44: doctor_consult_count นับได้จริง ==='
+begin;
+  insert into public.doctors (name, specialty) values ('นพ.ทดสอบนับเคส','ทั่วไป');
+  select id as d1 from public.doctors where name='นพ.ทดสอบนับเคส' \gset
+  select id as pa from public.patients
+   where owner_user_id='11111111-1111-1111-1111-111111111111' \gset
+  select id as pb from public.patients
+   where owner_user_id='22222222-2222-2222-2222-222222222222' \gset
+  insert into public.conversations (patient_id, doctor_id) values (:'pa', :'d1')
+    on conflict do nothing;
+  insert into public.conversations (patient_id, doctor_id) values (:'pb', :'d1')
+    on conflict do nothing;
+  \echo '  -- expect 2:'
+  select public.doctor_consult_count(:'d1'::uuid) as consults;
+rollback;
+
+\echo ''
+\echo '=== EXPLOIT 45: ผู้ป่วยใช้ฟังก์ชันนับเพื่อดูแชทคนอื่น (ต้องไม่ได้) ==='
+begin;
+  insert into public.doctors (name, specialty) values ('นพ.ทดสอบนับเคส','ทั่วไป');
+  select id as d1 from public.doctors where name='นพ.ทดสอบนับเคส' \gset
+  select id as pa from public.patients
+   where owner_user_id='11111111-1111-1111-1111-111111111111' \gset
+  select id as pb from public.patients
+   where owner_user_id='22222222-2222-2222-2222-222222222222' \gset
+  insert into public.conversations (patient_id, doctor_id) values (:'pa', :'d1')
+    on conflict do nothing;
+  insert into public.conversations (patient_id, doctor_id) values (:'pb', :'d1')
+    on conflict do nothing;
+
+  set local role authenticated;
+  select public.as_user('11111111-1111-1111-1111-111111111111');
+  \echo '  -- นับได้ (ตัวเลขรวม ไม่ระบุตัวตน) expect 2:'
+  select public.doctor_consult_count(:'d1'::uuid) as consults;
+  \echo '  -- แต่ยังอ่านแชทได้แค่ของตัวเอง expect 1 row:'
+  select count(*) as visible_threads from public.conversations;
+  reset role;
+rollback;

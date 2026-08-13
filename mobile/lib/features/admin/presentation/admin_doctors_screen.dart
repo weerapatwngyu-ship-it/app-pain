@@ -59,6 +59,12 @@ class _AdminDoctorsScreenState extends State<AdminDoctorsScreen> {
         specialty: result.specialty,
         bio: result.bio,
         userId: result.userId,
+        credential: result.credential,
+        workplace: result.workplace,
+        languages: result.languages,
+        conditions: result.conditions,
+        consultFee: result.consultFee,
+        consultMinutes: result.consultMinutes,
       );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -402,12 +408,24 @@ class _DoctorInput {
     required this.specialty,
     this.bio,
     this.userId,
+    this.credential,
+    this.workplace,
+    this.languages = const [],
+    this.conditions = const [],
+    this.consultFee,
+    this.consultMinutes,
   });
 
   final String name;
   final String specialty;
   final String? bio;
   final String? userId;
+  final String? credential;
+  final String? workplace;
+  final List<String> languages;
+  final List<String> conditions;
+  final double? consultFee;
+  final int? consultMinutes;
 }
 
 class _DoctorFormSheet extends StatefulWidget {
@@ -423,6 +441,17 @@ class _DoctorFormSheetState extends State<_DoctorFormSheet> {
   final _nameController = TextEditingController();
   final _specialtyController = TextEditingController();
   final _bioController = TextEditingController();
+  final _credentialController = TextEditingController();
+  final _workplaceController = TextEditingController();
+  final _conditionsController = TextEditingController();
+  final _feeController = TextEditingController();
+  final _minutesController = TextEditingController();
+
+  /// Offered as toggles rather than free text so the codes on the card stay
+  /// consistent; anything unusual can still go in the profile text.
+  static const _languageOptions = ['ไทย', 'อังกฤษ', 'จีน', 'ญี่ปุ่น'];
+  final Set<String> _languages = {'ไทย'};
+
   AccountSummary? _linked;
   String? _error;
 
@@ -431,7 +460,20 @@ class _DoctorFormSheetState extends State<_DoctorFormSheet> {
     _nameController.dispose();
     _specialtyController.dispose();
     _bioController.dispose();
+    _credentialController.dispose();
+    _workplaceController.dispose();
+    _conditionsController.dispose();
+    _feeController.dispose();
+    _minutesController.dispose();
     super.dispose();
+  }
+
+  /// Empty for a blank field, so an unfilled detail stays absent in the
+  /// database rather than being stored as an empty string that the card would
+  /// then render as a blank line.
+  String? _optional(TextEditingController c) {
+    final text = c.text.trim();
+    return text.isEmpty ? null : text;
   }
 
   void _submit() {
@@ -441,11 +483,38 @@ class _DoctorFormSheetState extends State<_DoctorFormSheet> {
       setState(() => _error = 'กรอกชื่อและความเชี่ยวชาญให้ครบ');
       return;
     }
+
+    final feeText = _feeController.text.trim();
+    final fee = feeText.isEmpty ? null : double.tryParse(feeText);
+    if (feeText.isNotEmpty && (fee == null || fee < 0)) {
+      setState(() => _error = 'ค่าปรึกษาไม่ถูกต้อง');
+      return;
+    }
+
+    final minutesText = _minutesController.text.trim();
+    final minutes = minutesText.isEmpty ? null : int.tryParse(minutesText);
+    if (minutesText.isNotEmpty && (minutes == null || minutes <= 0)) {
+      setState(() => _error = 'ระยะเวลาไม่ถูกต้อง');
+      return;
+    }
+
     Navigator.of(context).pop(_DoctorInput(
       name: name,
       specialty: specialty,
       bio: _bioController.text,
       userId: _linked?.id,
+      credential: _optional(_credentialController),
+      workplace: _optional(_workplaceController),
+      languages: _languages.toList(),
+      // One condition per line: the profile lists them as separate points, so
+      // they are separated on the way in rather than split apart on the way out.
+      conditions: _conditionsController.text
+          .split('\n')
+          .map((line) => line.trim())
+          .where((line) => line.isNotEmpty)
+          .toList(),
+      consultFee: fee,
+      consultMinutes: minutes,
     ));
   }
 
@@ -481,6 +550,66 @@ class _DoctorFormSheetState extends State<_DoctorFormSheet> {
               controller: _bioController,
               maxLines: 3,
               decoration: _decoration('ประวัติโดยย่อ (ไม่บังคับ)'),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _credentialController,
+              decoration: _decoration('วุฒิ/ตำแหน่ง เช่น แพทย์เวชปฏิบัติทั่วไป'),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _workplaceController,
+              decoration: _decoration('สถานที่ทำงาน เช่น คลินิกเวชกรรม...'),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _conditionsController,
+              maxLines: 4,
+              decoration:
+                  _decoration('อาการที่รับปรึกษา — บรรทัดละ 1 ข้อ (ไม่บังคับ)'),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _feeController,
+                    keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true),
+                    decoration: _decoration('ค่าปรึกษา (บาท)'),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: TextField(
+                    controller: _minutesController,
+                    keyboardType: TextInputType.number,
+                    decoration: _decoration('เวลา (นาที)'),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            const Text('ภาษาที่ให้บริการ',
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final language in _languageOptions)
+                  FilterChip(
+                    label: Text(language),
+                    selected: _languages.contains(language),
+                    onSelected: (selected) => setState(() {
+                      if (selected) {
+                        _languages.add(language);
+                      } else {
+                        _languages.remove(language);
+                      }
+                    }),
+                  ),
+              ],
             ),
             const SizedBox(height: 20),
             const Text('ผูกกับบัญชีผู้ใช้ (ไม่บังคับ)',

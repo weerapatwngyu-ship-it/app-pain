@@ -135,6 +135,7 @@ class _TodayScheduleScreenState extends State<TodayScheduleScreen> {
         builder: (_) => DoctorDetailScreen(
           doctor: doctor,
           chatRepository: widget.chatRepository,
+          doctorRepository: widget.doctorRepository,
           patientId: widget.patientId,
         ),
       ),

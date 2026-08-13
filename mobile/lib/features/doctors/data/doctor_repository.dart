@@ -9,6 +9,20 @@ class DoctorRepository {
     return rows.map<Doctor>(Doctor.fromRow).toList();
   }
 
+  /// How many patients have consulted a doctor.
+  ///
+  /// Read through a database function rather than counting rows here: the
+  /// conversations behind the number are readable only by the people in them,
+  /// which is exactly right, and would make a client-side count return the
+  /// caller's own threads instead of the doctor's total.
+  Future<int> consultCount(String doctorId) async {
+    final value = await db.rpc(
+      'doctor_consult_count',
+      params: {'target_doctor_id': doctorId},
+    );
+    return (value as num?)?.toInt() ?? 0;
+  }
+
   Future<Doctor> fetchOne(String id) async {
     final row = await db.from('doctors').select().eq('id', id).single();
     return Doctor.fromRow(row);

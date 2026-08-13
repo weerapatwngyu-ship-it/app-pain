@@ -250,6 +250,7 @@ class _HealthTopicDetailScreenState extends State<HealthTopicDetailScreen> {
                     builder: (_) => DoctorDetailScreen(
                       doctor: doctor,
                       chatRepository: widget.chatRepository,
+                      doctorRepository: widget.doctorRepository,
                       patientId: widget.patientId,
                     ),
                   ),

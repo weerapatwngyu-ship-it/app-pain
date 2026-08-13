@@ -111,12 +111,27 @@ class AdminRepository {
     required String specialty,
     String? bio,
     String? userId,
+    String? credential,
+    String? workplace,
+    List<String> languages = const [],
+    List<String> conditions = const [],
+    double? consultFee,
+    int? consultMinutes,
   }) async {
+    // Blank optional details are left out of the insert rather than written as
+    // empty strings, so the profile can tell "not recorded" from "recorded as
+    // nothing" and simply omit the line.
     await db.from('doctors').insert({
       'name': name,
       'specialty': specialty,
       if (bio != null && bio.trim().isNotEmpty) 'bio': bio.trim(),
       if (userId != null) 'user_id': userId,
+      if (credential != null) 'credential': credential,
+      if (workplace != null) 'workplace': workplace,
+      'languages': languages,
+      'conditions': conditions,
+      if (consultFee != null) 'consult_fee': consultFee,
+      if (consultMinutes != null) 'consult_minutes': consultMinutes,
     });
     if (userId != null) {
       await _setRole(userId: userId, role: 'provider');
