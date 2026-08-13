@@ -6,7 +6,6 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../auth/presentation/onboarding/onboarding_theme.dart';
 import '../data/patient_profile_repository.dart';
-import '../domain/entities/patient_profile.dart';
 import '../../../core/errors/friendly_error.dart';
 
 /// The patient's own health details: conditions, drug allergies, blood type
