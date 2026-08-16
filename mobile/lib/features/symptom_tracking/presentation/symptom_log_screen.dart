@@ -5,6 +5,7 @@ import '../domain/entities/symptom_category.dart';
 import '../domain/entities/symptom_log.dart';
 import '../domain/symptom_repository.dart';
 import '../domain/usecases/record_symptom_usecase.dart';
+import '../../../core/i18n/app_locale.dart';
 
 /// Recording how the patient feels today.
 ///
@@ -56,11 +57,11 @@ class _SymptomLogScreenState extends State<SymptomLogScreen> {
   /// Words for the number, because "6" means little on its own and a patient
   /// choosing between 5 and 6 is really choosing between two descriptions.
   static String _scoreLabel(int score) {
-    if (score == 0) return 'ไม่มีอาการ';
-    if (score <= 3) return 'เล็กน้อย';
-    if (score <= 6) return 'ปานกลาง';
-    if (score <= 8) return 'มาก';
-    return 'รุนแรงที่สุด';
+    if (score == 0) return t('ไม่มีอาการ', 'None');
+    if (score <= 3) return t('เล็กน้อย', 'Mild');
+    if (score <= 6) return t('ปานกลาง', 'Moderate');
+    if (score <= 8) return t('มาก', 'Severe');
+    return t('รุนแรงที่สุด', 'Worst');
   }
 
   static Color _scoreColor(int score) {
@@ -72,7 +73,7 @@ class _SymptomLogScreenState extends State<SymptomLogScreen> {
 
   Future<void> _save() async {
     if (_category == null) {
-      setState(() => _error = 'กรุณาเลือกหมวดอาการก่อนบันทึก');
+      setState(() => _error = t('กรุณาเลือกหมวดอาการก่อนบันทึก', 'Choose a symptom type before saving'));
       return;
     }
     setState(() {
@@ -91,7 +92,7 @@ class _SymptomLogScreenState extends State<SymptomLogScreen> {
       );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('บันทึกอาการแล้ว')),
+        SnackBar(content: Text(t('บันทึกอาการแล้ว', 'Symptom recorded'))),
       );
       setState(() {
         _category = null;
@@ -101,7 +102,7 @@ class _SymptomLogScreenState extends State<SymptomLogScreen> {
       });
     } catch (error) {
       if (!mounted) return;
-      setState(() => _error = 'บันทึกไม่สำเร็จ ลองอีกครั้ง');
+      setState(() => _error = t('บันทึกไม่สำเร็จ ลองอีกครั้ง', 'Could not save, try again'));
       debugPrint('recordSymptom failed: $error');
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -115,13 +116,13 @@ class _SymptomLogScreenState extends State<SymptomLogScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF7FAFA),
       appBar: AppBar(
-        title: const Text('บันทึกอาการวันนี้'),
+        title: Text(t('บันทึกอาการวันนี้', "Log today's symptoms")),
       ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
         children: [
           _Card(
-            title: 'วันนี้มีอาการอะไร',
+            title: t('วันนี้มีอาการอะไร', 'What are you feeling today?'),
             child: Wrap(
               spacing: 8,
               runSpacing: 8,
@@ -155,7 +156,7 @@ class _SymptomLogScreenState extends State<SymptomLogScreen> {
             ),
           ),
           _Card(
-            title: 'รุนแรงแค่ไหน',
+            title: t('รุนแรงแค่ไหน', 'How bad is it?'),
             child: Column(
               children: [
                 Row(
@@ -194,13 +195,13 @@ class _SymptomLogScreenState extends State<SymptomLogScreen> {
                   activeColor: _scoreColor(score),
                   onChanged: (value) => setState(() => _score = value),
                 ),
-                const Row(
+                Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('ไม่มีอาการ',
+                    Text(t('ไม่มีอาการ', 'None'),
                         style: TextStyle(
                             fontSize: 12, color: OnboardingColors.textMuted)),
-                    Text('รุนแรงที่สุด',
+                    Text(t('รุนแรงที่สุด', 'Worst'),
                         style: TextStyle(
                             fontSize: 12, color: OnboardingColors.textMuted)),
                   ],
@@ -209,13 +210,13 @@ class _SymptomLogScreenState extends State<SymptomLogScreen> {
             ),
           ),
           _Card(
-            title: 'อยากบันทึกเพิ่มไหม',
-            subtitle: 'ไม่บังคับ — เช่น เป็นตอนไหน กินอะไรมาก่อน',
+            title: t('อยากบันทึกเพิ่มไหม', 'Anything to add?'),
+            subtitle: t('ไม่บังคับ — เช่น เป็นตอนไหน กินอะไรมาก่อน', 'Optional — when it started, what you ate'),
             child: TextField(
               controller: _noteController,
               maxLines: 3,
               decoration: InputDecoration(
-                hintText: 'เช่น ปวดหลังอาหารเที่ยง',
+                hintText: t('เช่น ปวดหลังอาหารเที่ยง', 'e.g. pain after lunch'),
                 filled: true,
                 fillColor: const Color(0xFFF7F7F7),
                 contentPadding:
@@ -255,11 +256,11 @@ class _SymptomLogScreenState extends State<SymptomLogScreen> {
                     child: CircularProgressIndicator(
                         strokeWidth: 2, color: Colors.white),
                   )
-                : const Text('บันทึกอาการ'),
+                : Text(t('บันทึกอาการ', 'Log symptom')),
           ),
           const SizedBox(height: 24),
-          const Text(
-            'บันทึกล่าสุด',
+          Text(
+            t('บันทึกล่าสุด', 'Recent entries'),
             style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 10),
@@ -274,10 +275,10 @@ class _SymptomLogScreenState extends State<SymptomLogScreen> {
               }
               final logs = snapshot.data ?? const <SymptomLog>[];
               if (logs.isEmpty) {
-                return const Padding(
+                return Padding(
                   padding: EdgeInsets.symmetric(vertical: 20),
                   child: Text(
-                    'ยังไม่มีบันทึก — บันทึกครั้งแรกได้จากด้านบน',
+                    t('ยังไม่มีบันทึก — บันทึกครั้งแรกได้จากด้านบน', 'No entries yet — add your first one above'),
                     textAlign: TextAlign.center,
                     style: TextStyle(color: OnboardingColors.textMuted),
                   ),

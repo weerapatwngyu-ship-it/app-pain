@@ -6,6 +6,7 @@ import '../domain/entities/symptom_log.dart';
 import '../domain/symptom_repository.dart';
 import '../domain/usecases/record_symptom_usecase.dart';
 import 'symptom_log_screen.dart';
+import '../../../core/i18n/app_locale.dart';
 
 class SymptomCategoryLogsScreen extends StatefulWidget {
   const SymptomCategoryLogsScreen({
@@ -66,7 +67,7 @@ class _SymptomCategoryLogsScreenState extends State<SymptomCategoryLogsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final title = widget.category != null ? symptomCategoryLabel(widget.category) : 'บันทึกอาการทั้งหมด';
+    final title = widget.category != null ? symptomCategoryLabel(widget.category) : t('บันทึกอาการทั้งหมด', 'All symptom entries');
     return Scaffold(
       backgroundColor: const Color(0xFFF7FAFA),
       appBar: AppBar(title: Text(title)),
@@ -74,7 +75,7 @@ class _SymptomCategoryLogsScreenState extends State<SymptomCategoryLogsScreen> {
         onPressed: _record,
         foregroundColor: Colors.white,
         icon: const Icon(Icons.add),
-        label: const Text('บันทึกอาการ'),
+        label: Text(t('บันทึกอาการ', 'Log symptom')),
       ),
       body: FutureBuilder<List<SymptomLog>>(
         future: _logsFuture,
@@ -83,7 +84,7 @@ class _SymptomCategoryLogsScreenState extends State<SymptomCategoryLogsScreen> {
             return const Center(child: CircularProgressIndicator());
           }
           if (snapshot.hasError) {
-            return const Center(child: Text('โหลดข้อมูลไม่สำเร็จ'));
+            return Center(child: Text(t('โหลดข้อมูลไม่สำเร็จ', 'Could not load')));
           }
           final logs = snapshot.data ?? [];
           if (logs.isEmpty) {
@@ -96,13 +97,13 @@ class _SymptomCategoryLogsScreenState extends State<SymptomCategoryLogsScreen> {
                     const Icon(Icons.edit_note,
                         size: 44, color: OnboardingColors.textMuted),
                     const SizedBox(height: 12),
-                    const Text(
-                      'ยังไม่มีบันทึกในหมวดนี้',
+                    Text(
+                      t('ยังไม่มีบันทึกในหมวดนี้', 'Nothing recorded in this category yet'),
                       style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
                     ),
                     const SizedBox(height: 6),
-                    const Text(
-                      'บันทึกไว้เรื่อย ๆ จะเห็นว่าอาการดีขึ้นหรือแย่ลง\nและเล่าให้แพทย์ฟังได้ตรงขึ้น',
+                    Text(
+                      t('บันทึกไว้เรื่อย ๆ จะเห็นว่าอาการดีขึ้นหรือแย่ลง\nและเล่าให้แพทย์ฟังได้ตรงขึ้น', 'Recording regularly shows whether things are improving\nand gives your doctor something concrete'),
                       textAlign: TextAlign.center,
                       style: TextStyle(
                           color: OnboardingColors.textMuted, height: 1.5),
@@ -111,7 +112,7 @@ class _SymptomCategoryLogsScreenState extends State<SymptomCategoryLogsScreen> {
                     OutlinedButton.icon(
                       onPressed: _record,
                       icon: const Icon(Icons.add),
-                      label: const Text('บันทึกอาการ'),
+                      label: Text(t('บันทึกอาการ', 'Log symptom')),
                     ),
                   ],
                 ),

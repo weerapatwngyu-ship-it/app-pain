@@ -4,6 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'onboarding/onboarding_theme.dart';
 import '../../../core/errors/friendly_error.dart';
+import '../../../core/i18n/app_locale.dart';
 
 /// Email/password against Supabase Auth, plus Google when the build carries
 /// a GOOGLE_WEB_CLIENT_ID (see main.dart) — both against Supabase directly,
@@ -69,7 +70,7 @@ class _SignInScreenState extends State<SignInScreen> {
         // Success updates app.dart's session listener — nothing more to do.
       }
     } catch (e) {
-      setState(() => _error = friendlyError(e, whileDoing: 'เข้าสู่ระบบไม่สำเร็จ'));
+      setState(() => _error = friendlyError(e, whileDoing: t('เข้าสู่ระบบไม่สำเร็จ', 'Could not sign in')));
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -88,7 +89,7 @@ class _SignInScreenState extends State<SignInScreen> {
     // inbox, then switch them to the sign-in form for after they click it.
     setState(() {
       _isSignUp = false;
-      _info = 'ส่งอีเมลยืนยันไปที่ $email แล้ว — เปิดอีเมลแล้วกดลิงก์ยืนยันก่อน จึงจะเข้าสู่ระบบได้';
+      _info = t('ส่งอีเมลยืนยันไปที่ $email แล้ว — เปิดอีเมลแล้วกดลิงก์ยืนยันก่อน จึงจะเข้าสู่ระบบได้', 'A confirmation email was sent to $email — follow the link in it before signing in');
     });
   }
 
@@ -117,7 +118,7 @@ class _SignInScreenState extends State<SignInScreen> {
       final idToken = googleAuth.idToken;
       if (idToken == null) {
         throw StateError(
-          'Google ไม่ได้ส่ง idToken กลับมา — ตรวจสอบว่าตั้งค่า Web Client ID ถูกต้อง',
+          t('Google ไม่ได้ส่ง idToken กลับมา — ตรวจสอบว่าตั้งค่า Web Client ID ถูกต้อง', 'Google returned no idToken — check that the Web Client ID is set correctly'),
         );
       }
 
@@ -128,7 +129,7 @@ class _SignInScreenState extends State<SignInScreen> {
       );
       // Success updates app.dart's session listener — nothing more to do.
     } catch (e) {
-      setState(() => _error = friendlyError(e, whileDoing: 'เข้าสู่ระบบด้วย Google ไม่สำเร็จ'));
+      setState(() => _error = friendlyError(e, whileDoing: t('เข้าสู่ระบบด้วย Google ไม่สำเร็จ', 'Google sign-in failed')));
     } finally {
       if (mounted) setState(() => _googleLoading = false);
     }
@@ -161,7 +162,7 @@ class _SignInScreenState extends State<SignInScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  _isSignUp ? 'สมัครสมาชิกใหม่' : 'เข้าสู่ระบบ',
+                  _isSignUp ? t('สมัครสมาชิกใหม่', 'Create an account') : t('เข้าสู่ระบบ', 'Sign in'),
                   textAlign: TextAlign.center,
                   style: const TextStyle(fontSize: 16, color: OnboardingColors.textMuted),
                 ),
@@ -172,16 +173,16 @@ class _SignInScreenState extends State<SignInScreen> {
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
                   autocorrect: false,
-                  decoration: _decoration('อีเมล'),
-                  validator: (v) => (v == null || !v.contains('@')) ? 'กรอกอีเมลให้ถูกต้อง' : null,
+                  decoration: _decoration(t('อีเมล', 'Email')),
+                  validator: (v) => (v == null || !v.contains('@')) ? t('กรอกอีเมลให้ถูกต้อง', 'Enter a valid email') : null,
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
                   controller: _passwordController,
                   obscureText: true,
-                  decoration: _decoration('รหัสผ่าน (อย่างน้อย 6 ตัวอักษร)'),
+                  decoration: _decoration(t('รหัสผ่าน (อย่างน้อย 6 ตัวอักษร)', 'Password (at least 6 characters)')),
                   validator: (v) =>
-                      (v == null || v.length < 6) ? 'รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร' : null,
+                      (v == null || v.length < 6) ? t('รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร', 'Password must be at least 6 characters') : null,
                 ),
                 if (_error != null) ...[
                   const SizedBox(height: 16),
@@ -210,7 +211,7 @@ class _SignInScreenState extends State<SignInScreen> {
                             child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                           )
                         : Text(
-                            _isSignUp ? 'สมัครสมาชิก' : 'เข้าสู่ระบบ',
+                            _isSignUp ? t('สมัครสมาชิก', 'Sign up') : t('เข้าสู่ระบบ', 'Sign in'),
                             style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                           ),
                   ),
@@ -224,17 +225,17 @@ class _SignInScreenState extends State<SignInScreen> {
                             _error = null;
                             _info = null;
                           }),
-                  child: Text(_isSignUp ? 'มีบัญชีอยู่แล้ว? เข้าสู่ระบบ' : 'ยังไม่มีบัญชี? สมัครสมาชิก'),
+                  child: Text(_isSignUp ? t('มีบัญชีอยู่แล้ว? เข้าสู่ระบบ', 'Already have an account? Sign in') : t('ยังไม่มีบัญชี? สมัครสมาชิก', 'No account yet? Sign up')),
                 ),
                 if (widget.googleWebClientId != null) ...[
                   const SizedBox(height: 8),
-                  const Row(
+                  Row(
                     children: [
                       Expanded(child: Divider(color: OnboardingColors.border)),
                       Padding(
                         padding: EdgeInsets.symmetric(horizontal: 12),
                         child: Text(
-                          'หรือ',
+                          t('หรือ', 'or'),
                           style: TextStyle(fontSize: 13, color: OnboardingColors.textMuted),
                         ),
                       ),
@@ -258,16 +259,16 @@ class _SignInScreenState extends State<SignInScreen> {
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
                           : const _GoogleMark(),
-                      label: const Text(
-                        'เข้าสู่ระบบด้วย Google',
+                      label: Text(
+                        t('เข้าสู่ระบบด้วย Google', 'Sign in with Google'),
                         style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
                       ),
                     ),
                   ),
                 ],
                 const SizedBox(height: 8),
-                const Text(
-                  'การเข้าสู่ระบบถือว่าคุณยอมรับให้แอปเก็บข้อมูลสุขภาพ\nเพื่อใช้ติดตามการรักษาของคุณ',
+                Text(
+                  t('การเข้าสู่ระบบถือว่าคุณยอมรับให้แอปเก็บข้อมูลสุขภาพ\nเพื่อใช้ติดตามการรักษาของคุณ', 'By signing in you agree to let the app store health information\nused to follow your treatment'),
                   textAlign: TextAlign.center,
                   style: TextStyle(fontSize: 12, color: OnboardingColors.textMuted),
                 ),

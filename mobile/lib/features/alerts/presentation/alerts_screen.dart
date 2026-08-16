@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../shared/theme/app_theme.dart';
 import '../data/alerts_repository.dart';
 import '../domain/entities/alert.dart';
+import '../../../core/i18n/app_locale.dart';
 
 class AlertsScreen extends StatefulWidget {
   const AlertsScreen({super.key, required this.alertsRepository});
@@ -41,7 +42,7 @@ class _AlertsScreenState extends State<AlertsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('การแจ้งเตือน')),
+      appBar: AppBar(title: Text(t('การแจ้งเตือน', 'Alerts'))),
       body: FutureBuilder<List<PatientAlert>>(
         future: _alertsFuture,
         builder: (context, snapshot) {
@@ -50,7 +51,7 @@ class _AlertsScreenState extends State<AlertsScreen> {
           }
           final alerts = snapshot.data ?? [];
           if (alerts.isEmpty) {
-            return const Center(child: Text('ไม่มีการแจ้งเตือนที่ค้างอยู่'));
+            return Center(child: Text(t('ไม่มีการแจ้งเตือนที่ค้างอยู่', 'No open alerts')));
           }
           return ListView.builder(
             itemCount: alerts.length,
@@ -61,7 +62,7 @@ class _AlertsScreenState extends State<AlertsScreen> {
                 title: Text(alert.message ?? alert.severity.name),
                 trailing: TextButton(
                   onPressed: () => _acknowledge(alert),
-                  child: const Text('รับทราบ'),
+                  child: Text(t('รับทราบ', 'Acknowledge')),
                 ),
               );
             },

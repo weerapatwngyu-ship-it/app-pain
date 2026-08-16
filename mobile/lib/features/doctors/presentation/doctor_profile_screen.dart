@@ -13,6 +13,7 @@ import '../../pharmacy_finder/data/pharmacy_finder_repository.dart';
 import '../../pharmacy_finder/presentation/pharmacy_finder_screen.dart';
 import '../../profile/presentation/settings_screen.dart';
 import '../domain/entities/doctor.dart';
+import '../../../core/i18n/app_locale.dart';
 
 /// The doctor's own account page.
 ///
@@ -63,12 +64,12 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
           children: [
             ListTile(
               leading: const Icon(Icons.photo_camera_outlined),
-              title: const Text('ถ่ายรูป'),
+              title: Text(t('ถ่ายรูป', 'Take a photo')),
               onTap: () => Navigator.of(sheetContext).pop(ImageSource.camera),
             ),
             ListTile(
               leading: const Icon(Icons.photo_library_outlined),
-              title: const Text('เลือกจากคลังภาพ'),
+              title: Text(t('เลือกจากคลังภาพ', 'Choose from gallery')),
               onTap: () => Navigator.of(sheetContext).pop(ImageSource.gallery),
             ),
           ],
@@ -91,7 +92,7 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('อัปโหลดรูปไม่สำเร็จ ลองใหม่อีกครั้ง')),
+          SnackBar(content: Text(t('อัปโหลดรูปไม่สำเร็จ ลองใหม่อีกครั้ง', 'Upload failed. Try again.'))),
         );
       }
     } finally {
@@ -103,16 +104,16 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('ออกจากระบบ'),
-        content: const Text('ต้องการออกจากระบบใช่ไหม?'),
+        title: Text(t('ออกจากระบบ', 'Sign out')),
+        content: Text(t('ต้องการออกจากระบบใช่ไหม?', 'Sign out of your account?')),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('ยกเลิก'),
+            child: Text(t('ยกเลิก', 'Cancel')),
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('ออกจากระบบ'),
+            child: Text(t('ออกจากระบบ', 'Sign out')),
           ),
         ],
       ),
@@ -175,19 +176,19 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
           ),
         ],
         const SizedBox(height: 12),
-        const Padding(
+        Padding(
           padding: EdgeInsets.symmetric(vertical: 8),
           child: Text(
             'ข้อมูลนี้คือสิ่งที่ผู้ป่วยเห็นในหน้าแรก '
             'รูปแตะเพื่อเปลี่ยนได้เอง ส่วนชื่อและสาขาความเชี่ยวชาญ '
-            'ต้องติดต่อผู้ดูแลระบบ',
+            t('ต้องติดต่อผู้ดูแลระบบ', 'ask an administrator'),
             style: TextStyle(fontSize: 12, color: OnboardingColors.textMuted),
           ),
         ),
         const Divider(height: 32),
         _MenuTile(
           icon: Icons.forum_outlined,
-          label: 'คำถามจากผู้ป่วย',
+          label: t('คำถามจากผู้ป่วย', 'Patient questions'),
           onTap: () => Navigator.of(context).push(
             MaterialPageRoute(
               builder: (_) => QuestionQueueScreen(repository: widget.healthQuestionRepository),
@@ -196,7 +197,7 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
         ),
         _MenuTile(
           icon: Icons.local_hospital_outlined,
-          label: 'คลินิกออนไลน์',
+          label: t('คลินิกออนไลน์', 'Online clinic'),
           onTap: () => Navigator.of(context).push(
             MaterialPageRoute(
               // No patientId: a doctor browses the catalogue for reference and
@@ -213,7 +214,7 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
         ),
         _MenuTile(
           icon: Icons.local_pharmacy_outlined,
-          label: 'ร้านยาและคลินิกใกล้ฉัน',
+          label: t('ร้านยาและคลินิกใกล้ฉัน', 'Pharmacies and clinics near me'),
           onTap: () => Navigator.of(context).push(
             MaterialPageRoute(
               builder: (_) => PharmacyFinderScreen(repository: widget.pharmacyFinderRepository),
@@ -222,14 +223,14 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
         ),
         _MenuTile(
           icon: Icons.settings_outlined,
-          label: 'ตั้งค่า',
+          label: t('ตั้งค่า', 'Settings'),
           onTap: () => Navigator.of(context).push(
             MaterialPageRoute(builder: (_) => const SettingsScreen()),
           ),
         ),
         _MenuTile(
           icon: Icons.logout,
-          label: 'ออกจากระบบ',
+          label: t('ออกจากระบบ', 'Sign out'),
           onTap: () => _confirmLogout(context),
         ),
       ],

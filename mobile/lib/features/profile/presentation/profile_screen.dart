@@ -18,6 +18,7 @@ import '../data/patient_profile_repository.dart';
 import 'all_menu_screen.dart';
 import 'personal_info_detail_screen.dart';
 import 'settings_screen.dart';
+import '../../../core/i18n/app_locale.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({
@@ -71,7 +72,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   void _comingSoon(BuildContext context) {
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('ฟีเจอร์นี้อยู่ระหว่างการพัฒนา')),
+      SnackBar(content: Text(t('ฟีเจอร์นี้อยู่ระหว่างการพัฒนา', 'This feature is still being built'))),
     );
   }
 
@@ -134,7 +135,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        'รหัสผู้ใช้งาน: $_userCode',
+                        t('รหัสผู้ใช้งาน: $_userCode', 'User ID: $_userCode'),
                         style: const TextStyle(color: Colors.white70, fontSize: 13),
                       ),
                     ],
@@ -182,14 +183,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   OnboardingPrimaryButton(
-                    label: '+  เพิ่มสิทธิพิเศษ/กรมธรรม์',
+                    label: t('+  เพิ่มสิทธิพิเศษ/กรมธรรม์', '+  Add benefits / insurance'),
                     onPressed: () => _comingSoon(context),
                   ),
                   const SizedBox(height: 24),
-                  const _SectionLabel('บัญชีผู้ใช้'),
+                  _SectionLabel(t('บัญชีผู้ใช้', 'Account')),
                   _MenuTile(
                     icon: Icons.person_outline,
-                    label: 'แก้ไขข้อมูลส่วนตัว',
+                    label: t('แก้ไขข้อมูลส่วนตัว', 'Edit personal details'),
                     onTap: () => Navigator.of(context).push(
                       MaterialPageRoute(
                         builder: (_) => PersonalInfoDetailScreen(
@@ -202,10 +203,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  const _SectionLabel('อื่นๆ'),
+                  _SectionLabel(t('อื่นๆ', 'Other')),
                   _MenuTile(
                     icon: Icons.logout,
-                    label: 'ออกจากระบบ',
+                    label: t('ออกจากระบบ', 'Sign out'),
                     onTap: widget.onLogout,
                   ),
                 ],

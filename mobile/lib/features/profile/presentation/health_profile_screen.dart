@@ -7,6 +7,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../auth/presentation/onboarding/onboarding_theme.dart';
 import '../data/patient_profile_repository.dart';
 import '../../../core/errors/friendly_error.dart';
+import '../../../core/i18n/app_locale.dart';
 
 /// The patient's own health details: conditions, drug allergies, blood type
 /// and measurements.
@@ -83,7 +84,7 @@ class _HealthProfileScreenState extends State<HealthProfileScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = 'โหลดข้อมูลไม่สำเร็จ: $e';
+        _error = t('โหลดข้อมูลไม่สำเร็จ: $e', 'Could not load: $e');
         _loading = false;
       });
     }
@@ -115,7 +116,7 @@ class _HealthProfileScreenState extends State<HealthProfileScreen> {
     final weight = _parseMeasurement(_weightController.text, max: 500);
     final height = _parseMeasurement(_heightController.text, max: 300);
     if (weight == _invalid || height == _invalid) {
-      setState(() => _error = 'น้ำหนักหรือส่วนสูงไม่ถูกต้อง');
+      setState(() => _error = t('น้ำหนักหรือส่วนสูงไม่ถูกต้อง', 'Weight or height is not valid'));
       return;
     }
 
@@ -136,15 +137,15 @@ class _HealthProfileScreenState extends State<HealthProfileScreen> {
       );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('บันทึกข้อมูลสุขภาพแล้ว')),
+        SnackBar(content: Text(t('บันทึกข้อมูลสุขภาพแล้ว', 'Health information saved'))),
       );
       Navigator.of(context).pop();
     } on PostgrestException catch (e) {
-      setState(() => _error = 'บันทึกไม่สำเร็จ: ${e.message}');
+      setState(() => _error = t('บันทึกไม่สำเร็จ: ${e.message}', 'Could not save: ${e.message}'));
     } on SocketException catch (_) {
-      setState(() => _error = 'เชื่อมต่อเซิร์ฟเวอร์ไม่ได้');
+      setState(() => _error = t('เชื่อมต่อเซิร์ฟเวอร์ไม่ได้', 'Cannot reach the server'));
     } catch (e) {
-      setState(() => _error = friendlyError(e, whileDoing: 'บันทึกไม่สำเร็จ'));
+      setState(() => _error = friendlyError(e, whileDoing: t('บันทึกไม่สำเร็จ', 'Could not save')));
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -204,7 +205,7 @@ class _HealthProfileScreenState extends State<HealthProfileScreen> {
             IconButton.filled(
               onPressed: () => _addTo(values, controller),
               icon: const Icon(Icons.add),
-              tooltip: 'เพิ่ม',
+              tooltip: t('เพิ่ม', 'Add'),
             ),
           ],
         ),
@@ -255,7 +256,7 @@ class _HealthProfileScreenState extends State<HealthProfileScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(title: const Text('ข้อมูลสุขภาพ')),
+      appBar: AppBar(title: Text(t('ข้อมูลสุขภาพ', 'Health information'))),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : SafeArea(
@@ -265,19 +266,19 @@ class _HealthProfileScreenState extends State<HealthProfileScreen> {
                     child: ListView(
                       padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
                       children: [
-                        const _Label('โรคประจำตัว'),
+                        _Label(t('โรคประจำตัว', 'Ongoing conditions')),
                         TextField(
                           controller: _conditionController,
                           maxLines: 3,
                           minLines: 2,
-                          decoration: _decoration('เช่น เบาหวาน ความดันโลหิตสูง'),
+                          decoration: _decoration(t('เช่น เบาหวาน ความดันโลหิตสูง', 'e.g. diabetes, high blood pressure')),
                         ),
                         const SizedBox(height: 24),
                         _allergyField(
-                          label: 'ยาที่แพ้',
-                          help: 'ใส่ทีละชื่อ เพื่อให้ระบบนำไปตรวจสอบกับยาที่ใช้ได้',
-                          hint: 'เช่น เพนิซิลลิน',
-                          emptyNote: 'ยังไม่ได้ระบุ — ถ้าไม่แพ้ยาใดเลย ปล่อยว่างไว้ได้',
+                          label: t('ยาที่แพ้', 'Drug allergies'),
+                          help: t('ใส่ทีละชื่อ เพื่อให้ระบบนำไปตรวจสอบกับยาที่ใช้ได้', 'One per entry, so the app can check it against your medication'),
+                          hint: t('เช่น เพนิซิลลิน', 'e.g. penicillin'),
+                          emptyNote: t('ยังไม่ได้ระบุ — ถ้าไม่แพ้ยาใดเลย ปล่อยว่างไว้ได้', 'Not recorded — leave empty if you have no drug allergies'),
                           controller: _allergyController,
                           values: _allergies,
                           chipColor: const Color(0xFFFDECEC),
@@ -285,17 +286,17 @@ class _HealthProfileScreenState extends State<HealthProfileScreen> {
                         ),
                         const SizedBox(height: 24),
                         _allergyField(
-                          label: 'อาหารที่แพ้',
-                          help: 'ใส่ทีละอย่าง แพทย์จะเห็นในประวัติของคุณ',
-                          hint: 'เช่น กุ้ง ถั่วลิสง',
-                          emptyNote: 'ยังไม่ได้ระบุ — ถ้าไม่แพ้อาหารใดเลย ปล่อยว่างไว้ได้',
+                          label: t('อาหารที่แพ้', 'Food allergies'),
+                          help: t('ใส่ทีละอย่าง แพทย์จะเห็นในประวัติของคุณ', 'One per entry. Your doctor sees these on your record.'),
+                          hint: t('เช่น กุ้ง ถั่วลิสง', 'e.g. shrimp, peanuts'),
+                          emptyNote: t('ยังไม่ได้ระบุ — ถ้าไม่แพ้อาหารใดเลย ปล่อยว่างไว้ได้', 'Not recorded — leave empty if you have no food allergies'),
                           controller: _foodAllergyController,
                           values: _foodAllergies,
                           chipColor: const Color(0xFFFFF4E5),
                           chipBorder: const Color(0xFFF0D6A8),
                         ),
                         const SizedBox(height: 24),
-                        const _Label('กรุ๊ปเลือด'),
+                        _Label(t('กรุ๊ปเลือด', 'Blood type')),
                         Wrap(
                           spacing: 8,
                           runSpacing: 8,
@@ -315,7 +316,7 @@ class _HealthProfileScreenState extends State<HealthProfileScreen> {
                             padding: const EdgeInsets.only(top: 8),
                             child: TextButton(
                               onPressed: () => setState(() => _bloodType = null),
-                              child: const Text('ล้างกรุ๊ปเลือด'),
+                              child: Text(t('ล้างกรุ๊ปเลือด', 'Clear blood type')),
                             ),
                           ),
                         const SizedBox(height: 24),
@@ -326,13 +327,13 @@ class _HealthProfileScreenState extends State<HealthProfileScreen> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const _Label('น้ำหนัก (กก.)'),
+                                  _Label(t('น้ำหนัก (กก.)', 'Weight (kg)')),
                                   TextField(
                                     controller: _weightController,
                                     keyboardType: const TextInputType
                                         .numberWithOptions(decimal: true),
                                     inputFormatters: [_decimalOnly],
-                                    decoration: _decoration('เช่น 65'),
+                                    decoration: _decoration(t('เช่น 65', 'e.g. 65')),
                                   ),
                                 ],
                               ),
@@ -342,13 +343,13 @@ class _HealthProfileScreenState extends State<HealthProfileScreen> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const _Label('ส่วนสูง (ซม.)'),
+                                  _Label(t('ส่วนสูง (ซม.)', 'Height (cm)')),
                                   TextField(
                                     controller: _heightController,
                                     keyboardType: const TextInputType
                                         .numberWithOptions(decimal: true),
                                     inputFormatters: [_decimalOnly],
-                                    decoration: _decoration('เช่น 170'),
+                                    decoration: _decoration(t('เช่น 170', 'e.g. 170')),
                                   ),
                                 ],
                               ),
@@ -370,7 +371,7 @@ class _HealthProfileScreenState extends State<HealthProfileScreen> {
                   Padding(
                     padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
                     child: OnboardingPrimaryButton(
-                      label: 'บันทึก',
+                      label: t('บันทึก', 'Save'),
                       loading: _saving,
                       onPressed: _saving ? null : _save,
                     ),

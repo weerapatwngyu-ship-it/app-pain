@@ -6,6 +6,7 @@ import '../../chat/presentation/chat_screen.dart';
 import '../data/doctor_repository.dart';
 import '../domain/entities/doctor.dart';
 import '../../../core/errors/friendly_error.dart';
+import '../../../core/i18n/app_locale.dart';
 
 /// Read-only for patients: the directory is maintained by an admin, and the
 /// only thing a patient does here is start (or continue) a chat.
@@ -333,7 +334,7 @@ class _HeaderCard extends StatelessWidget {
                       const SizedBox(height: 4),
                       _InfoLine(
                           icon: Icons.forum_outlined,
-                          text: '$consultCount คนเคยปรึกษา'),
+                          text: t('$consultCount คนเคยปรึกษา', '$consultCount people have consulted')),
                     ],
                   ],
                 ),

@@ -25,6 +25,7 @@ import '../../symptom_tracking/presentation/symptom_category_logs_screen.dart';
 import '../data/patient_profile_repository.dart';
 import 'personal_info_detail_screen.dart';
 import 'settings_screen.dart';
+import '../../../core/i18n/app_locale.dart';
 
 /// Grid menu of every real feature in the app, grouped like the reference
 /// design's "เมนูทั้งหมด" — every tile here opens a screen that actually
@@ -70,16 +71,16 @@ class AllMenuScreen extends StatelessWidget {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('ออกจากระบบ'),
-        content: const Text('ต้องการออกจากระบบใช่ไหม?'),
+        title: Text(t('ออกจากระบบ', 'Sign out')),
+        content: Text(t('ต้องการออกจากระบบใช่ไหม?', 'Sign out of your account?')),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('ยกเลิก'),
+            child: Text(t('ยกเลิก', 'Cancel')),
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('ออกจากระบบ'),
+            child: Text(t('ออกจากระบบ', 'Sign out')),
           ),
         ],
       ),
@@ -91,15 +92,15 @@ class AllMenuScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(title: const Text('เมนูทั้งหมด')),
+      appBar: AppBar(title: Text(t('เมนูทั้งหมด', 'All menu'))),
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [
-          const _SectionLabel('ฟีเจอร์'),
+          _SectionLabel(t('ฟีเจอร์', 'Features')),
           _MenuGrid(tiles: [
             _MenuItem(
               icon: Icons.event_note_outlined,
-              label: 'บันทึกอาการทั้งหมด',
+              label: t('บันทึกอาการทั้งหมด', 'All symptom entries'),
               onTap: () => Navigator.of(context).push(
                 MaterialPageRoute(
                   builder: (_) => SymptomCategoryLogsScreen(
@@ -112,7 +113,7 @@ class AllMenuScreen extends StatelessWidget {
             ),
             _MenuItem(
               icon: Icons.medical_services_outlined,
-              label: 'ปรึกษาแพทย์',
+              label: t('ปรึกษาแพทย์', 'Talk to a doctor'),
               onTap: () => Navigator.of(context).push(
                 MaterialPageRoute(
                   builder: (_) => DoctorListScreen(
@@ -125,7 +126,7 @@ class AllMenuScreen extends StatelessWidget {
             ),
             _MenuItem(
               icon: Icons.local_pharmacy_outlined,
-              label: 'ร้านยาใกล้ฉัน',
+              label: t('ร้านยาใกล้ฉัน', 'Pharmacies near me'),
               onTap: () => Navigator.of(context).push(
                 MaterialPageRoute(
                   builder: (_) => PharmacyFinderScreen(repository: pharmacyFinderRepository),
@@ -134,7 +135,7 @@ class AllMenuScreen extends StatelessWidget {
             ),
             _MenuItem(
               icon: Icons.local_hospital_outlined,
-              label: 'คลินิกออนไลน์',
+              label: t('คลินิกออนไลน์', 'Online clinic'),
               onTap: () => Navigator.of(context).push(
                 MaterialPageRoute(
                   builder: (_) => HealthTopicsScreen(
@@ -148,7 +149,7 @@ class AllMenuScreen extends StatelessWidget {
             ),
             _MenuItem(
               icon: Icons.chat_bubble_outline,
-              label: 'ข้อความของฉัน',
+              label: t('ข้อความของฉัน', 'My messages'),
               onTap: () => Navigator.of(context).push(
                 MaterialPageRoute(
                   builder: (_) => ConversationListScreen(
@@ -161,7 +162,7 @@ class AllMenuScreen extends StatelessWidget {
             ),
             _MenuItem(
               icon: Icons.notifications_none,
-              label: 'การแจ้งเตือนจากระบบ',
+              label: t('การแจ้งเตือนจากระบบ', 'System alerts'),
               onTap: () => Navigator.of(context).push(
                 MaterialPageRoute(
                   builder: (_) => AlertsScreen(alertsRepository: alertsRepository),
@@ -170,7 +171,7 @@ class AllMenuScreen extends StatelessWidget {
             ),
             _MenuItem(
               icon: Icons.groups_outlined,
-              label: 'คุยกับผู้ป่วยด้วยกัน',
+              label: t('คุยกับผู้ป่วยด้วยกัน', 'Talk to other patients'),
               onTap: () => Navigator.of(context).push(
                 MaterialPageRoute(
                   builder: (_) => PeerChatScreen(
@@ -182,7 +183,7 @@ class AllMenuScreen extends StatelessWidget {
             ),
             _MenuItem(
               icon: Icons.forum_outlined,
-              label: 'คำถามของฉัน',
+              label: t('คำถามของฉัน', 'My questions'),
               onTap: () => Navigator.of(context).push(
                 MaterialPageRoute(
                   builder: (_) => MyQuestionsScreen(
@@ -195,11 +196,11 @@ class AllMenuScreen extends StatelessWidget {
           ]),
           if (user.role == UserRole.admin) ...[
             const SizedBox(height: 24),
-            const _SectionLabel('ผู้ดูแลระบบ'),
+            _SectionLabel(t('ผู้ดูแลระบบ', 'Administration')),
             _MenuGrid(tiles: [
               _MenuItem(
                 icon: Icons.verified_user_outlined,
-                label: 'จัดการบัญชีแพทย์',
+                label: t('จัดการบัญชีแพทย์', 'Manage doctor accounts'),
                 onTap: () => Navigator.of(context).push(
                   MaterialPageRoute(
                     builder: (_) => AdminDoctorsScreen(repository: adminRepository),
@@ -208,7 +209,7 @@ class AllMenuScreen extends StatelessWidget {
               ),
               _MenuItem(
                 icon: Icons.people_outline,
-                label: 'ผู้ป่วยทั้งหมด',
+                label: t('ผู้ป่วยทั้งหมด', 'All patients'),
                 onTap: () => Navigator.of(context).push(
                   MaterialPageRoute(
                     builder: (_) => CaseloadScreen(repository: caseloadRepository),
@@ -218,11 +219,11 @@ class AllMenuScreen extends StatelessWidget {
             ]),
           ],
           const SizedBox(height: 24),
-          const _SectionLabel('บัญชีของฉัน'),
+          _SectionLabel(t('บัญชีของฉัน', 'My account')),
           _MenuGrid(tiles: [
             _MenuItem(
               icon: Icons.person_outline,
-              label: 'ข้อมูลส่วนตัว',
+              label: t('ข้อมูลส่วนตัว', 'Personal details'),
               onTap: () => Navigator.of(context).push(
                 MaterialPageRoute(
                   builder: (_) => PersonalInfoDetailScreen(
@@ -236,14 +237,14 @@ class AllMenuScreen extends StatelessWidget {
             ),
             _MenuItem(
               icon: Icons.settings_outlined,
-              label: 'ตั้งค่า',
+              label: t('ตั้งค่า', 'Settings'),
               onTap: () => Navigator.of(context).push(
                 MaterialPageRoute(builder: (_) => const SettingsScreen()),
               ),
             ),
             _MenuItem(
               icon: Icons.logout,
-              label: 'ออกจากระบบ',
+              label: t('ออกจากระบบ', 'Sign out'),
               onTap: () => _confirmLogout(context),
             ),
           ]),

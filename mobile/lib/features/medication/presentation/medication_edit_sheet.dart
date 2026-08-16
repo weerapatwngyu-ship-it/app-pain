@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../auth/presentation/onboarding/onboarding_theme.dart';
+import '../../../core/i18n/app_locale.dart';
 
 /// What the form collected, handed back to the caller to save.
 class MedicationDraft {
@@ -28,10 +29,10 @@ class MedicationDraft {
 /// as separate entries rather than as a sentence — this is the moment it pays
 /// for itself.
 class MedicationEditSheet extends StatefulWidget {
-  const MedicationEditSheet({
+  MedicationEditSheet({
     super.key,
     this.allergies = const [],
-    this.title = 'เพิ่มยา',
+    this.title = t('เพิ่มยา', 'Add medication'),
   });
 
   final List<String> allergies;
@@ -59,11 +60,13 @@ class _MedicationEditSheetState extends State<MedicationEditSheet> {
   /// The times most doses actually land on. Offered as one tap each, because
   /// the alternative is opening a clock dialog four times to enter a schedule
   /// that is almost always one of these.
-  static const _quickTimes = <String, TimeOfDay>{
-    'เช้า': TimeOfDay(hour: 8, minute: 0),
-    'กลางวัน': TimeOfDay(hour: 12, minute: 0),
-    'เย็น': TimeOfDay(hour: 18, minute: 0),
-    'ก่อนนอน': TimeOfDay(hour: 21, minute: 0),
+  /// A getter, not a const map: the labels are translated, so they have to be
+  /// rebuilt after a language change rather than frozen at load.
+  static Map<String, TimeOfDay> get _quickTimes => {
+    t('เช้า', 'Morning'): const TimeOfDay(hour: 8, minute: 0),
+    t('กลางวัน', 'Midday'): const TimeOfDay(hour: 12, minute: 0),
+    t('เย็น', 'Evening'): const TimeOfDay(hour: 18, minute: 0),
+    t('ก่อนนอน', 'Bedtime'): const TimeOfDay(hour: 21, minute: 0),
   };
 
   bool _hasTime(TimeOfDay t) =>
@@ -122,7 +125,7 @@ class _MedicationEditSheetState extends State<MedicationEditSheet> {
       initialDate: (isStart ? _startDate : _endDate) ?? now,
       firstDate: DateTime(now.year - 2),
       lastDate: DateTime(now.year + 5),
-      helpText: isStart ? 'วันที่เริ่มกิน' : 'วันที่หยุด',
+      helpText: isStart ? t('วันที่เริ่มกิน', 'Start date') : t('วันที่หยุด', 'Stop date'),
     );
     if (picked == null) return;
     setState(() {
@@ -138,7 +141,7 @@ class _MedicationEditSheetState extends State<MedicationEditSheet> {
     final picked = await showTimePicker(
       context: context,
       initialTime: const TimeOfDay(hour: 8, minute: 0),
-      helpText: 'เวลาที่ต้องกิน',
+      helpText: t('เวลาที่ต้องกิน', 'Times to take it'),
     );
     if (picked == null || _hasTime(picked)) return;
     // Shared with the preset chips so sorting and clearing the "pick a time"
@@ -162,7 +165,7 @@ class _MedicationEditSheetState extends State<MedicationEditSheet> {
       MedicationDraft(
         name: _nameController.text.trim(),
         dosage: _dosageController.text.trim(),
-        frequency: typed.isEmpty ? 'วันละ ${_times.length} ครั้ง' : typed,
+        frequency: typed.isEmpty ? t('วันละ ${_times.length} ครั้ง', '${_times.length} times a day') : typed,
         startDate: _startDate,
         endDate: _endDate,
         times: _times.map(_timeText).toList(),
@@ -218,12 +221,12 @@ class _MedicationEditSheetState extends State<MedicationEditSheet> {
                 ],
               ),
               const SizedBox(height: 12),
-              const _Label('ชื่อยา*'),
+              _Label(t('ชื่อยา*', 'Medication name*')),
               TextFormField(
                 controller: _nameController,
-                decoration: _decoration('เช่น พาราเซตามอล'),
+                decoration: _decoration(t('เช่น พาราเซตามอล', 'e.g. paracetamol')),
                 validator: (v) =>
-                    (v == null || v.trim().isEmpty) ? 'กรอกชื่อยา' : null,
+                    (v == null || v.trim().isEmpty) ? t('กรอกชื่อยา', 'Enter the medication name') : null,
               ),
               if (matches.isNotEmpty) ...[
                 const SizedBox(height: 10),
@@ -243,7 +246,7 @@ class _MedicationEditSheetState extends State<MedicationEditSheet> {
                       Expanded(
                         child: Text(
                           'คุณเคยระบุว่าแพ้ ${matches.join(', ')} '
-                          '— ตรวจสอบกับแพทย์หรือเภสัชกรก่อนใช้ยานี้',
+                          t('— ตรวจสอบกับแพทย์หรือเภสัชกรก่อนใช้ยานี้', '— check with a doctor or pharmacist before using this'),
                           style: const TextStyle(
                             fontSize: 13,
                             color: Color(0xFFC0392B),
@@ -257,30 +260,30 @@ class _MedicationEditSheetState extends State<MedicationEditSheet> {
                 ),
               ],
               const SizedBox(height: 16),
-              const _Label('ขนาด/ปริมาณ*'),
+              _Label(t('ขนาด/ปริมาณ*', 'Dose / amount*')),
               TextFormField(
                 controller: _dosageController,
-                decoration: _decoration('เช่น 500 mg หรือ 1 เม็ด'),
+                decoration: _decoration(t('เช่น 500 mg หรือ 1 เม็ด', 'e.g. 500 mg or 1 tablet')),
                 validator: (v) =>
-                    (v == null || v.trim().isEmpty) ? 'กรอกขนาดยา' : null,
+                    (v == null || v.trim().isEmpty) ? t('กรอกขนาดยา', 'Enter the dose') : null,
               ),
               const SizedBox(height: 16),
-              const _Label('ความถี่'),
-              const Text(
-                'เว้นว่างได้ — ระบบจะเติมให้จากจำนวนเวลาที่เลือก',
+              _Label(t('ความถี่', 'How often')),
+              Text(
+                t('เว้นว่างได้ — ระบบจะเติมให้จากจำนวนเวลาที่เลือก', 'Optional — filled in from the number of times you choose'),
                 style: TextStyle(fontSize: 12, color: OnboardingColors.textMuted),
               ),
               const SizedBox(height: 8),
               TextFormField(
                 controller: _frequencyController,
                 decoration: _decoration(_times.isEmpty
-                    ? 'เช่น วันละ 3 ครั้ง หลังอาหาร'
-                    : 'วันละ ${_times.length} ครั้ง'),
+                    ? t('เช่น วันละ 3 ครั้ง หลังอาหาร', 'e.g. 3 times a day after meals')
+                    : t('วันละ ${_times.length} ครั้ง', '${_times.length} times a day')),
               ),
               const SizedBox(height: 16),
-              const _Label('เวลาที่ต้องกิน*'),
-              const Text(
-                'เลือกอย่างน้อย 1 เวลา ระบบจะเตือนและขึ้นในตารางวันนี้ตามนี้',
+              _Label(t('เวลาที่ต้องกิน*', 'Times to take it*')),
+              Text(
+                t('เลือกอย่างน้อย 1 เวลา ระบบจะเตือนและขึ้นในตารางวันนี้ตามนี้', 'Pick at least one time. Reminders and the daily schedule follow it.'),
                 style: TextStyle(fontSize: 12, color: OnboardingColors.textMuted),
               ),
               const SizedBox(height: 10),
@@ -326,7 +329,7 @@ class _MedicationEditSheetState extends State<MedicationEditSheet> {
                       ),
                   ActionChip(
                     avatar: const Icon(Icons.add, size: 18),
-                    label: const Text('เวลาอื่น'),
+                    label: Text(t('เวลาอื่น', 'Another time')),
                     onPressed: _addTime,
                   ),
                 ],
@@ -334,7 +337,7 @@ class _MedicationEditSheetState extends State<MedicationEditSheet> {
               if (_showTimeError) ...[
                 const SizedBox(height: 8),
                 Text(
-                  'เลือกเวลาอย่างน้อย 1 เวลา มิฉะนั้นยานี้จะไม่ขึ้นในตารางและไม่มีการเตือน',
+                  t('เลือกเวลาอย่างน้อย 1 เวลา มิฉะนั้นยานี้จะไม่ขึ้นในตารางและไม่มีการเตือน', 'Pick at least one time, or this medication never appears on the schedule and never reminds'),
                   style: TextStyle(
                     fontSize: 12,
                     color: Theme.of(context).colorScheme.error,
@@ -348,7 +351,7 @@ class _MedicationEditSheetState extends State<MedicationEditSheet> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const _Label('เริ่มกิน'),
+                        _Label(t('เริ่มกิน', 'Start')),
                         OutlinedButton(
                           onPressed: () => _pickDate(isStart: true),
                           child: Text(_dateText(_startDate)),
@@ -361,11 +364,11 @@ class _MedicationEditSheetState extends State<MedicationEditSheet> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const _Label('หยุดกิน (ถ้ามี)'),
+                        _Label(t('หยุดกิน (ถ้ามี)', 'Stop (optional)')),
                         OutlinedButton(
                           onPressed: () => _pickDate(isStart: false),
                           child: Text(
-                            _endDate == null ? 'ไม่กำหนด' : _dateText(_endDate!),
+                            _endDate == null ? t('ไม่กำหนด', 'Not set') : _dateText(_endDate!),
                           ),
                         ),
                       ],
@@ -378,11 +381,11 @@ class _MedicationEditSheetState extends State<MedicationEditSheet> {
                   alignment: Alignment.centerRight,
                   child: TextButton(
                     onPressed: () => setState(() => _endDate = null),
-                    child: const Text('ล้างวันหยุด'),
+                    child: Text(t('ล้างวันหยุด', 'Clear stop date')),
                   ),
                 ),
               const SizedBox(height: 20),
-              OnboardingPrimaryButton(label: 'บันทึก', onPressed: _submit),
+              OnboardingPrimaryButton(label: t('บันทึก', 'Save'), onPressed: _submit),
             ],
           ),
         ),

@@ -7,6 +7,7 @@ import '../data/health_question_repository.dart';
 import '../domain/entities/health_topic.dart';
 import 'health_topic_detail_screen.dart';
 import 'my_questions_screen.dart';
+import '../../../core/i18n/app_locale.dart';
 
 /// The full catalogue, as a grid of topics to read about and ask questions on.
 class HealthTopicsScreen extends StatelessWidget {
@@ -39,7 +40,7 @@ class HealthTopicsScreen extends StatelessWidget {
                     child: OnboardingHeader(
                       icon: Icons.arrow_back,
                       onIconTap: () => Navigator.of(context).pop(),
-                      title: 'คลินิกออนไลน์',
+                      title: t('คลินิกออนไลน์', 'Online clinic'),
                     ),
                   ),
                   if (patientId != null)
@@ -57,10 +58,10 @@ class HealthTopicsScreen extends StatelessWidget {
                 ],
               ),
             ),
-            const Padding(
+            Padding(
               padding: EdgeInsets.fromLTRB(20, 12, 20, 0),
               child: Text(
-                'เลือกหมวดที่ตรงกับอาการหรือเรื่องที่สงสัย เพื่ออ่านข้อมูลและฝากคำถามถึงแพทย์',
+                t('เลือกหมวดที่ตรงกับอาการหรือเรื่องที่สงสัย เพื่ออ่านข้อมูลและฝากคำถามถึงแพทย์', 'Pick the topic that matches your symptom or question, to read about it and ask a doctor'),
                 style: TextStyle(fontSize: 13, color: OnboardingColors.textMuted),
               ),
             ),

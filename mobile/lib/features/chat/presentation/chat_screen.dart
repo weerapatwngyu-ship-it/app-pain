@@ -7,6 +7,7 @@ import '../../auth/presentation/onboarding/onboarding_theme.dart';
 import '../domain/entities/conversation.dart';
 import '../domain/message_thread.dart';
 import '../../../core/errors/friendly_error.dart';
+import '../../../core/i18n/app_locale.dart';
 
 /// One thread, used by both sides — a message renders the same whether the
 /// reader is the patient or the doctor; only which bubble is "mine" differs.
@@ -77,7 +78,7 @@ class _ChatScreenState extends State<ChatScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = 'โหลดข้อความไม่สำเร็จ: $e';
+        _error = t('โหลดข้อความไม่สำเร็จ: $e', 'Could not load messages: $e');
         _loading = false;
       });
     }
@@ -117,7 +118,7 @@ class _ChatScreenState extends State<ChatScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(friendlyError(e, whileDoing: 'ส่งข้อความไม่สำเร็จ'))),
+        SnackBar(content: Text(friendlyError(e, whileDoing: t('ส่งข้อความไม่สำเร็จ', 'Could not send')))),
       );
     } finally {
       if (mounted) setState(() => _sending = false);
@@ -169,7 +170,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   });
                   _load();
                 },
-                child: const Text('ลองอีกครั้ง'),
+                child: Text(t('ลองอีกครั้ง', 'Try again')),
               ),
             ],
           ),
@@ -177,11 +178,11 @@ class _ChatScreenState extends State<ChatScreen> {
       );
     }
     if (_messages.isEmpty) {
-      return const Center(
+      return Center(
         child: Padding(
           padding: EdgeInsets.all(32),
           child: Text(
-            'ยังไม่มีข้อความ\nพิมพ์ข้อความแรกได้เลย',
+            t('ยังไม่มีข้อความ\nพิมพ์ข้อความแรกได้เลย', 'No messages yet\nSend the first one'),
             textAlign: TextAlign.center,
             style: TextStyle(color: OnboardingColors.textMuted),
           ),
@@ -233,7 +234,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 maxLines: 4,
                 textCapitalization: TextCapitalization.sentences,
                 decoration: InputDecoration(
-                  hintText: 'พิมพ์ข้อความ...',
+                  hintText: t('พิมพ์ข้อความ...', 'Type a message...'),
                   contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(24),
@@ -304,8 +305,8 @@ class _DayDivider extends StatelessWidget {
     final today = DateTime(now.year, now.month, now.day);
     final that = DateTime(day.year, day.month, day.day);
     final difference = today.difference(that).inDays;
-    if (difference == 0) return 'วันนี้';
-    if (difference == 1) return 'เมื่อวาน';
+    if (difference == 0) return t('วันนี้', 'Today');
+    if (difference == 1) return t('เมื่อวาน', 'Yesterday');
     return 'วัน${thaiWeekdays[that.weekday - 1]} ${thaiDate(that)}';
   }
 }

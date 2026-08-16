@@ -9,6 +9,7 @@ import '../../auth/presentation/onboarding/onboarding_theme.dart';
 import '../data/pharmacy_finder_repository.dart';
 import '../domain/entities/nearby_pharmacy.dart';
 import 'pharmacy_map_view.dart';
+import '../../../core/i18n/app_locale.dart';
 
 /// How far the last search actually reached, and whether it was cut short.
 /// Both come back from the search rather than being fixed here — the point of
@@ -58,7 +59,7 @@ class _PharmacyFinderScreenState extends State<PharmacyFinderScreen> {
     try {
       if (!await Geolocator.isLocationServiceEnabled()) {
         setState(() {
-          _error = 'กรุณาเปิดบริการตำแหน่ง (Location) ของเครื่องก่อนใช้งานฟีเจอร์นี้';
+          _error = t('กรุณาเปิดบริการตำแหน่ง (Location) ของเครื่องก่อนใช้งานฟีเจอร์นี้', 'Turn on location services on your phone before using this');
           _loading = false;
         });
         return;
@@ -71,7 +72,7 @@ class _PharmacyFinderScreenState extends State<PharmacyFinderScreen> {
       if (permission == LocationPermission.denied ||
           permission == LocationPermission.deniedForever) {
         setState(() {
-          _error = 'ต้องอนุญาตการเข้าถึงตำแหน่งเพื่อค้นหาร้านยาใกล้ฉัน';
+          _error = t('ต้องอนุญาตการเข้าถึงตำแหน่งเพื่อค้นหาร้านยาใกล้ฉัน', 'Location access is needed to find pharmacies near you');
           _showOpenAppSettings = permission == LocationPermission.deniedForever;
           _loading = false;
         });
@@ -103,7 +104,7 @@ class _PharmacyFinderScreenState extends State<PharmacyFinderScreen> {
     } on SocketException catch (_) {
       if (!mounted) return;
       setState(() {
-        _error = 'เชื่อมต่อ OpenStreetMap ไม่ได้ — ตรวจสอบอินเทอร์เน็ต';
+        _error = t('เชื่อมต่อ OpenStreetMap ไม่ได้ — ตรวจสอบอินเทอร์เน็ต', 'Cannot reach OpenStreetMap — check your internet');
         _loading = false;
       });
     } on TimeoutException catch (_) {
@@ -116,7 +117,7 @@ class _PharmacyFinderScreenState extends State<PharmacyFinderScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = 'ค้นหาร้านยาไม่สำเร็จ: $e';
+        _error = t('ค้นหาร้านยาไม่สำเร็จ: $e', 'Pharmacy search failed: $e');
         _loading = false;
       });
     }
@@ -139,7 +140,7 @@ class _PharmacyFinderScreenState extends State<PharmacyFinderScreen> {
                     child: OnboardingHeader(
                       icon: Icons.arrow_back,
                       onIconTap: () => Navigator.of(context).pop(),
-                      title: 'ร้านยา/คลินิกใกล้ฉัน',
+                      title: t('ร้านยา/คลินิกใกล้ฉัน', 'Pharmacies / clinics near me'),
                     ),
                   ),
                   if (hasResults)
@@ -191,7 +192,7 @@ class _PharmacyFinderScreenState extends State<PharmacyFinderScreen> {
               const SizedBox(height: 16),
               OutlinedButton(
                 onPressed: _showOpenAppSettings ? Geolocator.openAppSettings : _load,
-                child: Text(_showOpenAppSettings ? 'เปิดการตั้งค่าแอป' : 'ลองอีกครั้ง'),
+                child: Text(_showOpenAppSettings ? t('เปิดการตั้งค่าแอป', 'Open app settings') : t('ลองอีกครั้ง', 'Try again')),
               ),
             ],
           ),
@@ -199,12 +200,12 @@ class _PharmacyFinderScreenState extends State<PharmacyFinderScreen> {
       );
     }
     if (_places.isEmpty) {
-      return const Center(
+      return Center(
         child: Padding(
           padding: EdgeInsets.all(32),
           child: Text(
             'ค้นหาออกไปไกลถึง 100 กม. แล้วยังไม่พบ\n'
-            'พื้นที่นี้อาจยังไม่มีข้อมูลใน OpenStreetMap',
+            t('พื้นที่นี้อาจยังไม่มีข้อมูลใน OpenStreetMap', 'This area may not be mapped in OpenStreetMap yet'),
             textAlign: TextAlign.center,
             style: TextStyle(color: OnboardingColors.textMuted, height: 1.5),
           ),
@@ -238,8 +239,8 @@ class _PharmacyFinderScreenState extends State<PharmacyFinderScreen> {
               ? Center(
                   child: Text(
                     _filter == PlaceKind.pharmacy
-                        ? 'ผลการค้นหานี้ไม่มีร้านขายยา'
-                        : 'ผลการค้นหานี้ไม่มีคลินิก',
+                        ? t('ผลการค้นหานี้ไม่มีร้านขายยา', 'No pharmacies in these results')
+                        : t('ผลการค้นหานี้ไม่มีคลินิก', 'No clinics in these results'),
                     style: const TextStyle(color: OnboardingColors.textMuted),
                   ),
                 )
@@ -300,23 +301,23 @@ class _StatusLine extends StatelessWidget {
     final String text;
     if (loading) {
       icon = Icons.my_location;
-      text = 'กำลังค้นหาตำแหน่ง...';
+      text = t('กำลังค้นหาตำแหน่ง...', 'Finding your location...');
     } else if (error != null) {
       icon = Icons.error_outline;
       // Deliberately vague about which step failed: the message below already
       // says, and claiming the location lookup failed when it was the place
       // search sends the user off to check GPS for nothing.
-      text = 'ค้นหาไม่สำเร็จ';
+      text = t('ค้นหาไม่สำเร็จ', 'Search failed');
     } else {
       icon = Icons.place_outlined;
       // The radius is what the search had to reach, not a limit the user
       // chose, so it reads as "within" rather than "we only looked this far".
       final km = radiusMeters >= 1000
-          ? '${(radiusMeters / 1000).round()} กม.'
-          : '$radiusMeters ม.';
+          ? t('${(radiusMeters / 1000).round()} กม.', '${(radiusMeters / 1000).round()} km')
+          : t('$radiusMeters ม.', '$radiusMeters m');
       text = truncated
-          ? 'ใกล้ที่สุด $count แห่ง (ในรัศมี $km มีมากกว่านี้)'
-          : 'พบ $count แห่ง ในรัศมี $km';
+          ? t('ใกล้ที่สุด $count แห่ง (ในรัศมี $km มีมากกว่านี้)', 'Nearest $count (more within $km)')
+          : t('พบ $count แห่ง ในรัศมี $km', '$count found within $km');
     }
 
     return Row(
@@ -356,7 +357,7 @@ class _FilterChips extends StatelessWidget {
       child: Row(
         children: [
           _Chip(
-            label: 'ทั้งหมด ($countAll)',
+            label: t('ทั้งหมด ($countAll)', 'All ($countAll)'),
             selected: selected == null,
             onTap: () => onChanged(null),
           ),
@@ -511,7 +512,7 @@ class _PlaceCard extends StatelessWidget {
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  child: const Text('รายละเอียด'),
+                  child: Text(t('รายละเอียด', 'Details')),
                 ),
               ),
               const SizedBox(width: 10),
@@ -527,7 +528,7 @@ class _PlaceCard extends StatelessWidget {
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  label: const Text('นำทาง'),
+                  label: Text(t('นำทาง', 'Directions')),
                 ),
               ),
             ],
@@ -601,28 +602,28 @@ class _DetailSheet extends StatelessWidget {
             _DetailRow(
               icon: Icons.phone_outlined,
               text: place.phone!,
-              onTap: () => _launch(context, Uri.parse('tel:${place.phone}'), 'โทรออก'),
+              onTap: () => _launch(context, Uri.parse('tel:${place.phone}'), t('โทรออก', 'Call')),
             ),
           if (place.website != null)
             _DetailRow(
               icon: Icons.language,
               text: place.website!,
-              onTap: () => _launch(context, Uri.parse(place.website!), 'เปิดเว็บไซต์'),
+              onTap: () => _launch(context, Uri.parse(place.website!), t('เปิดเว็บไซต์', 'Open website')),
             ),
           if (place.address.isEmpty &&
               place.openingHours == null &&
               place.phone == null &&
               place.website == null)
-            const Padding(
+            Padding(
               padding: EdgeInsets.symmetric(vertical: 8),
               child: Text(
-                'OpenStreetMap ยังไม่มีข้อมูลติดต่อของสถานที่นี้',
+                t('OpenStreetMap ยังไม่มีข้อมูลติดต่อของสถานที่นี้', 'OpenStreetMap has no contact details for this place'),
                 style: TextStyle(fontSize: 13, color: OnboardingColors.textMuted),
               ),
             ),
           const SizedBox(height: 20),
           OnboardingPrimaryButton(
-            label: 'นำทางด้วย Google Maps',
+            label: t('นำทางด้วย Google Maps', 'Open in Google Maps'),
             onPressed: () => openPharmacyInGoogleMaps(context, place),
           ),
         ],
@@ -681,7 +682,7 @@ Future<void> openPharmacyInGoogleMaps(BuildContext context, NearbyPharmacy pharm
   final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
   if (!opened && context.mounted) {
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('เปิด Google Maps ไม่สำเร็จ')),
+      SnackBar(content: Text(t('เปิด Google Maps ไม่สำเร็จ', 'Could not open Google Maps'))),
     );
   }
 }

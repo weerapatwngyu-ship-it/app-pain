@@ -6,6 +6,7 @@ import '../data/doctor_repository.dart';
 import '../domain/entities/doctor.dart';
 import 'doctor_card.dart';
 import 'doctor_detail_screen.dart';
+import '../../../core/i18n/app_locale.dart';
 
 /// The directory as a patient sees it: browse and message only. Adding or
 /// editing a listing is an admin action — a patient publishing a doctor is how
@@ -76,7 +77,7 @@ class _DoctorListScreenState extends State<DoctorListScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF7FAFA),
       appBar: AppBar(
-        title: const Text('ปรึกษาแพทย์'),
+        title: Text(t('ปรึกษาแพทย์', 'Talk to a doctor')),
       ),
       body: FutureBuilder<List<Doctor>>(
         future: _doctorsFuture,
@@ -85,15 +86,15 @@ class _DoctorListScreenState extends State<DoctorListScreen> {
             return const Center(child: CircularProgressIndicator());
           }
           if (snapshot.hasError) {
-            return const Center(child: Text('โหลดข้อมูลแพทย์ไม่สำเร็จ'));
+            return Center(child: Text(t('โหลดข้อมูลแพทย์ไม่สำเร็จ', 'Could not load doctors')));
           }
           final doctors = snapshot.data ?? const <Doctor>[];
           if (doctors.isEmpty) {
-            return const Center(
+            return Center(
               child: Padding(
                 padding: EdgeInsets.all(32),
                 child: Text(
-                  'ยังไม่มีแพทย์ในระบบ\nผู้ดูแลระบบจะเป็นผู้เพิ่มรายชื่อแพทย์',
+                  t('ยังไม่มีแพทย์ในระบบ\nผู้ดูแลระบบจะเป็นผู้เพิ่มรายชื่อแพทย์', 'No doctors listed yet\nAn administrator adds them'),
                   textAlign: TextAlign.center,
                   style: TextStyle(color: OnboardingColors.textMuted),
                 ),

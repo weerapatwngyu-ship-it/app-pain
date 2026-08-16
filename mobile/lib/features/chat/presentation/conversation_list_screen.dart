@@ -4,6 +4,7 @@ import '../../auth/presentation/onboarding/onboarding_theme.dart';
 import '../data/chat_repository.dart';
 import '../domain/entities/conversation.dart';
 import 'chat_screen.dart';
+import '../../../core/i18n/app_locale.dart';
 
 /// Thread list for either side. [isDoctorView] only picks which counterpart
 /// name to show — the underlying rows and access rules are the same.
@@ -47,8 +48,8 @@ class _ConversationListScreenState extends State<ConversationListScreen> {
 
   Future<void> _open(Conversation conversation) async {
     final title = widget.isDoctorView
-        ? (conversation.patientName ?? 'ผู้ป่วย')
-        : (conversation.doctorName ?? 'แพทย์');
+        ? (conversation.patientName ?? t('ผู้ป่วย', 'Patient'))
+        : (conversation.doctorName ?? t('แพทย์', 'Doctor'));
     await Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => ChatScreen(
@@ -69,7 +70,7 @@ class _ConversationListScreenState extends State<ConversationListScreen> {
       backgroundColor: Colors.white,
       appBar: AppBar(
         automaticallyImplyLeading: widget.showBackButton,
-        title: Text(widget.isDoctorView ? 'ข้อความจากผู้ป่วย' : 'ข้อความของฉัน'),
+        title: Text(widget.isDoctorView ? t('ข้อความจากผู้ป่วย', 'Patient messages') : t('ข้อความของฉัน', 'My messages')),
       ),
       body: FutureBuilder<List<Conversation>>(
         future: _future,
@@ -84,10 +85,10 @@ class _ConversationListScreenState extends State<ConversationListScreen> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text('โหลดข้อความไม่สำเร็จ: ${snapshot.error}',
+                    Text(t('โหลดข้อความไม่สำเร็จ: ${snapshot.error}', 'Could not load messages: ${snapshot.error}'),
                         textAlign: TextAlign.center),
                     const SizedBox(height: 16),
-                    OutlinedButton(onPressed: _reload, child: const Text('ลองอีกครั้ง')),
+                    OutlinedButton(onPressed: _reload, child: Text(t('ลองอีกครั้ง', 'Try again'))),
                   ],
                 ),
               ),
@@ -105,8 +106,8 @@ class _ConversationListScreenState extends State<ConversationListScreen> {
                       padding: const EdgeInsets.all(32),
                       child: Text(
                         widget.isDoctorView
-                            ? 'ยังไม่มีผู้ป่วยส่งข้อความมา'
-                            : 'ยังไม่มีการสนทนา\nเลือกแพทย์จาก "ปรึกษาแพทย์" เพื่อเริ่มคุย',
+                            ? t('ยังไม่มีผู้ป่วยส่งข้อความมา', 'No patients have messaged you yet')
+                            : t('ยังไม่มีการสนทนา\nเลือกแพทย์จาก "ปรึกษาแพทย์" เพื่อเริ่มคุย', 'No conversations yet\nPick a doctor under "Talk to a doctor" to start'),
                         textAlign: TextAlign.center,
                         style: const TextStyle(color: OnboardingColors.textMuted),
                       ),
@@ -128,8 +129,8 @@ class _ConversationListScreenState extends State<ConversationListScreen> {
               itemBuilder: (context, index) {
                 final conversation = conversations[index];
                 final title = widget.isDoctorView
-                    ? (conversation.patientName ?? 'ผู้ป่วย')
-                    : (conversation.doctorName ?? 'แพทย์');
+                    ? (conversation.patientName ?? t('ผู้ป่วย', 'Patient'))
+                    : (conversation.doctorName ?? t('แพทย์', 'Doctor'));
                 final photoUrl =
                     widget.isDoctorView ? null : conversation.doctorPhotoUrl;
                 return ListTile(

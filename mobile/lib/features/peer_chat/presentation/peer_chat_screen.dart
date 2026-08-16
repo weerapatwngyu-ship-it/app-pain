@@ -7,6 +7,7 @@ import '../data/peer_chat_repository.dart';
 import '../domain/entities/peer_thread.dart';
 import 'peer_directory_screen.dart';
 import '../../../core/errors/friendly_error.dart';
+import '../../../core/i18n/app_locale.dart';
 
 /// "คุยกับผู้ป่วยด้วยกัน" — the patient's own thread list, gated behind an
 /// explicit opt-in.
@@ -57,7 +58,7 @@ class _PeerChatScreenState extends State<PeerChatScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = 'โหลดข้อมูลไม่สำเร็จ: $e';
+        _error = t('โหลดข้อมูลไม่สำเร็จ: $e', 'Could not load: $e');
         _loading = false;
       });
     }
@@ -79,7 +80,7 @@ class _PeerChatScreenState extends State<PeerChatScreen> {
       if (!mounted) return;
       setState(() => _saving = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(friendlyError(e, whileDoing: 'บันทึกไม่สำเร็จ'))),
+        SnackBar(content: Text(friendlyError(e, whileDoing: t('บันทึกไม่สำเร็จ', 'Could not save')))),
       );
     }
   }
@@ -88,22 +89,22 @@ class _PeerChatScreenState extends State<PeerChatScreen> {
     final agreed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('เปิดให้ผู้ป่วยคนอื่นคุยด้วย'),
-        content: const Text(
+        title: Text(t('เปิดให้ผู้ป่วยคนอื่นคุยด้วย', 'Let other patients message me')),
+        content: Text(
           'เมื่อเปิด ผู้ป่วยคนอื่นที่เปิดฟีเจอร์นี้จะเห็นชื่อของคุณ '
           'และส่งข้อความหาคุณได้\n\n'
           'ข้อมูลการรักษา ยา และอาการของคุณจะไม่ถูกแชร์\n\n'
           'ข้อความในนี้เป็นการคุยกันเองระหว่างผู้ป่วย ไม่ใช่คำแนะนำจากแพทย์ '
-          'อย่าใช้แทนการปรึกษาแพทย์',
+          t('อย่าใช้แทนการปรึกษาแพทย์', 'Do not use it in place of medical advice.'),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('ยกเลิก'),
+            child: Text(t('ยกเลิก', 'Cancel')),
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('เข้าใจแล้ว เปิดเลย'),
+            child: Text(t('เข้าใจแล้ว เปิดเลย', 'Got it, turn it on')),
           ),
         ],
       ),
@@ -126,7 +127,7 @@ class _PeerChatScreenState extends State<PeerChatScreen> {
         builder: (_) => ChatScreen(
           conversationId: thread.conversationId,
           title: thread.otherName,
-          subtitle: 'ผู้ป่วยด้วยกัน',
+          subtitle: t('ผู้ป่วยด้วยกัน', 'Fellow patient'),
           repository: widget.repository,
         ),
       ),
@@ -138,14 +139,14 @@ class _PeerChatScreenState extends State<PeerChatScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(title: const Text('คุยกับผู้ป่วยด้วยกัน')),
+      appBar: AppBar(title: Text(t('คุยกับผู้ป่วยด้วยกัน', 'Talk to other patients'))),
       body: _buildBody(),
       floatingActionButton: _enabled && !_loading
           ? FloatingActionButton.extended(
               onPressed: _openDirectory,
               backgroundColor: OnboardingColors.teal,
               icon: const Icon(Icons.person_search, color: Colors.white),
-              label: const Text('หาเพื่อนคุย', style: TextStyle(color: Colors.white)),
+              label: Text(t('หาเพื่อนคุย', 'Find someone'), style: TextStyle(color: Colors.white)),
             )
           : null,
     );
@@ -167,7 +168,7 @@ class _PeerChatScreenState extends State<PeerChatScreen> {
                   setState(() => _loading = true);
                   _load();
                 },
-                child: const Text('ลองอีกครั้ง'),
+                child: Text(t('ลองอีกครั้ง', 'Try again')),
               ),
             ],
           ),
@@ -191,11 +192,11 @@ class _PeerChatScreenState extends State<PeerChatScreen> {
       // No explicit thumb colour: the parameter for it was renamed
       // (activeColor -> activeThumbColor) across the Flutter versions this
       // pubspec allows, so the theme's colorScheme drives it instead.
-      title: const Text('เปิดให้ผู้ป่วยคนอื่นคุยด้วย'),
+      title: Text(t('เปิดให้ผู้ป่วยคนอื่นคุยด้วย', 'Let other patients message me')),
       subtitle: Text(
         _enabled
-            ? 'ผู้ป่วยที่เปิดฟีเจอร์นี้เหมือนกันจะเห็นชื่อคุณ'
-            : 'ตอนนี้ไม่มีใครเห็นชื่อคุณ',
+            ? t('ผู้ป่วยที่เปิดฟีเจอร์นี้เหมือนกันจะเห็นชื่อคุณ', 'Patients who turned this on can see your name')
+            : t('ตอนนี้ไม่มีใครเห็นชื่อคุณ', 'Nobody can see your name right now'),
         style: const TextStyle(fontSize: 12, color: OnboardingColors.textMuted),
       ),
     );
@@ -203,12 +204,12 @@ class _PeerChatScreenState extends State<PeerChatScreen> {
 
   Widget _buildThreads() {
     if (!_enabled) {
-      return const Center(
+      return Center(
         child: Padding(
           padding: EdgeInsets.all(32),
           child: Text(
             'เปิดสวิตช์ด้านบนเพื่อเริ่มคุยกับผู้ป่วยคนอื่น\n\n'
-            'ข้อความที่นี่เป็นการคุยกันเองระหว่างผู้ป่วย\nไม่ใช่คำแนะนำจากแพทย์',
+            t('ข้อความที่นี่เป็นการคุยกันเองระหว่างผู้ป่วย\nไม่ใช่คำแนะนำจากแพทย์', 'Messages here are between patients\nnot medical advice'),
             textAlign: TextAlign.center,
             style: TextStyle(color: OnboardingColors.textMuted, height: 1.5),
           ),
@@ -216,11 +217,11 @@ class _PeerChatScreenState extends State<PeerChatScreen> {
       );
     }
     if (_threads.isEmpty) {
-      return const Center(
+      return Center(
         child: Padding(
           padding: EdgeInsets.all(32),
           child: Text(
-            'ยังไม่มีแชท\nกด "หาเพื่อนคุย" เพื่อเริ่มคุยกับใครสักคน',
+            t('ยังไม่มีแชท\nกด "หาเพื่อนคุย" เพื่อเริ่มคุยกับใครสักคน', 'No chats yet\nPress "Find someone" to start one'),
             textAlign: TextAlign.center,
             style: TextStyle(color: OnboardingColors.textMuted),
           ),

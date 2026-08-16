@@ -4,6 +4,7 @@ import '../../auth/presentation/onboarding/onboarding_theme.dart';
 import '../data/health_question_repository.dart';
 import '../domain/entities/health_question.dart';
 import 'health_topic_detail_screen.dart' show QuestionCard;
+import '../../../core/i18n/app_locale.dart';
 
 /// Every question the patient has asked, across all topics.
 class MyQuestionsScreen extends StatefulWidget {
@@ -49,7 +50,7 @@ class _MyQuestionsScreenState extends State<MyQuestionsScreen> {
               child: OnboardingHeader(
                 icon: Icons.arrow_back,
                 onIconTap: () => Navigator.of(context).pop(),
-                title: 'คำถามของฉัน',
+                title: t('คำถามของฉัน', 'My questions'),
               ),
             ),
             Expanded(
@@ -67,13 +68,13 @@ class _MyQuestionsScreenState extends State<MyQuestionsScreen> {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Text(
-                              'โหลดคำถามไม่สำเร็จ: ${snapshot.error}',
+                              t('โหลดคำถามไม่สำเร็จ: ${snapshot.error}', 'Could not load questions: ${snapshot.error}'),
                               textAlign: TextAlign.center,
                             ),
                             const SizedBox(height: 16),
                             OutlinedButton(
                               onPressed: _reload,
-                              child: const Text('ลองอีกครั้ง'),
+                              child: Text(t('ลองอีกครั้ง', 'Try again')),
                             ),
                           ],
                         ),
@@ -82,11 +83,11 @@ class _MyQuestionsScreenState extends State<MyQuestionsScreen> {
                   }
                   final questions = snapshot.data ?? const <HealthQuestion>[];
                   if (questions.isEmpty) {
-                    return const Center(
+                    return Center(
                       child: Padding(
                         padding: EdgeInsets.all(32),
                         child: Text(
-                          'ยังไม่เคยฝากคำถามถึงแพทย์\nเลือกหมวดในคลินิกออนไลน์เพื่อเริ่มถาม',
+                          t('ยังไม่เคยฝากคำถามถึงแพทย์\nเลือกหมวดในคลินิกออนไลน์เพื่อเริ่มถาม', 'You have not asked anything yet\nPick a topic in the online clinic to start'),
                           textAlign: TextAlign.center,
                           style: TextStyle(color: OnboardingColors.textMuted),
                         ),

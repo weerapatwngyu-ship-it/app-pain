@@ -11,6 +11,7 @@ import '../../auth/presentation/onboarding/onboarding_theme.dart';
 import '../../../shared/validation/thai_phone.dart';
 import '../data/patient_profile_repository.dart';
 import '../../../core/errors/friendly_error.dart';
+import '../../../core/i18n/app_locale.dart';
 
 /// The form a new member fills in once, straight after signing up.
 ///
@@ -61,10 +62,12 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
   /// while this form is still open and the parent has not been told yet.
   late AppUser _user = widget.user;
 
-  static const _genderOptions = {
-    'female': 'หญิง',
-    'male': 'ชาย',
-    'unspecified': 'ไม่ระบุ',
+  /// A getter, not a const map: the labels are translated, so they have
+  /// to be rebuilt after a language change rather than frozen at load.
+  static Map<String, String> get _genderOptions => {
+    'female': t('หญิง', 'Female'),
+    'male': t('ชาย', 'Male'),
+    'unspecified': t('ไม่ระบุ', 'Not specified'),
   };
 
   @override
@@ -83,7 +86,7 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
       initialDate: _birthDate ?? DateTime(now.year - 25),
       firstDate: DateTime(now.year - 120),
       lastDate: now,
-      helpText: 'เลือกวันเกิด',
+      helpText: t('เลือกวันเกิด', 'Choose date of birth'),
     );
     if (picked != null) setState(() => _birthDate = picked);
   }
@@ -115,7 +118,7 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
     // The date picker is not a form field, so its own error has to be raised
     // by hand rather than by the validator run above.
     if (_birthDate == null) {
-      setState(() => _error = 'กรุณาเลือกวันเกิด');
+      setState(() => _error = t('กรุณาเลือกวันเกิด', 'Choose your date of birth'));
       return;
     }
 
@@ -153,12 +156,12 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
       // 23505 is Postgres' unique-violation code, which here can only be the
       // email already being on another account.
       setState(() => _error = e.code == '23505'
-          ? 'อีเมลนี้ถูกใช้สมัครสมาชิกแล้ว'
-          : 'บันทึกไม่สำเร็จ: ${e.message}');
+          ? t('อีเมลนี้ถูกใช้สมัครสมาชิกแล้ว', 'That email is already registered')
+          : t('บันทึกไม่สำเร็จ: ${e.message}', 'Could not save: ${e.message}'));
     } on SocketException catch (_) {
-      setState(() => _error = 'เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ ลองใหม่อีกครั้ง');
+      setState(() => _error = t('เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ ลองใหม่อีกครั้ง', 'Cannot reach the server. Try again.'));
     } catch (e) {
-      setState(() => _error = friendlyError(e, whileDoing: 'บันทึกไม่สำเร็จ'));
+      setState(() => _error = friendlyError(e, whileDoing: t('บันทึกไม่สำเร็จ', 'Could not save')));
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -188,25 +191,25 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
                 padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
                 child: Row(
                   children: [
-                    const Expanded(
+                    Expanded(
                       child: Text(
-                        'กรอกข้อมูลส่วนตัว',
+                        t('กรอกข้อมูลส่วนตัว', 'Your details'),
                         style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
                       ),
                     ),
                     TextButton(
                       onPressed: _saving ? null : widget.onLogout,
-                      child: const Text('ออกจากระบบ'),
+                      child: Text(t('ออกจากระบบ', 'Sign out')),
                     ),
                   ],
                 ),
               ),
-              const Padding(
+              Padding(
                 padding: EdgeInsets.fromLTRB(20, 4, 20, 0),
                 child: Align(
                   alignment: Alignment.centerLeft,
                   child: Text(
-                    'กรอกครั้งเดียว แก้ไขภายหลังได้ที่โปรไฟล์',
+                    t('กรอกครั้งเดียว แก้ไขภายหลังได้ที่โปรไฟล์', 'Once only — you can change these later in your profile'),
                     style: TextStyle(color: OnboardingColors.textMuted, fontSize: 13),
                   ),
                 ),
@@ -231,8 +234,8 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
                             loading: _uploadingAvatar,
                           ),
                           const SizedBox(height: 8),
-                          const Text(
-                            'แตะเพื่อใส่รูปโปรไฟล์',
+                          Text(
+                            t('แตะเพื่อใส่รูปโปรไฟล์', 'Tap to add a profile photo'),
                             style: TextStyle(
                               color: OnboardingColors.textMuted,
                               fontSize: 13,
@@ -242,25 +245,25 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
                       ),
                     ),
                     const SizedBox(height: 24),
-                    const _Label('ชื่อจริง*'),
+                    _Label(t('ชื่อจริง*', 'First name*')),
                     TextFormField(
                       controller: _firstNameController,
                       textCapitalization: TextCapitalization.words,
-                      decoration: _decoration('ชื่อจริง'),
+                      decoration: _decoration(t('ชื่อจริง', 'First name')),
                       validator: (v) =>
-                          (v == null || v.trim().isEmpty) ? 'กรอกชื่อจริง' : null,
+                          (v == null || v.trim().isEmpty) ? t('กรอกชื่อจริง', 'Enter your first name') : null,
                     ),
                     const SizedBox(height: 16),
-                    const _Label('นามสกุล*'),
+                    _Label(t('นามสกุล*', 'Last name*')),
                     TextFormField(
                       controller: _lastNameController,
                       textCapitalization: TextCapitalization.words,
-                      decoration: _decoration('นามสกุล'),
+                      decoration: _decoration(t('นามสกุล', 'Last name')),
                       validator: (v) =>
-                          (v == null || v.trim().isEmpty) ? 'กรอกนามสกุล' : null,
+                          (v == null || v.trim().isEmpty) ? t('กรอกนามสกุล', 'Enter your last name') : null,
                     ),
                     const SizedBox(height: 16),
-                    const _Label('เบอร์โทรศัพท์*'),
+                    _Label(t('เบอร์โทรศัพท์*', 'Phone number*')),
                     TextFormField(
                       controller: _phoneController,
                       keyboardType: TextInputType.phone,
@@ -268,24 +271,24 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
                       validator: validateThaiPhone,
                     ),
                     const SizedBox(height: 16),
-                    const _Label('อีเมล*'),
+                    _Label(t('อีเมล*', 'Email*')),
                     TextFormField(
                       controller: _emailController,
                       keyboardType: TextInputType.emailAddress,
                       decoration: _decoration('example@email.com'),
                       validator: (v) => (v == null || !v.contains('@'))
-                          ? 'กรอกอีเมลให้ถูกต้อง'
+                          ? t('กรอกอีเมลให้ถูกต้อง', 'Enter a valid email')
                           : null,
                     ),
                     const SizedBox(height: 16),
-                    const _Label('วันเกิด*'),
+                    _Label(t('วันเกิด*', 'Date of birth*')),
                     InkWell(
                       onTap: _saving ? null : _pickBirthDate,
                       child: InputDecorator(
-                        decoration: _decoration('วว/ดด/ปปปป'),
+                        decoration: _decoration(t('วว/ดด/ปปปป', 'DD/MM/YYYY')),
                         child: Text(
                           _birthDate == null
-                              ? 'วว/ดด/ปปปป'
+                              ? t('วว/ดด/ปปปป', 'DD/MM/YYYY')
                               : _formatBirthDate(_birthDate!),
                           style: TextStyle(
                             color: _birthDate == null
@@ -296,7 +299,7 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
                       ),
                     ),
                     const SizedBox(height: 16),
-                    const _Label('เพศ'),
+                    _Label(t('เพศ', 'Gender')),
                     Row(
                       children: _genderOptions.entries.map((entry) {
                         final selected = _gender == entry.key;
@@ -346,7 +349,7 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
                 child: OnboardingPrimaryButton(
-                  label: 'บันทึกและเริ่มใช้งาน',
+                  label: t('บันทึกและเริ่มใช้งาน', 'Save and get started'),
                   loading: _saving,
                   onPressed: _saving ? null : _submit,
                 ),

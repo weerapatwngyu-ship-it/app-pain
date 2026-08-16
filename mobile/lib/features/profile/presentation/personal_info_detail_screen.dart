@@ -7,11 +7,14 @@ import '../data/patient_profile_repository.dart';
 import '../domain/entities/patient_profile.dart';
 import 'health_profile_screen.dart';
 import 'personal_info_edit_screen.dart';
+import '../../../core/i18n/app_locale.dart';
 
-const _genderLabels = {
-  'female': 'หญิง',
-  'male': 'ชาย',
-  'unspecified': 'ไม่ระบุ',
+/// A getter, not a const map: the labels are translated, so they have to
+/// be rebuilt after a language change rather than frozen at load.
+Map<String, String> get _genderLabels => {
+  'female': t('หญิง', 'Female'),
+  'male': t('ชาย', 'Male'),
+  'unspecified': t('ไม่ระบุ', 'Not specified'),
 };
 
 class PersonalInfoDetailScreen extends StatefulWidget {
@@ -128,9 +131,9 @@ class _PersonalInfoDetailScreenState extends State<PersonalInfoDetailScreen> {
                     onTap: () => Navigator.of(context).pop(),
                   ),
                   const SizedBox(width: 16),
-                  const Expanded(
+                  Expanded(
                     child: Text(
-                      'ข้อมูลส่วนตัว',
+                      t('ข้อมูลส่วนตัว', 'Personal details'),
                       style: TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.w700,
@@ -140,7 +143,7 @@ class _PersonalInfoDetailScreenState extends State<PersonalInfoDetailScreen> {
                   ),
                   TextButton(
                     onPressed: _openEdit,
-                    child: const Text('แก้ไข', style: TextStyle(color: OnboardingColors.teal)),
+                    child: Text(t('แก้ไข', 'Edit'), style: TextStyle(color: OnboardingColors.teal)),
                   ),
                 ],
               ),
@@ -157,7 +160,7 @@ class _PersonalInfoDetailScreenState extends State<PersonalInfoDetailScreen> {
                           if (snapshot.hasError) {
                             return Center(
                               child: Text(
-                                'โหลดข้อมูลไม่สำเร็จ: ${snapshot.error}',
+                                t('โหลดข้อมูลไม่สำเร็จ: ${snapshot.error}', 'Could not load: ${snapshot.error}'),
                                 textAlign: TextAlign.center,
                               ),
                             );
@@ -201,51 +204,51 @@ class _PersonalInfoDetailScreenState extends State<PersonalInfoDetailScreen> {
         children: [
           Row(
             children: [
-              const Expanded(
+              Expanded(
                 child: Text(
-                  'ข้อมูลสุขภาพ',
+                  t('ข้อมูลสุขภาพ', 'Health information'),
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
                 ),
               ),
               TextButton(
                 onPressed: _user.patientId == null ? null : _openHealthEdit,
-                child: const Text('แก้ไข',
+                child: Text(t('แก้ไข', 'Edit'),
                     style: TextStyle(color: OnboardingColors.teal)),
               ),
             ],
           ),
           const SizedBox(height: 4),
           _InfoRow(
-            label: 'โรคประจำตัว',
+            label: t('โรคประจำตัว', 'Ongoing conditions'),
             value: profile?.primaryCondition ?? '-',
           ),
           // Shown before the rest because it is the entry the app actually
           // acts on — it is checked against every medication being added.
           _chipList(
-            label: 'ยาที่แพ้',
+            label: t('ยาที่แพ้', 'Drug allergies'),
             values: allergies,
             background: const Color(0xFFFDECEC),
             border: const Color(0xFFF3B9B9),
           ),
           _chipList(
-            label: 'อาหารที่แพ้',
+            label: t('อาหารที่แพ้', 'Food allergies'),
             values: foodAllergies,
             background: const Color(0xFFFFF4E5),
             border: const Color(0xFFF0D6A8),
           ),
           const Divider(color: OnboardingColors.border, height: 1),
-          _InfoRow(label: 'กรุ๊ปเลือด', value: profile?.bloodType ?? '-'),
+          _InfoRow(label: t('กรุ๊ปเลือด', 'Blood type'), value: profile?.bloodType ?? '-'),
           _InfoRow(
-            label: 'น้ำหนัก',
+            label: t('น้ำหนัก', 'Weight'),
             value: profile?.weightKg == null
                 ? '-'
-                : '${_numberText(profile!.weightKg)} กก.',
+                : t('${_numberText(profile!.weightKg)} กก.', '${_numberText(profile!.weightKg)} kg'),
           ),
           _InfoRow(
-            label: 'ส่วนสูง',
+            label: t('ส่วนสูง', 'Height'),
             value: profile?.heightCm == null
                 ? '-'
-                : '${_numberText(profile!.heightCm)} ซม.',
+                : t('${_numberText(profile!.heightCm)} ซม.', '${_numberText(profile!.heightCm)} cm'),
             showDivider: false,
           ),
         ],
@@ -320,16 +323,16 @@ class _PersonalInfoDetailScreenState extends State<PersonalInfoDetailScreen> {
             child: Icon(Icons.person, color: Colors.white, size: 48),
           ),
           const SizedBox(height: 20),
-          _InfoRow(label: 'ชื่อจริง', value: _firstNameOf(_user)),
-          _InfoRow(label: 'นามสกุล', value: _lastNameOf(_user)),
-          _InfoRow(label: 'เบอร์โทรศัพท์', value: _user.phone ?? '-'),
-          _InfoRow(label: 'อีเมล', value: _user.email),
+          _InfoRow(label: t('ชื่อจริง', 'First name'), value: _firstNameOf(_user)),
+          _InfoRow(label: t('นามสกุล', 'Last name'), value: _lastNameOf(_user)),
+          _InfoRow(label: t('เบอร์โทรศัพท์', 'Phone number'), value: _user.phone ?? '-'),
+          _InfoRow(label: t('อีเมล', 'Email'), value: _user.email),
           _InfoRow(
-            label: 'วันเกิด',
+            label: t('วันเกิด', 'Date of birth'),
             value: profile == null ? '-' : _formatBirthDate(profile.birthDate),
           ),
           _InfoRow(
-            label: 'เพศสภาพ',
+            label: t('เพศสภาพ', 'Gender'),
             value: profile?.gender == null
                 ? '-'
                 : (_genderLabels[profile!.gender] ?? '-'),

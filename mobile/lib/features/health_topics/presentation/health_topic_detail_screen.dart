@@ -8,6 +8,7 @@ import '../../doctors/presentation/doctor_detail_screen.dart';
 import '../data/health_question_repository.dart';
 import '../domain/entities/health_question.dart';
 import '../domain/entities/health_topic.dart';
+import '../../../core/i18n/app_locale.dart';
 
 class HealthTopicDetailScreen extends StatefulWidget {
   const HealthTopicDetailScreen({
@@ -83,7 +84,7 @@ class _HealthTopicDetailScreenState extends State<HealthTopicDetailScreen> {
     if (asked == true && mounted) {
       setState(_reloadQuestions);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('ส่งคำถามแล้ว — แพทย์จะตอบกลับในแอป')),
+        SnackBar(content: Text(t('ส่งคำถามแล้ว — แพทย์จะตอบกลับในแอป', 'Question sent — a doctor will reply in the app'))),
       );
     }
   }
@@ -125,18 +126,18 @@ class _HealthTopicDetailScreenState extends State<HealthTopicDetailScreen> {
             const SizedBox(height: 24),
             _Section(
               icon: Icons.checklist_rtl,
-              title: 'อาการที่พบบ่อย',
+              title: t('อาการที่พบบ่อย', 'Common symptoms'),
               items: topic.commonSigns,
             ),
             _Section(
               icon: Icons.warning_amber_rounded,
-              title: 'ควรพบแพทย์เมื่อไหร่',
+              title: t('ควรพบแพทย์เมื่อไหร่', 'When to see a doctor'),
               items: topic.seeDoctorWhen,
               accent: const Color(0xFFC0392B),
             ),
             _Section(
               icon: Icons.favorite_outline,
-              title: 'ดูแลตัวเองอย่างไร',
+              title: t('ดูแลตัวเองอย่างไร', 'Looking after yourself'),
               items: topic.selfCare,
             ),
             const SizedBox(height: 8),
@@ -161,15 +162,15 @@ class _HealthTopicDetailScreenState extends State<HealthTopicDetailScreen> {
               ),
             ),
             const SizedBox(height: 28),
-            const Text(
-              'ปรึกษาบุคลากร',
+            Text(
+              t('ปรึกษาบุคลากร', 'Talk to a professional'),
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 12),
             _buildDoctors(),
             const SizedBox(height: 28),
-            const Text(
-              'คำถามของฉันในหมวดนี้',
+            Text(
+              t('คำถามของฉันในหมวดนี้', 'My questions in this topic'),
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 12),
@@ -177,12 +178,12 @@ class _HealthTopicDetailScreenState extends State<HealthTopicDetailScreen> {
             const SizedBox(height: 20),
             if (widget.patientId != null)
               OnboardingPrimaryButton(
-                label: 'ฝากคำถามถึงแพทย์',
+                label: t('ฝากคำถามถึงแพทย์', 'Ask a doctor'),
                 onPressed: _openAskSheet,
               )
             else
-              const Text(
-                'ยังไม่มีข้อมูลผู้ป่วยในบัญชีนี้ จึงยังฝากคำถามไม่ได้',
+              Text(
+                t('ยังไม่มีข้อมูลผู้ป่วยในบัญชีนี้ จึงยังฝากคำถามไม่ได้', 'This account has no patient record yet, so questions cannot be sent'),
                 style: TextStyle(fontSize: 13, color: OnboardingColors.textMuted),
               ),
           ],
@@ -203,8 +204,8 @@ class _HealthTopicDetailScreenState extends State<HealthTopicDetailScreen> {
         }
         final all = snapshot.data ?? const <Doctor>[];
         if (all.isEmpty) {
-          return const Text(
-            'ยังไม่มีรายชื่อบุคลากรในระบบ — ฝากคำถามไว้ได้ แพทย์จะตอบกลับภายหลัง',
+          return Text(
+            t('ยังไม่มีรายชื่อบุคลากรในระบบ — ฝากคำถามไว้ได้ แพทย์จะตอบกลับภายหลัง', 'No professionals listed yet — you can still ask, and a doctor will reply later'),
             style: TextStyle(fontSize: 13, color: OnboardingColors.textMuted),
           );
         }
@@ -221,23 +222,23 @@ class _HealthTopicDetailScreenState extends State<HealthTopicDetailScreen> {
               Row(
                 children: [
                   _FilterChip(
-                    label: 'เกี่ยวกับ${widget.topic.label} (${related.length})',
+                    label: t('เกี่ยวกับ${widget.topic.label} (${related.length})', 'About ${widget.topic.label} (${related.length})'),
                     selected: _onlyRelatedDoctors,
                     onTap: () => setState(() => _onlyRelatedDoctors = true),
                   ),
                   const SizedBox(width: 8),
                   _FilterChip(
-                    label: 'ทั้งหมด (${all.length})',
+                    label: t('ทั้งหมด (${all.length})', 'All (${all.length})'),
                     selected: !_onlyRelatedDoctors,
                     onTap: () => setState(() => _onlyRelatedDoctors = false),
                   ),
                 ],
               ),
             if (related.isEmpty)
-              const Padding(
+              Padding(
                 padding: EdgeInsets.only(bottom: 8),
                 child: Text(
-                  'ยังไม่มีบุคลากรที่ระบุความเชี่ยวชาญตรงหมวดนี้ — แสดงรายชื่อทั้งหมดแทน',
+                  t('ยังไม่มีบุคลากรที่ระบุความเชี่ยวชาญตรงหมวดนี้ — แสดงรายชื่อทั้งหมดแทน', 'No one lists this speciality — showing everyone instead'),
                   style: TextStyle(fontSize: 12, color: OnboardingColors.textMuted),
                 ),
               ),
@@ -265,8 +266,8 @@ class _HealthTopicDetailScreenState extends State<HealthTopicDetailScreen> {
 
   Widget _buildQuestions() {
     if (widget.patientId == null) {
-      return const Text(
-        'เข้าสู่ระบบด้วยบัญชีผู้ป่วยเพื่อดูคำถามของคุณ',
+      return Text(
+        t('เข้าสู่ระบบด้วยบัญชีผู้ป่วยเพื่อดูคำถามของคุณ', 'Sign in with a patient account to see your questions'),
         style: TextStyle(fontSize: 13, color: OnboardingColors.textMuted),
       );
     }
@@ -281,14 +282,14 @@ class _HealthTopicDetailScreenState extends State<HealthTopicDetailScreen> {
         }
         if (snapshot.hasError) {
           return Text(
-            'โหลดคำถามไม่สำเร็จ: ${snapshot.error}',
+            t('โหลดคำถามไม่สำเร็จ: ${snapshot.error}', 'Could not load questions: ${snapshot.error}'),
             style: TextStyle(fontSize: 13, color: Theme.of(context).colorScheme.error),
           );
         }
         final questions = snapshot.data ?? const <HealthQuestion>[];
         if (questions.isEmpty) {
-          return const Text(
-            'ยังไม่เคยถามในหมวดนี้',
+          return Text(
+            t('ยังไม่เคยถามในหมวดนี้', 'No questions in this topic yet'),
             style: TextStyle(fontSize: 13, color: OnboardingColors.textMuted),
           );
         }
@@ -507,8 +508,8 @@ class QuestionCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'คำตอบจากแพทย์',
+                  Text(
+                    t('คำตอบจากแพทย์', "Doctor's reply"),
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w700,
@@ -565,7 +566,7 @@ class _AskQuestionSheetState extends State<_AskQuestionSheet> {
   Future<void> _send() async {
     final text = _controller.text.trim();
     if (text.length < 10) {
-      setState(() => _error = 'เขียนคำถามให้ละเอียดอีกนิด (อย่างน้อย 10 ตัวอักษร)');
+      setState(() => _error = t('เขียนคำถามให้ละเอียดอีกนิด (อย่างน้อย 10 ตัวอักษร)', 'Add a little more detail (at least 10 characters)'));
       return;
     }
     setState(() {
@@ -582,7 +583,7 @@ class _AskQuestionSheetState extends State<_AskQuestionSheet> {
     } catch (e) {
       if (mounted) {
         setState(() {
-          _error = 'ส่งคำถามไม่สำเร็จ: $e';
+          _error = t('ส่งคำถามไม่สำเร็จ: $e', 'Could not send the question: $e');
           _sending = false;
         });
       }
@@ -603,12 +604,12 @@ class _AskQuestionSheetState extends State<_AskQuestionSheet> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'ถามเรื่อง${widget.topic.label}',
+            t('ถามเรื่อง${widget.topic.label}', 'Ask about ${widget.topic.label}'),
             style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 4),
-          const Text(
-            'อธิบายอาการ ระยะเวลาที่เป็น และยาที่กินอยู่ จะช่วยให้แพทย์ตอบได้ตรงขึ้น',
+          Text(
+            t('อธิบายอาการ ระยะเวลาที่เป็น และยาที่กินอยู่ จะช่วยให้แพทย์ตอบได้ตรงขึ้น', 'Describing the symptom, how long you have had it, and what you are taking helps the doctor answer'),
             style: TextStyle(fontSize: 13, color: OnboardingColors.textMuted),
           ),
           const SizedBox(height: 16),
@@ -618,7 +619,7 @@ class _AskQuestionSheetState extends State<_AskQuestionSheet> {
             maxLength: 1000,
             textInputAction: TextInputAction.newline,
             decoration: InputDecoration(
-              hintText: 'เช่น มีผื่นคันที่แขนมา 3 วัน กินยาแก้แพ้แล้วยังไม่ดีขึ้น',
+              hintText: t('เช่น มีผื่นคันที่แขนมา 3 วัน กินยาแก้แพ้แล้วยังไม่ดีขึ้น', 'e.g. an itchy rash on my arm for 3 days, antihistamines have not helped'),
               contentPadding: const EdgeInsets.all(16),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(16),
@@ -638,13 +639,13 @@ class _AskQuestionSheetState extends State<_AskQuestionSheet> {
             ),
           ],
           const SizedBox(height: 8),
-          const Text(
-            'หากเป็นเหตุฉุกเฉิน อย่ารอคำตอบในแอป — โทร 1669',
+          Text(
+            t('หากเป็นเหตุฉุกเฉิน อย่ารอคำตอบในแอป — โทร 1669', 'In an emergency do not wait for a reply here — call 1669'),
             style: TextStyle(fontSize: 12, color: Color(0xFFC0392B)),
           ),
           const SizedBox(height: 16),
           OnboardingPrimaryButton(
-            label: 'ส่งคำถาม',
+            label: t('ส่งคำถาม', 'Send question'),
             loading: _sending,
             onPressed: _sending ? null : _send,
           ),

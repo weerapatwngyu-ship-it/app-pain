@@ -10,6 +10,7 @@ import '../../../shared/validation/thai_phone.dart';
 import '../data/patient_profile_repository.dart';
 import '../domain/entities/patient_profile.dart';
 import '../../../core/errors/friendly_error.dart';
+import '../../../core/i18n/app_locale.dart';
 
 class PersonalInfoEditScreen extends StatefulWidget {
   const PersonalInfoEditScreen({
@@ -40,10 +41,12 @@ class _PersonalInfoEditScreenState extends State<PersonalInfoEditScreen> {
   bool _loading = false;
   String? _error;
 
-  static const _genderOptions = {
-    'female': 'หญิง',
-    'male': 'ชาย',
-    'unspecified': 'ไม่ระบุ',
+  /// A getter, not a const map: the labels are translated, so they have
+  /// to be rebuilt after a language change rather than frozen at load.
+  static Map<String, String> get _genderOptions => {
+    'female': t('หญิง', 'Female'),
+    'male': t('ชาย', 'Male'),
+    'unspecified': t('ไม่ระบุ', 'Not specified'),
   };
 
   @override
@@ -137,12 +140,12 @@ class _PersonalInfoEditScreenState extends State<PersonalInfoEditScreen> {
       // 23505 is Postgres' unique-violation code; here that means the email
       // is already on another account.
       setState(() => _error = e.code == '23505'
-          ? 'อีเมลนี้ถูกใช้สมัครสมาชิกแล้ว'
-          : 'บันทึกไม่สำเร็จ: ${e.message}');
+          ? t('อีเมลนี้ถูกใช้สมัครสมาชิกแล้ว', 'That email is already registered')
+          : t('บันทึกไม่สำเร็จ: ${e.message}', 'Could not save: ${e.message}'));
     } on SocketException catch (_) {
-      setState(() => _error = 'เชื่อมต่อเซิร์ฟเวอร์ไม่ได้');
+      setState(() => _error = t('เชื่อมต่อเซิร์ฟเวอร์ไม่ได้', 'Cannot reach the server'));
     } catch (e) {
-      setState(() => _error = friendlyError(e, whileDoing: 'บันทึกไม่สำเร็จ'));
+      setState(() => _error = friendlyError(e, whileDoing: t('บันทึกไม่สำเร็จ', 'Could not save')));
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -173,30 +176,30 @@ class _PersonalInfoEditScreenState extends State<PersonalInfoEditScreen> {
                 child: OnboardingHeader(
                   icon: Icons.arrow_back,
                   onIconTap: () => Navigator.of(context).pop(),
-                  title: 'แก้ไขข้อมูลส่วนตัว',
+                  title: t('แก้ไขข้อมูลส่วนตัว', 'Edit personal details'),
                 ),
               ),
               Expanded(
                 child: ListView(
                   padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
                   children: [
-                    const Text('ชื่อจริง*', style: TextStyle(fontWeight: FontWeight.w600)),
+                    Text(t('ชื่อจริง*', 'First name*'), style: TextStyle(fontWeight: FontWeight.w600)),
                     const SizedBox(height: 8),
                     TextFormField(
                       controller: _firstNameController,
-                      decoration: _decoration('ชื่อจริง'),
-                      validator: (v) => (v == null || v.trim().isEmpty) ? 'กรอกชื่อจริง' : null,
+                      decoration: _decoration(t('ชื่อจริง', 'First name')),
+                      validator: (v) => (v == null || v.trim().isEmpty) ? t('กรอกชื่อจริง', 'Enter your first name') : null,
                     ),
                     const SizedBox(height: 16),
-                    const Text('นามสกุล*', style: TextStyle(fontWeight: FontWeight.w600)),
+                    Text(t('นามสกุล*', 'Last name*'), style: TextStyle(fontWeight: FontWeight.w600)),
                     const SizedBox(height: 8),
                     TextFormField(
                       controller: _lastNameController,
-                      decoration: _decoration('นามสกุล'),
-                      validator: (v) => (v == null || v.trim().isEmpty) ? 'กรอกนามสกุล' : null,
+                      decoration: _decoration(t('นามสกุล', 'Last name')),
+                      validator: (v) => (v == null || v.trim().isEmpty) ? t('กรอกนามสกุล', 'Enter your last name') : null,
                     ),
                     const SizedBox(height: 16),
-                    const Text('เบอร์โทรศัพท์*', style: TextStyle(fontWeight: FontWeight.w600)),
+                    Text(t('เบอร์โทรศัพท์*', 'Phone number*'), style: TextStyle(fontWeight: FontWeight.w600)),
                     const SizedBox(height: 8),
                     TextFormField(
                       controller: _phoneController,
@@ -205,24 +208,24 @@ class _PersonalInfoEditScreenState extends State<PersonalInfoEditScreen> {
                       validator: validateThaiPhone,
                     ),
                     const SizedBox(height: 16),
-                    const Text('อีเมล*', style: TextStyle(fontWeight: FontWeight.w600)),
+                    Text(t('อีเมล*', 'Email*'), style: TextStyle(fontWeight: FontWeight.w600)),
                     const SizedBox(height: 8),
                     TextFormField(
                       controller: _emailController,
                       keyboardType: TextInputType.emailAddress,
                       decoration: _decoration('example@mordee.com'),
                       validator: (v) =>
-                          (v == null || !v.contains('@')) ? 'กรอกอีเมลให้ถูกต้อง' : null,
+                          (v == null || !v.contains('@')) ? t('กรอกอีเมลให้ถูกต้อง', 'Enter a valid email') : null,
                     ),
                     const SizedBox(height: 16),
-                    const Text('วันเกิด', style: TextStyle(fontWeight: FontWeight.w600)),
+                    Text(t('วันเกิด', 'Date of birth'), style: TextStyle(fontWeight: FontWeight.w600)),
                     const SizedBox(height: 8),
                     InkWell(
                       onTap: _pickBirthDate,
                       child: InputDecorator(
-                        decoration: _decoration('วว/ดด/ปปปป'),
+                        decoration: _decoration(t('วว/ดด/ปปปป', 'DD/MM/YYYY')),
                         child: Text(
-                          _birthDate == null ? 'วว/ดด/ปปปป' : _formatBirthDate(_birthDate!),
+                          _birthDate == null ? t('วว/ดด/ปปปป', 'DD/MM/YYYY') : _formatBirthDate(_birthDate!),
                           style: TextStyle(
                             color: _birthDate == null ? Colors.grey : OnboardingColors.text,
                           ),
@@ -230,7 +233,7 @@ class _PersonalInfoEditScreenState extends State<PersonalInfoEditScreen> {
                       ),
                     ),
                     const SizedBox(height: 16),
-                    const Text('เพศสภาพ', style: TextStyle(fontWeight: FontWeight.w600)),
+                    Text(t('เพศสภาพ', 'Gender'), style: TextStyle(fontWeight: FontWeight.w600)),
                     const SizedBox(height: 8),
                     Row(
                       children: _genderOptions.entries.map((entry) {
@@ -272,7 +275,7 @@ class _PersonalInfoEditScreenState extends State<PersonalInfoEditScreen> {
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
                 child: OnboardingPrimaryButton(
-                  label: 'บันทึก',
+                  label: t('บันทึก', 'Save'),
                   loading: _loading,
                   onPressed: _loading ? null : _submit,
                 ),
