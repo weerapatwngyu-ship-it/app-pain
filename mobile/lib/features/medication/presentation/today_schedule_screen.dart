@@ -826,8 +826,12 @@ class _TodaySummaryPanel extends StatelessWidget {
         // No "add" here any more: prescribing belongs to the doctor, and a
         // button the patient cannot complete would only lead somewhere empty.
         Text(
-          t('เมื่อแพทย์สั่งยาให้ ยาจะขึ้นที่นี่พร้อมเวลาที่ต้องกิน ', 'When your doctor prescribes, it appears here with its times ')
-          t('และแอปจะเตือนตามเวลานั้นทุกวัน', 'and the app reminds you daily.'),
+          t(
+            'เมื่อแพทย์สั่งยาให้ ยาจะขึ้นที่นี่พร้อมเวลาที่ต้องกิน '
+                'และแอปจะเตือนตามเวลานั้นทุกวัน',
+            'When your doctor prescribes, it appears here with its times, '
+                'and the app reminds you daily.',
+          ),
           style: TextStyle(color: Colors.white, fontSize: 13, height: 1.5),
         ),
         const SizedBox(height: 14),

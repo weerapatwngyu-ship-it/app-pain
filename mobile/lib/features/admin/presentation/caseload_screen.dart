@@ -314,8 +314,12 @@ class _PatientRecordScreenState extends State<PatientRecordScreen> {
             // with them; until then the record is read-only. Saying that is
             // more use than "no permission", because it is something the
             // doctor can do from this very screen.
-            deniedMessage: t('ต้องเริ่มสนทนากับผู้ป่วยรายนี้ก่อน ', 'Start a conversation with this patient first ')
-                t('จึงจะสั่งยาให้ได้ (กดปุ่ม ส่งข้อความ)', 'before prescribing (press Message).'),
+            deniedMessage: t(
+              'ต้องเริ่มสนทนากับผู้ป่วยรายนี้ก่อน '
+                  'จึงจะสั่งยาให้ได้ (กดปุ่ม ส่งข้อความ)',
+              'Start a conversation with this patient first, '
+                  'before prescribing (press Message).',
+            ),
           )),
           duration: const Duration(seconds: 6),
         ),

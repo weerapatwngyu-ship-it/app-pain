@@ -179,9 +179,14 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
         Padding(
           padding: EdgeInsets.symmetric(vertical: 8),
           child: Text(
-            'ข้อมูลนี้คือสิ่งที่ผู้ป่วยเห็นในหน้าแรก '
-            'รูปแตะเพื่อเปลี่ยนได้เอง ส่วนชื่อและสาขาความเชี่ยวชาญ '
-            t('ต้องติดต่อผู้ดูแลระบบ', 'ask an administrator'),
+            t(
+              'ข้อมูลนี้คือสิ่งที่ผู้ป่วยเห็นในหน้าแรก '
+                  'รูปแตะเพื่อเปลี่ยนได้เอง ส่วนชื่อและสาขาความเชี่ยวชาญ '
+                  'ต้องติดต่อผู้ดูแลระบบ',
+              'This is what patients see on the home screen. Tap the photo to '
+                  'change it yourself; for your name and speciality, ask an '
+                  'administrator.',
+            ),
             style: TextStyle(fontSize: 12, color: OnboardingColors.textMuted),
           ),
         ),
