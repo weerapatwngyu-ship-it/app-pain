@@ -1321,3 +1321,52 @@ begin;
   select name, food_allergies from public.patients where id = :'pa';
   reset role;
 rollback;
+
+\echo ''
+\echo '=== CONTROL 51: หมอเห็นว่าผู้ป่วยกินยาหรือยัง (ต้องเห็น dose_logs) ==='
+begin;
+  select id as pa from public.patients
+   where owner_user_id='11111111-1111-1111-1111-111111111111' \gset
+
+  insert into public.prescriptions
+    (patient_id, medication_name, dosage, frequency, start_date, source)
+  values (:'pa','ยาความดัน','1 เม็ด','วันละครั้ง', current_date, 'self')
+  returning id as rx \gset
+  insert into public.dose_schedules (prescription_id, scheduled_time)
+  values (:'rx','08:00') returning id as sch \gset
+  insert into public.dose_logs (schedule_id, scheduled_at, actioned_at, status)
+  values (:'sch', now(), now(), 'taken');
+
+  insert into auth.users (id, email)
+    values ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa','doc3@test.com');
+  update public.profiles set role='provider'
+   where id='aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+
+  set local role authenticated;
+  select public.as_user('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa');
+  \echo '  -- expect 1 row taken: การติดตามการกินยาคือเหตุผลที่บันทึกมันไว้:'
+  select status from public.dose_logs where schedule_id = :'sch';
+  reset role;
+rollback;
+
+\echo ''
+\echo '=== EXPLOIT 52: ผู้ป่วยคนอื่นอ่านบันทึกการกินยาของคนนี้ (ต้องได้ 0 แถว) ==='
+begin;
+  select id as pa from public.patients
+   where owner_user_id='11111111-1111-1111-1111-111111111111' \gset
+
+  insert into public.prescriptions
+    (patient_id, medication_name, dosage, frequency, start_date, source)
+  values (:'pa','ยาความดัน','1 เม็ด','วันละครั้ง', current_date, 'self')
+  returning id as rx \gset
+  insert into public.dose_schedules (prescription_id, scheduled_time)
+  values (:'rx','08:00') returning id as sch \gset
+  insert into public.dose_logs (schedule_id, scheduled_at, actioned_at, status)
+  values (:'sch', now(), now(), 'taken');
+
+  set local role authenticated;
+  select public.as_user('22222222-2222-2222-2222-222222222222');
+  \echo '  -- expect 0 rows:'
+  select status from public.dose_logs where schedule_id = :'sch';
+  reset role;
+rollback;

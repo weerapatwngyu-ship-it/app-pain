@@ -56,11 +56,15 @@ class MedicationRepositoryImpl implements MedicationRepository {
     // Filtered by the ids the screen is showing rather than by patient: those
     // are already the caller's own doses, and it keeps this off the joins that
     // reaching patient_id from a log would otherwise need.
+    // toUtc before serialising. A local midnight written without an offset is
+    // read by Postgres as UTC midnight, which in Thailand is 07:00 the same
+    // morning — so a dose taken at 06:30 fell outside "today" and the tile
+    // came back unticked, inviting a second dose.
     final rows = await db
         .from('dose_logs')
         .select('schedule_id')
         .inFilter('schedule_id', scheduleIds)
-        .gte('actioned_at', startOfDay.toIso8601String());
+        .gte('actioned_at', startOfDay.toUtc().toIso8601String());
 
     final logged = rows.map<String>((row) => row['schedule_id'] as String).toSet();
 

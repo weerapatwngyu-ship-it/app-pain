@@ -391,6 +391,12 @@ class _PatientRecordScreenState extends State<PatientRecordScreen> {
                 ...past.map((p) => _PrescriptionTile(prescription: p, faded: true)),
               ],
               const SizedBox(height: 24),
+              const _SectionTitle('การกินยา 7 วันล่าสุด'),
+              _AdherenceCard(
+                adherence: record.adherence,
+                logs: record.doseLogs,
+              ),
+              const SizedBox(height: 24),
               const _SectionTitle('บันทึกอาการล่าสุด'),
               if (record.symptomLogs.isEmpty)
                 const _Empty('ผู้ป่วยยังไม่ได้บันทึกอาการ')
@@ -488,6 +494,173 @@ class _Header extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+/// What the patient did with the doses that came due this week.
+///
+/// The counts are the point, not the list: a doctor asking "is this being
+/// taken" wants the shape of the week before they want individual entries.
+/// "ไม่ได้บันทึก" is shown as its own number rather than folded into a
+/// percentage, because a dose with no log means the app was not answered —
+/// which is not the same as the patient saying they skipped it, and only the
+/// doctor can judge which one it really was.
+class _AdherenceCard extends StatelessWidget {
+  const _AdherenceCard({required this.adherence, required this.logs});
+
+  final DoseAdherence adherence;
+  final List<DoseLogEntry> logs;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!adherence.hasSchedule) {
+      return const _Empty('ยังไม่มียาที่ต้องกินตามเวลาในช่วง 7 วันนี้');
+    }
+
+    final rate = adherence.takenRate;
+    final recent = logs.take(6).toList();
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: OnboardingColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text(
+                rate == null ? '—' : '${(rate * 100).round()}%',
+                style: TextStyle(
+                  fontSize: 30,
+                  fontWeight: FontWeight.w700,
+                  height: 1.1,
+                  color: _rateColor(rate),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'กินตามเวลา ${adherence.taken} จาก ${adherence.expected} ครั้ง'
+                  'ที่ต้องกิน',
+                  style: const TextStyle(
+                      fontSize: 13, height: 1.4, color: OnboardingColors.textMuted),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              _Tally(
+                label: 'กินแล้ว',
+                count: adherence.taken,
+                color: OnboardingColors.teal,
+              ),
+              _Tally(
+                label: 'ข้าม',
+                count: adherence.skipped,
+                color: const Color(0xFFB26A00),
+              ),
+              _Tally(
+                label: 'ไม่ได้บันทึก',
+                count: adherence.unanswered,
+                color: const Color(0xFFC0392B),
+              ),
+            ],
+          ),
+          if (recent.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            const Divider(color: OnboardingColors.border, height: 20),
+            for (final log in recent) _DoseLogRow(log: log),
+          ],
+        ],
+      ),
+    );
+  }
+
+  /// Deliberately coarse. A number this rough should not be read to the
+  /// percentage point, and three bands is what a doctor acts on: fine,
+  /// worth asking about, worth calling about.
+  static Color _rateColor(double? rate) {
+    if (rate == null) return OnboardingColors.textMuted;
+    if (rate >= 0.8) return OnboardingColors.teal;
+    if (rate >= 0.5) return const Color(0xFFB26A00);
+    return const Color(0xFFC0392B);
+  }
+}
+
+class _Tally extends StatelessWidget {
+  const _Tally({required this.label, required this.count, required this.color});
+
+  final String label;
+  final int count;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '$count',
+            style: TextStyle(
+                fontSize: 18, fontWeight: FontWeight.w700, color: color),
+          ),
+          Text(
+            label,
+            style: const TextStyle(
+                fontSize: 11.5, color: OnboardingColors.textMuted),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DoseLogRow extends StatelessWidget {
+  const _DoseLogRow({required this.log});
+
+  final DoseLogEntry log;
+
+  @override
+  Widget build(BuildContext context) {
+    final taken = log.status == 'taken';
+    final at = log.actionedAt ?? log.scheduledAt;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 5),
+      child: Row(
+        children: [
+          Icon(
+            taken ? Icons.check_circle : Icons.remove_circle_outline,
+            size: 16,
+            color: taken ? OnboardingColors.teal : const Color(0xFFB26A00),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              log.medicationName.isEmpty ? 'ยา' : log.medicationName,
+              style: const TextStyle(fontSize: 13),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          Text(
+            '${thaiDate(at)} ${_clock(at)}',
+            style: const TextStyle(
+                fontSize: 12, color: OnboardingColors.textMuted),
+          ),
+        ],
+      ),
+    );
+  }
+
+  static String _clock(DateTime at) {
+    String two(int n) => n.toString().padLeft(2, '0');
+    return '${two(at.hour)}:${two(at.minute)}';
   }
 }
 
