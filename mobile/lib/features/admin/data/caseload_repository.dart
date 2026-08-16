@@ -228,7 +228,7 @@ class CaseloadRepository {
         .from('patients')
         .select('id, name, birth_date, gender, primary_condition, '
             'drug_allergies, food_allergies, blood_type, weight_kg, height_cm')
-        .order('name');
+        .order('name', ascending: true);
     return rows.map<CaseloadPatient>(CaseloadPatient.fromRow).toList();
   }
 

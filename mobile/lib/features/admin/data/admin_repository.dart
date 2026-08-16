@@ -70,7 +70,8 @@ class AdminRepository {
 
   /// Every listing, including ones with no account behind them yet.
   Future<List<Doctor>> doctors() async {
-    final rows = await db.from('doctors').select().order('name');
+    final rows =
+        await db.from('doctors').select().order('name', ascending: true);
     return rows.map<Doctor>(Doctor.fromRow).toList();
   }
 

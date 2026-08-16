@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/supabase/supabase_refs.dart';
+import '../../../shared/format/thai_date.dart';
 import '../../auth/presentation/onboarding/onboarding_theme.dart';
 import '../domain/entities/conversation.dart';
 import '../domain/message_thread.dart';
@@ -82,10 +83,22 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
+  /// Lands on the newest message, which is the bottom of the list.
+  ///
+  /// Twice, a frame apart: a ListView.builder only lays out what is visible,
+  /// so the first maxScrollExtent it reports is an estimate of a thread it has
+  /// not measured yet. Jumping once leaves a long conversation a little short
+  /// of the end — near enough to look right and wrong exactly when it matters,
+  /// on the message the reader opened the thread for.
   void _scrollToBottom() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!_scrollController.hasClients) return;
+    void jump() {
+      if (!mounted || !_scrollController.hasClients) return;
       _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
+    }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      jump();
+      WidgetsBinding.instance.addPostFrameCallback((_) => jump());
     });
   }
 
@@ -182,10 +195,25 @@ class _ChatScreenState extends State<ChatScreen> {
       itemCount: _messages.length,
       itemBuilder: (context, index) {
         final message = _messages[index];
-        return _Bubble(message: message, isMine: message.senderId == _myId);
+        // A day divider above the first message of each day. Without it a
+        // thread reads as one run of clock times, so yesterday's 20:14 sitting
+        // above today's 13:58 looks like the messages are out of order.
+        final previous = index == 0 ? null : _messages[index - 1];
+        final newDay = previous == null ||
+            !_sameDay(previous.createdAt, message.createdAt);
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (newDay) _DayDivider(day: message.createdAt),
+            _Bubble(message: message, isMine: message.senderId == _myId),
+          ],
+        );
       },
     );
   }
+
+  static bool _sameDay(DateTime a, DateTime b) =>
+      a.year == b.year && a.month == b.month && a.day == b.day;
 
   Widget _buildComposer() {
     return SafeArea(
@@ -238,6 +266,47 @@ class _ChatScreenState extends State<ChatScreen> {
         ),
       ),
     );
+  }
+}
+
+/// "วันนี้" / "เมื่อวาน" / "15 ส.ค. 2568", centred between days.
+class _DayDivider extends StatelessWidget {
+  const _DayDivider({required this.day});
+
+  final DateTime day;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF1F1F1),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Text(
+          _label(day),
+          style: const TextStyle(
+            fontSize: 11.5,
+            fontWeight: FontWeight.w600,
+            color: OnboardingColors.textMuted,
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Named days for the two the reader can place without thinking; a date for
+  /// everything older, since "3 วันที่แล้ว" makes them do the arithmetic.
+  static String _label(DateTime day) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final that = DateTime(day.year, day.month, day.day);
+    final difference = today.difference(that).inDays;
+    if (difference == 0) return 'วันนี้';
+    if (difference == 1) return 'เมื่อวาน';
+    return 'วัน${thaiWeekdays[that.weekday - 1]} ${thaiDate(that)}';
   }
 }
 

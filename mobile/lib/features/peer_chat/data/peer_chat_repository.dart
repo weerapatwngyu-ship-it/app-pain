@@ -67,7 +67,9 @@ class PeerChatRepository implements MessageThread {
         .from('peer_messages')
         .select()
         .eq('conversation_id', conversationId)
-        .order('created_at');
+        // Oldest first, newest at the bottom — see the note in
+        // ChatRepository.messages about order()'s default direction.
+        .order('created_at', ascending: true);
     return rows.map<ChatMessage>(ChatMessage.fromRow).toList();
   }
 

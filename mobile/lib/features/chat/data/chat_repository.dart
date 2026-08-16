@@ -64,7 +64,10 @@ class ChatRepository implements MessageThread {
         .from('messages')
         .select()
         .eq('conversation_id', conversationId)
-        .order('created_at');
+        // ascending explicitly: postgrest-dart's order() defaults to
+        // DESCENDING, which put the newest message at the top of the thread
+        // and read as a scrambled conversation.
+        .order('created_at', ascending: true);
     return rows.map<ChatMessage>(ChatMessage.fromRow).toList();
   }
 

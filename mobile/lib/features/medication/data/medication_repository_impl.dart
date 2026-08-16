@@ -28,7 +28,10 @@ class MedicationRepositoryImpl implements MedicationRepository {
         .eq('prescriptions.patient_id', patientId)
         .lte('prescriptions.start_date', today)
         .or('end_date.is.null,end_date.gte.$today', referencedTable: 'prescriptions')
-        .order('scheduled_time');
+        // Ascending, or the day runs backwards: the list would open with the
+        // bedtime dose and the "next dose" line — which reads the first
+        // unlogged item — would name the latest time of the day.
+        .order('scheduled_time', ascending: true);
 
     return rows.map<DoseScheduleItem>(DoseScheduleItem.fromRow).toList();
   }
