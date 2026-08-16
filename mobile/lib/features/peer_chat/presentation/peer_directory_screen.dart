@@ -8,6 +8,7 @@ import '../../chat/presentation/chat_screen.dart';
 import '../data/peer_chat_repository.dart';
 import '../domain/entities/peer_thread.dart';
 import '../../../core/errors/friendly_error.dart';
+import '../../../core/i18n/app_locale.dart';
 
 /// Finds another patient to message. Only people who switched peer chat on
 /// appear here, and only if the viewer switched it on too.
@@ -56,7 +57,7 @@ class _PeerDirectoryScreenState extends State<PeerDirectoryScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = 'ค้นหาไม่สำเร็จ: $e';
+        _error = t('ค้นหาไม่สำเร็จ: $e', 'Search failed: $e');
         _loading = false;
       });
     }
@@ -82,7 +83,7 @@ class _PeerDirectoryScreenState extends State<PeerDirectoryScreen> {
           builder: (_) => ChatScreen(
             conversationId: conversationId,
             title: contact.displayName,
-            subtitle: 'ผู้ป่วยด้วยกัน',
+            subtitle: t('ผู้ป่วยด้วยกัน', 'Fellow patients'),
             repository: widget.repository,
           ),
         ),
@@ -91,7 +92,7 @@ class _PeerDirectoryScreenState extends State<PeerDirectoryScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(friendlyError(e, whileDoing: 'เปิดแชทไม่สำเร็จ'))),
+        SnackBar(content: Text(friendlyError(e, whileDoing: t('เปิดแชทไม่สำเร็จ', 'Could not open the chat')))),
       );
     } finally {
       if (mounted) setState(() => _openingFor = null);
@@ -111,7 +112,7 @@ class _PeerDirectoryScreenState extends State<PeerDirectoryScreen> {
               controller: _searchController,
               onChanged: _onSearchChanged,
               decoration: InputDecoration(
-                hintText: 'ค้นหาด้วยชื่อ',
+                hintText: t('ค้นหาด้วยชื่อ', 'Search by name'),
                 prefixIcon: const Icon(Icons.search),
                 contentPadding: const EdgeInsets.symmetric(horizontal: 16),
                 border: OutlineInputBorder(
@@ -155,11 +156,11 @@ class _PeerDirectoryScreenState extends State<PeerDirectoryScreen> {
       );
     }
     if (_contacts.isEmpty) {
-      return const Center(
+      return Center(
         child: Padding(
           padding: EdgeInsets.all(32),
           child: Text(
-            'ยังไม่พบใคร\nจะเห็นเฉพาะคนที่เปิดให้คุยด้วยเท่านั้น',
+            t('ยังไม่พบใคร\nจะเห็นเฉพาะคนที่เปิดให้คุยด้วยเท่านั้น', 'Nobody found\nYou only see people who opted in'),
             textAlign: TextAlign.center,
             style: TextStyle(color: OnboardingColors.textMuted),
           ),

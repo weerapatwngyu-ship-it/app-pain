@@ -373,7 +373,7 @@ class _TodayScheduleScreenState extends State<TodayScheduleScreen> {
                 const SizedBox(height: 28),
                 _SectionHeader(
                   title: t('ปรึกษาแพทย์', 'Talk to a doctor'),
-                  actionLabel: t('ดูทั้งหมด', 'See all'),
+                  actionLabel: t(t('ดูทั้งหมด', 'See all'), 'See all'),
                   onAction: _openDoctorList,
                 ),
                 const SizedBox(height: 10),
@@ -414,7 +414,7 @@ class _TodayScheduleScreenState extends State<TodayScheduleScreen> {
                 const SizedBox(height: 28),
                 _SectionHeader(
                   title: t('คลินิกออนไลน์', 'Online clinic'),
-                  actionLabel: t('ดูทั้งหมด', 'See all'),
+                  actionLabel: t(t('ดูทั้งหมด', 'See all'), 'See all'),
                   onAction: _openHealthTopics,
                 ),
                 const SizedBox(height: 10),
@@ -440,8 +440,8 @@ class _TodayScheduleScreenState extends State<TodayScheduleScreen> {
                 ),
                 const SizedBox(height: 28),
                 _SectionHeader(
-                  title: 'หมวดอาการ',
-                  actionLabel: 'ดูทั้งหมด',
+                  title: t('หมวดอาการ', 'Symptom categories'),
+                  actionLabel: t('ดูทั้งหมด', 'See all'),
                   onAction: () => _openCategory(null),
                 ),
                 const SizedBox(height: 10),
@@ -814,8 +814,8 @@ class _TodaySummaryPanel extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'ยังไม่มียาที่ต้องกินวันนี้',
+        Text(
+          t('ยังไม่มียาที่ต้องกินวันนี้', 'No doses due today'),
           style: TextStyle(
             color: Colors.white,
             fontSize: 18,
@@ -825,9 +825,9 @@ class _TodaySummaryPanel extends StatelessWidget {
         const SizedBox(height: 6),
         // No "add" here any more: prescribing belongs to the doctor, and a
         // button the patient cannot complete would only lead somewhere empty.
-        const Text(
-          'เมื่อแพทย์สั่งยาให้ ยาจะขึ้นที่นี่พร้อมเวลาที่ต้องกิน '
-          'และแอปจะเตือนตามเวลานั้นทุกวัน',
+        Text(
+          t('เมื่อแพทย์สั่งยาให้ ยาจะขึ้นที่นี่พร้อมเวลาที่ต้องกิน ', 'When your doctor prescribes, it appears here with its times ')
+          t('และแอปจะเตือนตามเวลานั้นทุกวัน', 'and the app reminds you daily.'),
           style: TextStyle(color: Colors.white, fontSize: 13, height: 1.5),
         ),
         const SizedBox(height: 14),
@@ -939,9 +939,9 @@ class _TodaySummaryPanel extends StatelessWidget {
         const SizedBox(height: 12),
         InkWell(
           onTap: onOpenList,
-          child: const Row(
+          child: Row(
             children: [
-              Text('ดูยาทั้งหมดของฉัน',
+              Text(t('ดูยาทั้งหมดของฉัน', 'See all my medication'),
                   style: TextStyle(color: Colors.white, fontSize: 13.5)),
               Icon(Icons.chevron_right, size: 18, color: Colors.white),
             ],

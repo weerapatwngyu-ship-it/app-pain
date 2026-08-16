@@ -153,7 +153,7 @@ class _RemindersScreenState extends State<RemindersScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(friendlyError(e, whileDoing: 'ส่งไปนาฬิกาไม่สำเร็จ'))));
+          .showSnackBar(SnackBar(content: Text(friendlyError(e, whileDoing: t('ส่งไปนาฬิกาไม่สำเร็จ', 'Could not hand it to the clock app')))));
     }
   }
 
@@ -201,7 +201,7 @@ class _RemindersScreenState extends State<RemindersScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(friendlyError(e, whileDoing: 'บันทึกไม่สำเร็จ'))));
+          .showSnackBar(SnackBar(content: Text(friendlyError(e, whileDoing: t('บันทึกไม่สำเร็จ', 'Could not save')))));
     }
   }
 
@@ -219,7 +219,7 @@ class _RemindersScreenState extends State<RemindersScreen> {
       await _load();
       if (!mounted) return;
       ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(friendlyError(e, whileDoing: 'เปลี่ยนสถานะไม่สำเร็จ'))));
+          .showSnackBar(SnackBar(content: Text(friendlyError(e, whileDoing: t('เปลี่ยนสถานะไม่สำเร็จ', 'Could not change that')))));
     }
   }
 
@@ -470,7 +470,7 @@ class _ReminderSheetState extends State<_ReminderSheet> {
       _Repeat.everyDay => {1, 2, 3, 4, 5, 6, 7},
       _Repeat.custom => _days,
     };
-    if (_repeat == _Repeat.custom && days.isEmpty) return 'เลือกวันที่ต้องการเตือน';
+    if (_repeat == _Repeat.custom && days.isEmpty) return t('เลือกวันที่ต้องการเตือน', 'Choose which days to be reminded');
     return MedicationReminder(
       id: 0,
       label: '',
@@ -496,7 +496,7 @@ class _ReminderSheetState extends State<_ReminderSheet> {
     // is not what the user asked for — make them pick.
     if (_repeat == _Repeat.custom && days.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('เลือกอย่างน้อย 1 วัน')),
+        SnackBar(content: Text(t('เลือกอย่างน้อย 1 วัน', 'Pick at least one day'))),
       );
       return;
     }
@@ -544,13 +544,13 @@ class _ReminderSheetState extends State<_ReminderSheet> {
               children: [
                 TextButton(
                   onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('ยกเลิก'),
+                  child: Text(t('ยกเลิก', 'Cancel')),
                 ),
                 Text(
-                  widget.existing == null ? 'ตั้งเวลาใหม่' : 'แก้ไขการเตือน',
+                  widget.existing == null ? t('ตั้งเวลาใหม่', 'New reminder') : t('แก้ไขการเตือน', 'Edit reminder'),
                   style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
                 ),
-                TextButton(onPressed: _submit, child: const Text('เสร็จสิ้น')),
+                TextButton(onPressed: _submit, child: Text(t('เสร็จสิ้น', 'Done'))),
               ],
             ),
             const SizedBox(height: 4),
@@ -581,8 +581,8 @@ class _ReminderSheetState extends State<_ReminderSheet> {
                       ),
                     ),
                     const SizedBox(height: 2),
-                    const Text(
-                      'แตะเพื่อเปลี่ยนเวลา',
+                    Text(
+                      t('แตะเพื่อเปลี่ยนเวลา', 'Tap to change the time'),
                       style: TextStyle(
                           fontSize: 12, color: OnboardingColors.textMuted),
                     ),
@@ -630,8 +630,8 @@ class _ReminderSheetState extends State<_ReminderSheet> {
               controller: _label,
               textCapitalization: TextCapitalization.sentences,
               decoration: InputDecoration(
-                labelText: 'ชื่อยา หรือข้อความเตือน',
-                hintText: 'เช่น ยาความดัน 1 เม็ด หลังอาหารเช้า',
+                labelText: t('ชื่อยา หรือข้อความเตือน', 'Medication name or reminder text'),
+                hintText: t('เช่น ยาความดัน 1 เม็ด หลังอาหารเช้า', 'e.g. 1 blood-pressure tablet after breakfast'),
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
               ),
             ),
@@ -643,7 +643,7 @@ class _ReminderSheetState extends State<_ReminderSheet> {
                   onPressed: () =>
                       Navigator.of(context).pop(const _EditResult.remove()),
                   icon: const Icon(Icons.delete_outline, color: Color(0xFFC0392B)),
-                  label: const Text('ลบการเตือนนี้',
+                  label: Text(t('ลบการเตือนนี้', 'Delete this reminder'),
                       style: TextStyle(color: Color(0xFFC0392B))),
                 ),
               ),
@@ -656,9 +656,9 @@ class _ReminderSheetState extends State<_ReminderSheet> {
 }
 
 enum _Repeat {
-  once('ดังครั้งเดียว'),
-  everyDay('ทุกวัน'),
-  custom('กำหนดเอง');
+  once(t('ดังครั้งเดียว', 'Once')),
+  everyDay(t('ทุกวัน', 'Every day')),
+  custom(t('กำหนดเอง', 'Custom'));
 
   const _Repeat(this.label);
   final String label;
@@ -689,11 +689,11 @@ class _StatusBanner extends StatelessWidget {
     if (!blocked && !enabledButUnscheduled) return const SizedBox.shrink();
 
     final message = blocked
-        ? 'ระบบปิดกั้นการแจ้งเตือนของแอปนี้อยู่ จึงจะไม่มีเสียงเตือนแม้ตั้งเวลาไว้\n\n'
-            'เปิดที่ ตั้งค่า > แอป > MediGo > การแจ้งเตือน'
-        : 'ตั้งเวลาไว้ $reminderCount รายการ แต่ระบบไม่ได้รับนาฬิกาไว้เลย\n\n'
-            'มักเกิดจากสิทธิ์ "การปลุกและการเตือนความจำ" ยังไม่ได้เปิด '
-            'หรือเครื่องปิดการทำงานเบื้องหลังของแอปไว้';
+        ? t('ระบบปิดกั้นการแจ้งเตือนของแอปนี้อยู่ จึงจะไม่มีเสียงเตือนแม้ตั้งเวลาไว้\n\n', 'Notifications are blocked for this app, so nothing will ring however it is set.\n\n')
+            t('เปิดที่ ตั้งค่า > แอป > MediGo > การแจ้งเตือน', 'Turn them on in Settings > Apps > MediGo > Notifications')
+        : t('ตั้งเวลาไว้ $reminderCount รายการ แต่ระบบไม่ได้รับนาฬิกาไว้เลย\n\n', '$reminderCount reminders are set, but the system is holding no alarms.\n\n')
+            t('มักเกิดจากสิทธิ์ "การปลุกและการเตือนความจำ" ยังไม่ได้เปิด ', 'Usually the "alarms and reminders" permission is off, ')
+            t('หรือเครื่องปิดการทำงานเบื้องหลังของแอปไว้', 'or the phone is blocking the app from running in the background.');
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),

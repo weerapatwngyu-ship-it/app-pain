@@ -9,6 +9,7 @@ import '../../../shared/format/thai_date.dart';
 import '../../medication/data/medication_list_repository.dart';
 import '../../medication/presentation/medication_edit_sheet.dart';
 import '../data/caseload_repository.dart';
+import '../../../core/i18n/app_locale.dart';
 
 /// Every patient in the system, for clinical staff.
 ///
@@ -59,7 +60,7 @@ class _CaseloadScreenState extends State<CaseloadScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(title: const Text('ผู้ป่วยทั้งหมด')),
+      appBar: AppBar(title: Text(t('ผู้ป่วยทั้งหมด', 'All patients'))),
       body: Column(
         children: [
           Padding(
@@ -67,7 +68,7 @@ class _CaseloadScreenState extends State<CaseloadScreen> {
             child: TextField(
               onChanged: (v) => setState(() => _query = v.trim().toLowerCase()),
               decoration: InputDecoration(
-                hintText: 'ค้นหาชื่อผู้ป่วย',
+                hintText: t('ค้นหาชื่อผู้ป่วย', 'Search patient name'),
                 prefixIcon: const Icon(Icons.search, size: 20),
                 contentPadding: const EdgeInsets.symmetric(vertical: 4),
                 border: OutlineInputBorder(
@@ -116,8 +117,8 @@ class _CaseloadScreenState extends State<CaseloadScreen> {
                       padding: const EdgeInsets.all(32),
                       child: Text(
                         all.isEmpty
-                            ? 'ยังไม่มีผู้ป่วยในระบบ'
-                            : 'ไม่พบผู้ป่วยที่ตรงกับ "$_query"',
+                            ? t('ยังไม่มีผู้ป่วยในระบบ', 'No patients yet')
+                            : t('ไม่พบผู้ป่วยที่ตรงกับ "$_query"', 'No patients match "$_query"'),
                         textAlign: TextAlign.center,
                         style: const TextStyle(color: OnboardingColors.textMuted),
                       ),
@@ -141,7 +142,7 @@ class _CaseloadScreenState extends State<CaseloadScreen> {
                         title: Text(patient.name),
                         subtitle: Text(
                           [
-                            'อายุ ${patient.age} ปี',
+                            t('อายุ ${patient.age} ปี', '${patient.age} years old'),
                             // genderLabel, not the raw column: the database
                             // stores 'female'/'male', which is not what a Thai
                             // clinician should be reading off a caseload.
@@ -279,7 +280,7 @@ class _PatientRecordScreenState extends State<PatientRecordScreen> {
       isScrollControlled: true,
       builder: (_) => MedicationEditSheet(
         allergies: _patient.drugAllergies,
-        title: 'สั่งยาให้ ${_patient.name}',
+        title: t('สั่งยาให้ ${_patient.name}', 'Prescribe for ${_patient.name}'),
       ),
     );
     if (draft == null) return;
@@ -300,7 +301,7 @@ class _PatientRecordScreenState extends State<PatientRecordScreen> {
       if (!mounted) return;
       setState(() => _future = _load());
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('สั่ง ${draft.name} ให้ผู้ป่วยแล้ว')),
+        SnackBar(content: Text(t('สั่ง ${draft.name} ให้ผู้ป่วยแล้ว', 'Prescribed ${draft.name}'))),
       );
     } catch (e) {
       if (!mounted) return;
@@ -308,13 +309,13 @@ class _PatientRecordScreenState extends State<PatientRecordScreen> {
         SnackBar(
           content: Text(friendlyError(
             e,
-            whileDoing: 'สั่งยาไม่สำเร็จ',
+            whileDoing: t('สั่งยาไม่สำเร็จ', 'Could not prescribe'),
             // A doctor takes charge of a patient by opening a conversation
             // with them; until then the record is read-only. Saying that is
             // more use than "no permission", because it is something the
             // doctor can do from this very screen.
-            deniedMessage: 'ต้องเริ่มสนทนากับผู้ป่วยรายนี้ก่อน '
-                'จึงจะสั่งยาให้ได้ (กดปุ่ม ส่งข้อความ)',
+            deniedMessage: t('ต้องเริ่มสนทนากับผู้ป่วยรายนี้ก่อน ', 'Start a conversation with this patient first ')
+                t('จึงจะสั่งยาให้ได้ (กดปุ่ม ส่งข้อความ)', 'before prescribing (press Message).'),
           )),
           duration: const Duration(seconds: 6),
         ),
@@ -333,7 +334,7 @@ class _PatientRecordScreenState extends State<PatientRecordScreen> {
             IconButton(
               onPressed: _prescribe,
               icon: const Icon(Icons.medication_outlined),
-              tooltip: 'สั่งยา',
+              tooltip: t('สั่งยา', 'Prescribe'),
             ),
         ],
       ),
@@ -349,7 +350,7 @@ class _PatientRecordScreenState extends State<PatientRecordScreen> {
                           strokeWidth: 2, color: Colors.white),
                     )
                   : const Icon(Icons.chat_bubble_outline, color: Colors.white),
-              label: const Text('ส่งข้อความ',
+              label: Text(t('ส่งข้อความ', 'Message'),
                   style: TextStyle(color: Colors.white)),
             )
           : null,
@@ -377,34 +378,34 @@ class _PatientRecordScreenState extends State<PatientRecordScreen> {
             children: [
               _Header(patient: record.patient, openAlerts: record.openAlerts),
               const SizedBox(height: 24),
-              const _SectionTitle('ข้อมูลผู้ป่วย'),
+              _SectionTitle(t('ข้อมูลผู้ป่วย', 'Patient details')),
               _ProfileCard(patient: record.patient),
               const SizedBox(height: 24),
-              const _SectionTitle('ยาที่ใช้อยู่'),
+              _SectionTitle(t('ยาที่ใช้อยู่', 'Current medication')),
               if (active.isEmpty)
-                const _Empty('ไม่มีรายการยาที่ใช้อยู่')
+                _Empty(t('ไม่มีรายการยาที่ใช้อยู่', 'No current medication'))
               else
                 ...active.map((p) => _PrescriptionTile(prescription: p)),
               if (past.isNotEmpty) ...[
                 const SizedBox(height: 20),
-                const _SectionTitle('ยาที่หยุดแล้ว'),
+                _SectionTitle(t('ยาที่หยุดแล้ว', 'Stopped medication')),
                 ...past.map((p) => _PrescriptionTile(prescription: p, faded: true)),
               ],
               const SizedBox(height: 24),
-              const _SectionTitle('การกินยา 7 วันล่าสุด'),
+              _SectionTitle(t('การกินยา 7 วันล่าสุด', 'Adherence, last 7 days')),
               _AdherenceCard(
                 adherence: record.adherence,
                 logs: record.doseLogs,
               ),
               const SizedBox(height: 24),
-              const _SectionTitle('บันทึกอาการล่าสุด'),
+              _SectionTitle(t('บันทึกอาการล่าสุด', 'Recent symptom entries')),
               if (record.symptomLogs.isEmpty)
-                const _Empty('ผู้ป่วยยังไม่ได้บันทึกอาการ')
+                _Empty(t('ผู้ป่วยยังไม่ได้บันทึกอาการ', 'The patient has not logged any symptoms'))
               else
                 ...record.symptomLogs.map((s) => _SymptomTile(entry: s)),
               const SizedBox(height: 24),
-              const Text(
-                'หน้านี้แสดงข้อมูลอย่างเดียว การแก้ใบสั่งยาต้องเป็นแพทย์ที่ดูแลผู้ป่วยรายนี้',
+              Text(
+                t('หน้านี้แสดงข้อมูลอย่างเดียว การแก้ใบสั่งยาต้องเป็นแพทย์ที่ดูแลผู้ป่วยรายนี้', 'This screen is read-only. Changing a prescription requires being this patient’s provider.'),
                 style: TextStyle(fontSize: 12, color: OnboardingColors.textMuted),
               ),
             ],
@@ -437,7 +438,7 @@ class _Header extends StatelessWidget {
           const SizedBox(height: 6),
           Text(
             [
-              'อายุ ${patient.age} ปี',
+              t('อายุ ${patient.age} ปี', '${patient.age} years old'),
               if (patient.genderLabel != null) patient.genderLabel!,
               if (patient.bloodType != null) 'กรุ๊ปเลือด ${patient.bloodType}',
             ].join(' · '),
@@ -481,7 +482,7 @@ class _Header extends StatelessWidget {
                     size: 18, color: Color(0xFFC0392B)),
                 const SizedBox(width: 6),
                 Text(
-                  'มีการแจ้งเตือนค้างอยู่ $openAlerts รายการ',
+                  t('มีการแจ้งเตือนค้างอยู่ $openAlerts รายการ', '$openAlerts open alerts'),
                   style: const TextStyle(
                     fontSize: 13,
                     color: Color(0xFFC0392B),
@@ -514,7 +515,7 @@ class _AdherenceCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (!adherence.hasSchedule) {
-      return const _Empty('ยังไม่มียาที่ต้องกินตามเวลาในช่วง 7 วันนี้');
+      return _Empty(t('ยังไม่มียาที่ต้องกินตามเวลาในช่วง 7 วันนี้', 'Nothing was due on a schedule in the last 7 days'));
     }
 
     final rate = adherence.takenRate;
@@ -556,17 +557,17 @@ class _AdherenceCard extends StatelessWidget {
           Row(
             children: [
               _Tally(
-                label: 'กินแล้ว',
+                label: t('กินแล้ว', 'Taken'),
                 count: adherence.taken,
                 color: OnboardingColors.teal,
               ),
               _Tally(
-                label: 'ข้าม',
+                label: t('ข้าม', 'Skipped'),
                 count: adherence.skipped,
                 color: const Color(0xFFB26A00),
               ),
               _Tally(
-                label: 'ไม่ได้บันทึก',
+                label: t('ไม่ได้บันทึก', 'No answer'),
                 count: adherence.unanswered,
                 color: const Color(0xFFC0392B),
               ),
@@ -732,34 +733,34 @@ class _ProfileCard extends StatelessWidget {
       ),
       child: Column(
         children: [
-          _ProfileRow(label: 'ชื่อ-นามสกุล', value: patient.name),
+          _ProfileRow(label: t('ชื่อ-นามสกุล', 'Name'), value: patient.name),
           _ProfileRow(
-            label: 'วันเกิด',
+            label: t('วันเกิด', 'Date of birth'),
             value: '${thaiDateFull(patient.birthDate)} '
                 '(อายุ ${patient.age} ปี)',
             note: patient.birthDateUnconfirmed
-                ? 'ค่าเริ่มต้นของระบบ — ผู้ป่วยอาจยังไม่ได้กรอกวันเกิดจริง'
+                ? t('ค่าเริ่มต้นของระบบ — ผู้ป่วยอาจยังไม่ได้กรอกวันเกิดจริง', 'System default — the patient may not have entered a real date of birth')
                 : null,
           ),
-          _ProfileRow(label: 'เพศ', value: patient.genderLabel),
-          _ProfileRow(label: 'กรุ๊ปเลือด', value: patient.bloodType),
+          _ProfileRow(label: t('เพศ', 'Gender'), value: patient.genderLabel),
+          _ProfileRow(label: t('กรุ๊ปเลือด', 'Blood type'), value: patient.bloodType),
           _ProfileRow(
-            label: 'น้ำหนัก / ส่วนสูง',
+            label: t('น้ำหนัก / ส่วนสูง', 'Weight / height'),
             value: _measurements(),
           ),
           _ProfileRow(
-            label: 'โรคประจำตัว',
+            label: t('โรคประจำตัว', 'Ongoing conditions'),
             value: patient.primaryCondition,
           ),
           _ProfileRow(
-            label: 'แพ้ยา',
+            label: t('แพ้ยา', 'Drug allergies'),
             value: patient.drugAllergies.isEmpty
                 ? null
                 : patient.drugAllergies.join(', '),
             emphasis: patient.drugAllergies.isNotEmpty,
           ),
           _ProfileRow(
-            label: 'แพ้อาหาร',
+            label: t('แพ้อาหาร', 'Food allergies'),
             value: patient.foodAllergies.isEmpty
                 ? null
                 : patient.foodAllergies.join(', '),
@@ -834,7 +835,7 @@ class _ProfileRow extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  missing ? 'ยังไม่ได้ระบุ' : value!,
+                  missing ? t('ยังไม่ได้ระบุ', 'Not recorded') : value!,
                   style: TextStyle(
                     fontSize: 14,
                     height: 1.4,

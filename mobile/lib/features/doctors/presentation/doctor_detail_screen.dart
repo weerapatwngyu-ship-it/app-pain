@@ -62,7 +62,7 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(friendlyError(e, whileDoing: 'เปิดแชทไม่สำเร็จ'))),
+        SnackBar(content: Text(friendlyError(e, whileDoing: t('เปิดแชทไม่สำเร็จ', 'Could not open the chat')))),
       );
     } finally {
       if (mounted) setState(() => _opening = false);
@@ -116,7 +116,7 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
                                   strokeWidth: 2, color: Colors.white),
                             )
                           : const Icon(Icons.chat_bubble_outline, size: 20),
-                      label: Text(_opening ? 'กำลังเปิด...' : 'ปรึกษาแพทย์ท่านนี้'),
+                      label: Text(_opening ? t('กำลังเปิด...', 'Opening...') : t('ปรึกษาแพทย์ท่านนี้', 'Consult this doctor')),
                       style: FilledButton.styleFrom(
                         backgroundColor: OnboardingColors.teal,
                         foregroundColor: Colors.white,
@@ -139,7 +139,7 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
           _HeaderCard(doctor: doctor, consultCount: _consultCount),
           if (doctor.conditions.isNotEmpty)
             _Section(
-              title: 'อาการที่รับปรึกษา',
+              title: t('อาการที่รับปรึกษา', 'Conditions they see'),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -167,14 +167,14 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
             ),
           if (doctor.bio != null && doctor.bio!.trim().isNotEmpty)
             _Section(
-              title: 'ข้อมูลเพิ่มเติม',
+              title: t('ข้อมูลเพิ่มเติม', 'More information'),
               child: Text(doctor.bio!, style: const TextStyle(height: 1.6)),
             ),
           if (!canChat)
-            const Padding(
+            Padding(
               padding: EdgeInsets.symmetric(vertical: 16),
               child: Text(
-                'บัญชีนี้ไม่มีข้อมูลผู้ป่วย จึงยังส่งข้อความไม่ได้',
+                t('บัญชีนี้ไม่มีข้อมูลผู้ป่วย จึงยังส่งข้อความไม่ได้', 'This account has no patient record, so messages cannot be sent yet'),
                 textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 13, color: OnboardingColors.textMuted),
               ),
@@ -186,14 +186,14 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
               color: const Color(0xFFFDECEC),
               borderRadius: BorderRadius.circular(14),
             ),
-            child: const Row(
+            child: Row(
               children: [
                 Icon(Icons.warning_amber_rounded,
                     color: Color(0xFFC0392B), size: 20),
                 SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    'ข้อความในแอปไม่ใช่ช่องทางฉุกเฉิน — หากมีอาการรุนแรง โทร 1669',
+                    t('ข้อความในแอปไม่ใช่ช่องทางฉุกเฉิน — หากมีอาการรุนแรง โทร 1669', 'In-app messages are not for emergencies — if it is severe, call 1669'),
                     style: TextStyle(
                         fontSize: 12.5, height: 1.4, color: Color(0xFFC0392B)),
                   ),
