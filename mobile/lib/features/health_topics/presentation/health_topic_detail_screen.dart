@@ -147,15 +147,19 @@ class _HealthTopicDetailScreenState extends State<HealthTopicDetailScreen> {
                 color: const Color(0xFFFFF6E5),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: const Row(
+              // Not const: healthTopicDisclaimer is translated, so it is a
+              // getter now rather than a compile-time constant.
+              child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(Icons.info_outline, size: 18, color: Color(0xFFB26A00)),
-                  SizedBox(width: 8),
+                  const Icon(Icons.info_outline,
+                      size: 18, color: Color(0xFFB26A00)),
+                  const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       healthTopicDisclaimer,
-                      style: TextStyle(fontSize: 12, color: Color(0xFFB26A00), height: 1.5),
+                      style: const TextStyle(
+                          fontSize: 12, color: Color(0xFFB26A00), height: 1.5),
                     ),
                   ),
                 ],
