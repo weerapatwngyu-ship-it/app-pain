@@ -204,8 +204,12 @@ class _PharmacyFinderScreenState extends State<PharmacyFinderScreen> {
         child: Padding(
           padding: const EdgeInsets.all(32),
           child: Text(
-            'ค้นหาออกไปไกลถึง 100 กม. แล้วยังไม่พบ\n'
-            t('พื้นที่นี้อาจยังไม่มีข้อมูลใน OpenStreetMap', 'This area may not be mapped in OpenStreetMap yet'),
+            t(
+              'ค้นหาออกไปไกลถึง 100 กม. แล้วยังไม่พบ\n'
+                  'พื้นที่นี้อาจยังไม่มีข้อมูลใน OpenStreetMap',
+              'Nothing found within 100 km.\n'
+                  'This area may not be mapped in OpenStreetMap yet.',
+            ),
             textAlign: TextAlign.center,
             style: const TextStyle(color: OnboardingColors.textMuted, height: 1.5),
           ),

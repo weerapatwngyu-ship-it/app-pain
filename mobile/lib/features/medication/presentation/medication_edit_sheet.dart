@@ -251,8 +251,13 @@ class _MedicationEditSheetState extends State<MedicationEditSheet> {
                       const SizedBox(width: 10),
                       Expanded(
                         child: Text(
-                          'คุณเคยระบุว่าแพ้ ${matches.join(', ')} '
-                          t('— ตรวจสอบกับแพทย์หรือเภสัชกรก่อนใช้ยานี้', '— check with a doctor or pharmacist before using this'),
+                          t(
+                            'คุณเคยระบุว่าแพ้ ${matches.join(', ')} '
+                                '— ตรวจสอบกับแพทย์หรือเภสัชกรก่อนใช้ยานี้',
+                            'You recorded an allergy to '
+                                '${matches.join(', ')} — check with a doctor '
+                                'or pharmacist before using this',
+                          ),
                           style: const TextStyle(
                             fontSize: 13,
                             color: Color(0xFFC0392B),

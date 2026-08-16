@@ -91,11 +91,18 @@ class _PeerChatScreenState extends State<PeerChatScreen> {
       builder: (context) => AlertDialog(
         title: Text(t('เปิดให้ผู้ป่วยคนอื่นคุยด้วย', 'Let other patients message me')),
         content: Text(
-          'เมื่อเปิด ผู้ป่วยคนอื่นที่เปิดฟีเจอร์นี้จะเห็นชื่อของคุณ '
-          'และส่งข้อความหาคุณได้\n\n'
-          'ข้อมูลการรักษา ยา และอาการของคุณจะไม่ถูกแชร์\n\n'
-          'ข้อความในนี้เป็นการคุยกันเองระหว่างผู้ป่วย ไม่ใช่คำแนะนำจากแพทย์ '
-          t('อย่าใช้แทนการปรึกษาแพทย์', 'Do not use it in place of medical advice.'),
+          t(
+            'เมื่อเปิด ผู้ป่วยคนอื่นที่เปิดฟีเจอร์นี้จะเห็นชื่อของคุณ '
+                'และส่งข้อความหาคุณได้\n\n'
+                'ข้อมูลการรักษา ยา และอาการของคุณจะไม่ถูกแชร์\n\n'
+                'ข้อความในนี้เป็นการคุยกันเองระหว่างผู้ป่วย '
+                'ไม่ใช่คำแนะนำจากแพทย์ อย่าใช้แทนการปรึกษาแพทย์',
+            'When this is on, other patients who also turned it on can see '
+                'your name and message you.\n\n'
+                'Your treatment, medication and symptoms are not shared.\n\n'
+                'Messages here are between patients, not medical advice. Do '
+                'not use it in place of seeing a doctor.',
+          ),
         ),
         actions: [
           TextButton(
@@ -208,8 +215,13 @@ class _PeerChatScreenState extends State<PeerChatScreen> {
         child: Padding(
           padding: const EdgeInsets.all(32),
           child: Text(
-            'เปิดสวิตช์ด้านบนเพื่อเริ่มคุยกับผู้ป่วยคนอื่น\n\n'
-            t('ข้อความที่นี่เป็นการคุยกันเองระหว่างผู้ป่วย\nไม่ใช่คำแนะนำจากแพทย์', 'Messages here are between patients\nnot medical advice'),
+            t(
+              'เปิดสวิตช์ด้านบนเพื่อเริ่มคุยกับผู้ป่วยคนอื่น\n\n'
+                  'ข้อความที่นี่เป็นการคุยกันเองระหว่างผู้ป่วย\n'
+                  'ไม่ใช่คำแนะนำจากแพทย์',
+              'Turn on the switch above to start talking to other patients.\n\n'
+                  'Messages here are between patients,\nnot medical advice.',
+            ),
             textAlign: TextAlign.center,
             style: const TextStyle(color: OnboardingColors.textMuted, height: 1.5),
           ),
