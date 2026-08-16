@@ -826,11 +826,6 @@ class _TodaySummaryPanel extends StatelessWidget {
         // No "add" here any more: prescribing belongs to the doctor, and a
         // button the patient cannot complete would only lead somewhere empty.
         Text(
-<<<<<<< HEAD
-          t('เมื่อแพทย์สั่งยาให้ ยาจะขึ้นที่นี่พร้อมเวลาที่ต้องกิน ', 'When your doctor prescribes, it appears here with its times ')
-          t('และแอปจะเตือนตามเวลานั้นทุกวัน', 'and the app reminds you daily.'),
-          style: const TextStyle(color: Colors.white, fontSize: 13, height: 1.5),
-=======
           t(
             'เมื่อแพทย์สั่งยาให้ ยาจะขึ้นที่นี่พร้อมเวลาที่ต้องกิน '
                 'และแอปจะเตือนตามเวลานั้นทุกวัน',
@@ -838,7 +833,6 @@ class _TodaySummaryPanel extends StatelessWidget {
                 'and the app reminds you daily.',
           ),
           style: const TextStyle(color: Colors.white, fontSize: 13, height: 1.5),
->>>>>>> origin/claude/medication-patient-tracking-app-ncm8h9
         ),
         const SizedBox(height: 14),
         SizedBox(
