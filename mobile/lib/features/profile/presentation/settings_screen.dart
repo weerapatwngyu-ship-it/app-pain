@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/i18n/app_locale.dart';
 import '../../auth/presentation/onboarding/onboarding_theme.dart';
 import '../../reminders/presentation/notification_check_screen.dart';
 
@@ -11,14 +12,20 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  // Thai is the only language actually implemented today — this toggle is
-  // a visual placeholder for a future localization pass, not wired to
-  // anything yet.
-  bool _englishSelected = false;
+  /// Applies immediately and everywhere: the root of the app listens to the
+  /// controller, so the screen behind this one is already in the new language
+  /// by the time the user goes back to it.
+  Future<void> _setLocale(AppLocale locale) async {
+    await LocaleController.instance.set(locale);
+    if (mounted) setState(() {});
+  }
 
   void _comingSoon() {
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('ฟีเจอร์นี้อยู่ระหว่างการพัฒนา')),
+      SnackBar(
+        content: Text(t('ฟีเจอร์นี้อยู่ระหว่างการพัฒนา',
+            'This feature is still being built')),
+      ),
     );
   }
 
@@ -35,33 +42,42 @@ class _SettingsScreenState extends State<SettingsScreen> {
               OnboardingHeader(
                 icon: Icons.arrow_back,
                 onIconTap: () => Navigator.of(context).pop(),
-                title: 'ตั้งค่า',
+                title: t('ตั้งค่า', 'Settings'),
               ),
               const SizedBox(height: 24),
-              const Text('ตั้งค่า', style: TextStyle(color: OnboardingColors.textMuted)),
+              Text(t('ทั่วไป', 'General'),
+                  style: const TextStyle(color: OnboardingColors.textMuted)),
               const SizedBox(height: 12),
               Row(
                 children: [
-                  const Expanded(
-                    child: Text('ภาษา', style: TextStyle(fontWeight: FontWeight.w600)),
+                  Expanded(
+                    child: Text(t('ภาษา', 'Language'),
+                        style: const TextStyle(fontWeight: FontWeight.w600)),
                   ),
                   _LanguageChip(
                     label: 'ภาษาไทย',
-                    selected: !_englishSelected,
-                    onTap: () => setState(() => _englishSelected = false),
+                    selected: !LocaleController.instance.isEnglish,
+                    onTap: () => _setLocale(AppLocale.th),
                   ),
                   const SizedBox(width: 8),
                   _LanguageChip(
                     label: 'English',
-                    selected: _englishSelected,
-                    onTap: () => setState(() => _englishSelected = true),
+                    selected: LocaleController.instance.isEnglish,
+                    onTap: () => _setLocale(AppLocale.en),
                   ),
                 ],
+              ),
+              const SizedBox(height: 6),
+              Text(
+                t('บางหน้าที่ยังไม่ได้แปลจะแสดงเป็นภาษาไทยไปก่อน',
+                    'Screens that have not been translated yet stay in Thai'),
+                style: const TextStyle(
+                    fontSize: 11.5, color: OnboardingColors.textMuted),
               ),
               const SizedBox(height: 8),
               const Divider(color: OnboardingColors.border),
               _MenuRow(
-                label: 'ตรวจสอบระบบเตือน',
+                label: t('ตรวจสอบระบบเตือน', 'Check the reminder system'),
                 trailing: Icons.chevron_right,
                 onTap: () => Navigator.of(context).push(
                   MaterialPageRoute(
@@ -70,22 +86,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
               ),
               _MenuRow(
-                label: 'ตั้งค่าความเป็นส่วนตัว',
+                label: t('ตั้งค่าความเป็นส่วนตัว', 'Privacy settings'),
                 trailing: Icons.lock_outline,
                 onTap: _comingSoon,
               ),
               const SizedBox(height: 16),
               const Divider(color: OnboardingColors.border),
               const SizedBox(height: 12),
-              const Text('นโยบาย', style: TextStyle(color: OnboardingColors.textMuted)),
+              Text(t('นโยบาย', 'Policies'),
+                  style: const TextStyle(color: OnboardingColors.textMuted)),
               const SizedBox(height: 8),
               _MenuRow(
-                label: 'นโยบายความเป็นส่วนตัว',
+                label: t('นโยบายความเป็นส่วนตัว', 'Privacy policy'),
                 trailing: Icons.chevron_right,
                 onTap: _comingSoon,
               ),
               _MenuRow(
-                label: 'ข้อตกลงและเงื่อนไข',
+                label: t('ข้อตกลงและเงื่อนไข', 'Terms and conditions'),
                 trailing: Icons.chevron_right,
                 onTap: _comingSoon,
               ),

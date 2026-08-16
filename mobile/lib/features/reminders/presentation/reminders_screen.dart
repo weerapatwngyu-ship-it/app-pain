@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/i18n/app_locale.dart';
 import '../../../core/notification/notification_service.dart';
 import '../../auth/presentation/onboarding/onboarding_theme.dart';
 import '../../medication/domain/entities/dose_log.dart';
@@ -101,7 +102,8 @@ class _RemindersScreenState extends State<RemindersScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = friendlyError(e, whileDoing: 'โหลดการเตือนไม่สำเร็จ');
+        _error = friendlyError(e,
+            whileDoing: t('โหลดการเตือนไม่สำเร็จ', 'Could not load reminders'));
         _loading = false;
       });
     }
@@ -115,9 +117,12 @@ class _RemindersScreenState extends State<RemindersScreen> {
       if (!mounted) return;
       if (result.launched) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('เปิดแอปนาฬิกาแล้ว — กดบันทึกในแอปนาฬิกาเพื่อยืนยัน'),
-            duration: Duration(seconds: 6),
+          SnackBar(
+            content: Text(t(
+              'เปิดแอปนาฬิกาแล้ว — กดบันทึกในแอปนาฬิกาเพื่อยืนยัน',
+              'Clock app opened — press save there to confirm the alarm',
+            )),
+            duration: const Duration(seconds: 6),
           ),
         );
         return;
@@ -133,14 +138,14 @@ class _RemindersScreenState extends State<RemindersScreen> {
       showDialog<void>(
         context: context,
         builder: (_) => AlertDialog(
-          title: const Text('ตั้งนาฬิกาปลุกไม่สำเร็จ'),
+          title: Text(t('ตั้งนาฬิกาปลุกไม่สำเร็จ', 'Could not set the alarm')),
           content: SingleChildScrollView(
             child: SelectableText(detail.toString()),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: const Text('ปิด'),
+              child: Text(t('ปิด', 'Close')),
             ),
           ],
         ),
@@ -158,10 +163,14 @@ class _RemindersScreenState extends State<RemindersScreen> {
     // be undone by the next sync.
     if (existing != null && existing.fromDoctor) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('เวลานี้แพทย์เป็นผู้กำหนด แก้ไขเองไม่ได้ '
-              'หากต้องการเปลี่ยน ปรึกษาแพทย์ในแอป'),
-          duration: Duration(seconds: 5),
+        SnackBar(
+          content: Text(t(
+            'เวลานี้แพทย์เป็นผู้กำหนด แก้ไขเองไม่ได้ '
+                'หากต้องการเปลี่ยน ปรึกษาแพทย์ในแอป',
+            'Your doctor set this time, so it cannot be edited here. '
+                'Message them in the app to change it.',
+          )),
+          duration: const Duration(seconds: 5),
         ),
       );
       return;
@@ -218,7 +227,7 @@ class _RemindersScreenState extends State<RemindersScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(title: const Text('เตือนกินยา')),
+      appBar: AppBar(title: Text(t('เตือนกินยา', 'Medication reminders'))),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _edit(),
         backgroundColor: OnboardingColors.teal,
@@ -244,7 +253,7 @@ class _RemindersScreenState extends State<RemindersScreen> {
                   setState(() => _loading = true);
                   _load();
                 },
-                child: const Text('ลองอีกครั้ง'),
+                child: Text(t('ลองอีกครั้ง', 'Try again')),
               ),
             ],
           ),
@@ -256,15 +265,22 @@ class _RemindersScreenState extends State<RemindersScreen> {
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
         children: [
           _StatusBanner(status: _status, reminderCount: 0),
-          const Padding(
-            padding: EdgeInsets.all(32),
+          Padding(
+            padding: const EdgeInsets.all(32),
             child: Text(
-              'ยังไม่มีการเตือน\n\n'
-              'เมื่อแพทย์สั่งยาให้ ระบบจะตั้งเวลาเตือนตามที่แพทย์กำหนดให้เอง '
-              'ไม่ต้องตั้งเอง\n\n'
-              'หรือกดปุ่ม + เพื่อเพิ่มการเตือนของตัวเอง',
+              t(
+                'ยังไม่มีการเตือน\n\n'
+                    'เมื่อแพทย์สั่งยาให้ ระบบจะตั้งเวลาเตือนตามที่แพทย์กำหนดให้เอง '
+                    'ไม่ต้องตั้งเอง\n\n'
+                    'หรือกดปุ่ม + เพื่อเพิ่มการเตือนของตัวเอง',
+                'No reminders yet\n\n'
+                    'When your doctor prescribes something, the app sets the '
+                    'reminders for you at the times they chose.\n\n'
+                    'Or press + to add one of your own.',
+              ),
               textAlign: TextAlign.center,
-              style: TextStyle(color: OnboardingColors.textMuted, height: 1.6),
+              style: const TextStyle(
+                  color: OnboardingColors.textMuted, height: 1.6),
             ),
           ),
         ],
@@ -355,9 +371,10 @@ class _ReminderCard extends StatelessWidget {
                           color: const Color(0xFFEAF5F3),
                           borderRadius: BorderRadius.circular(20),
                         ),
-                        child: const Text(
-                          'จากแพทย์ · ตั้งให้อัตโนมัติ',
-                          style: TextStyle(
+                        child: Text(
+                          t('จากแพทย์ · ตั้งให้อัตโนมัติ',
+                              'From your doctor · set automatically'),
+                          style: const TextStyle(
                               fontSize: 11, color: OnboardingColors.teal),
                         ),
                       ),
@@ -377,7 +394,8 @@ class _ReminderCard extends StatelessWidget {
                 ),
               ),
               IconButton(
-                tooltip: 'ตั้งในนาฬิกาปลุกของเครื่อง',
+                tooltip: t('ตั้งในนาฬิกาปลุกของเครื่อง',
+                    "Add to the phone's clock app"),
                 icon: const Icon(Icons.alarm_add, color: OnboardingColors.teal),
                 onPressed: onSendToClock,
               ),

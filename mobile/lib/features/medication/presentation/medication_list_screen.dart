@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/i18n/app_locale.dart';
 import '../../auth/presentation/onboarding/onboarding_theme.dart';
 import '../data/medication_list_repository.dart';
 import '../domain/entities/medication.dart';
@@ -47,22 +48,28 @@ class _MedicationListScreenState extends State<MedicationListScreen> {
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: Text(medication.name),
-        content: const Text(
-          'หยุดยา จะเก็บประวัติการกินไว้และไม่แสดงในรายการวันนี้อีก\n'
-          'ลบออก จะลบทั้งรายการและประวัติการกินยานี้ทิ้ง',
+        content: Text(
+          t(
+            'หยุดยา จะเก็บประวัติการกินไว้และไม่แสดงในรายการวันนี้อีก\n'
+                'ลบออก จะลบทั้งรายการและประวัติการกินยานี้ทิ้ง',
+            'Stop keeps the dose history and drops the medication from '
+                "today's list.\n"
+                'Delete removes the medication and its dose history for good.',
+          ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('ยกเลิก'),
+            child: Text(t('ยกเลิก', 'Cancel')),
           ),
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop('stop'),
-            child: const Text('หยุดยา'),
+            child: Text(t('หยุดยา', 'Stop')),
           ),
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop('delete'),
-            child: const Text('ลบออก', style: TextStyle(color: Color(0xFFC0392B))),
+            child: Text(t('ลบออก', 'Delete'),
+                style: const TextStyle(color: Color(0xFFC0392B))),
           ),
         ],
       ),
@@ -86,14 +93,16 @@ class _MedicationListScreenState extends State<MedicationListScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(friendlyError(e, whileDoing: 'ทำรายการไม่สำเร็จ'))));
+          SnackBar(
+              content: Text(friendlyError(e,
+                  whileDoing: t('ทำรายการไม่สำเร็จ', 'That did not work')))));
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('ยาของฉัน')),
+      appBar: AppBar(title: Text(t('ยาของฉัน', 'My medication'))),
       body: RefreshIndicator(
         onRefresh: () async {
           _reload();
@@ -107,19 +116,25 @@ class _MedicationListScreenState extends State<MedicationListScreen> {
             }
             if (snapshot.hasError) {
               return _Message(friendlyError(snapshot.error!,
-                  whileDoing: 'โหลดรายการยาไม่สำเร็จ'));
+                  whileDoing:
+                      t('โหลดรายการยาไม่สำเร็จ', 'Could not load your medication')));
             }
             final all = snapshot.data ?? const <Medication>[];
             final active = all.where((m) => m.isActive).toList();
             final stopped = all.where((m) => !m.isActive).toList();
 
             if (all.isEmpty) {
-              return const _Message(
+              return _Message(t(
                 'ยังไม่มีรายการยา\n\n'
-                'แพทย์จะเป็นผู้สั่งยาให้ผ่านระบบ '
-                'เมื่อสั่งแล้วยาจะขึ้นที่นี่และแอปจะเตือนตามเวลาที่แพทย์กำหนด\n\n'
-                'หากมียาที่กินอยู่ ปรึกษาแพทย์ในแอปเพื่อให้บันทึกให้',
-              );
+                    'แพทย์จะเป็นผู้สั่งยาให้ผ่านระบบ '
+                    'เมื่อสั่งแล้วยาจะขึ้นที่นี่และแอปจะเตือนตามเวลาที่แพทย์กำหนด\n\n'
+                    'หากมียาที่กินอยู่ ปรึกษาแพทย์ในแอปเพื่อให้บันทึกให้',
+                'No medication yet\n\n'
+                    'Your doctor prescribes through the app. Once they do, it '
+                    'appears here and you are reminded at the times they set.\n\n'
+                    'Already taking something? Message your doctor in the app '
+                    'so they can record it.',
+              ));
             }
 
             return ListView(
@@ -134,9 +149,9 @@ class _MedicationListScreenState extends State<MedicationListScreen> {
                   ),
                 if (stopped.isNotEmpty) ...[
                   const SizedBox(height: 20),
-                  const Text(
-                    'หยุดแล้ว',
-                    style: TextStyle(
+                  Text(
+                    t('หยุดแล้ว', 'Stopped'),
+                    style: const TextStyle(
                       fontWeight: FontWeight.w700,
                       color: OnboardingColors.textMuted,
                     ),
@@ -199,9 +214,9 @@ class _MedicationCard extends StatelessWidget {
                         color: const Color(0xFFEAF5F3),
                         borderRadius: BorderRadius.circular(20),
                       ),
-                      child: const Text(
-                        'จากแพทย์',
-                        style: TextStyle(
+                      child: Text(
+                        t('จากแพทย์', 'Prescribed'),
+                        style: const TextStyle(
                             fontSize: 11, color: OnboardingColors.teal),
                       ),
                     ),
@@ -243,7 +258,7 @@ class _MedicationCard extends StatelessWidget {
                   child: TextButton.icon(
                     onPressed: onManage,
                     icon: const Icon(Icons.more_horiz, size: 18),
-                    label: const Text('หยุดยา / ลบ'),
+                    label: Text(t('หยุดยา / ลบ', 'Stop / delete')),
                     style: TextButton.styleFrom(
                       foregroundColor: OnboardingColors.textMuted,
                       padding: EdgeInsets.zero,

@@ -19,7 +19,7 @@ class LocalDatabase {
     final path = join(await getDatabasesPath(), 'medtrack.db');
     return openDatabase(
       path,
-      version: 3,
+      version: 4,
       // Existing installs already carry a v1 database, so the reminders table
       // has to arrive through an upgrade as well as through a fresh create —
       // otherwise anyone who had the app before this feature would hit
@@ -27,6 +27,7 @@ class LocalDatabase {
       onUpgrade: (db, oldVersion, newVersion) async {
         if (oldVersion < 2) await _createReminders(db);
         if (oldVersion < 3) await _addPrescriptionColumns(db);
+        if (oldVersion < 4) await _createSettings(db);
       },
       onCreate: (db, version) async {
         await db.execute('''
@@ -48,7 +49,42 @@ class LocalDatabase {
           )
         ''');
         await _createReminders(db);
+        await _createSettings(db);
       },
+    );
+  }
+
+  /// Device-level preferences — the ones that belong to this phone rather
+  /// than to the account, and that have to be readable before the app has
+  /// signed anyone in. Kept here rather than in Supabase for that reason:
+  /// the chosen language decides what the sign-in screen says.
+  static Future<void> _createSettings(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS app_settings (
+        key TEXT PRIMARY KEY,
+        value TEXT NOT NULL
+      )
+    ''');
+  }
+
+  Future<String?> setting(String key) async {
+    final db = await database;
+    final rows = await db.query(
+      'app_settings',
+      columns: ['value'],
+      where: 'key = ?',
+      whereArgs: [key],
+      limit: 1,
+    );
+    return rows.isEmpty ? null : rows.first['value'] as String?;
+  }
+
+  Future<void> setSetting(String key, String value) async {
+    final db = await database;
+    await db.insert(
+      'app_settings',
+      {'key': key, 'value': value},
+      conflictAlgorithm: ConflictAlgorithm.replace,
     );
   }
 

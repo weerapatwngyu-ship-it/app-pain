@@ -1,3 +1,5 @@
+import '../../../../core/i18n/app_locale.dart';
+
 /// Where a reminder came from.
 enum ReminderSource {
   /// Typed by the patient on the reminders screen.
@@ -57,11 +59,17 @@ class MedicationReminder {
       '${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')}';
 
   String get repeatLabel {
-    if (isOneOff) return 'ดังครั้งเดียว';
-    if (isEveryDay) return 'ทุกวัน';
-    const names = {1: 'จ.', 2: 'อ.', 3: 'พ.', 4: 'พฤ.', 5: 'ศ.', 6: 'ส.', 7: 'อา.'};
+    if (isOneOff) return t('ดังครั้งเดียว', 'Once');
+    if (isEveryDay) return t('ทุกวัน', 'Every day');
+    const thai = {1: 'จ.', 2: 'อ.', 3: 'พ.', 4: 'พฤ.', 5: 'ศ.', 6: 'ส.', 7: 'อา.'};
+    const english = {
+      1: 'Mon', 2: 'Tue', 3: 'Wed', 4: 'Thu', 5: 'Fri', 6: 'Sat', 7: 'Sun',
+    };
+    final names = LocaleController.instance.isEnglish ? english : thai;
     final sorted = days.toList()..sort();
-    if (sorted.length == 5 && sorted.every((d) => d <= 5)) return 'จ. ถึง ศ.';
+    if (sorted.length == 5 && sorted.every((d) => d <= 5)) {
+      return t('จ. ถึง ศ.', 'Mon to Fri');
+    }
     return sorted.map((d) => names[d]).join(' ');
   }
 
@@ -98,10 +106,18 @@ class MedicationReminder {
     final hours = left.inHours % 24;
     final minutes = left.inMinutes % 60;
 
-    if (daysLeft > 0) return 'จะเตือนในอีก $daysLeft วัน $hours ชั่วโมง';
-    if (hours > 0) return 'จะเตือนในอีก $hours ชั่วโมง $minutes นาที';
-    if (minutes > 0) return 'จะเตือนในอีก $minutes นาที';
-    return 'จะเตือนในไม่ถึง 1 นาที';
+    if (daysLeft > 0) {
+      return t('จะเตือนในอีก $daysLeft วัน $hours ชั่วโมง',
+          'Rings in $daysLeft d $hours h');
+    }
+    if (hours > 0) {
+      return t('จะเตือนในอีก $hours ชั่วโมง $minutes นาที',
+          'Rings in $hours h $minutes min');
+    }
+    if (minutes > 0) {
+      return t('จะเตือนในอีก $minutes นาที', 'Rings in $minutes min');
+    }
+    return t('จะเตือนในไม่ถึง 1 นาที', 'Rings in under a minute');
   }
 
   MedicationReminder copyWith({

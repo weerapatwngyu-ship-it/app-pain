@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../core/i18n/app_locale.dart';
 import '../core/storage/local_database.dart';
 import '../features/alerts/data/alerts_repository.dart';
 import '../features/auth/data/auth_repository_impl.dart';
@@ -117,10 +118,17 @@ class _MediGoAppState extends State<MediGoApp> {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'MediGo',
-      theme: AppTheme.light(),
-      home: _buildHome(),
+    // Rebuilt whenever the language changes. t() reads the controller during
+    // build rather than through an InheritedWidget, so something has to force
+    // the repaint — and doing it at the root is what makes the switch take
+    // effect everywhere at once instead of on the next screen the user opens.
+    return ListenableBuilder(
+      listenable: LocaleController.instance,
+      builder: (context, _) => MaterialApp(
+        title: 'MediGo',
+        theme: AppTheme.light(),
+        home: _buildHome(),
+      ),
     );
   }
 

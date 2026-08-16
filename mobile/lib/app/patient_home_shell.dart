@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../core/i18n/app_locale.dart';
 import '../features/alerts/data/alerts_repository.dart';
 import '../features/reminders/data/reminder_repository.dart';
 import '../features/reminders/presentation/reminders_screen.dart';
@@ -154,7 +155,7 @@ class _PatientHomeShellState extends State<PatientHomeShell> {
             children: [
               _NavItem(
                 icon: Icons.home_outlined,
-                label: 'หน้าหลัก',
+                label: t('หน้าหลัก', 'Home'),
                 selected: _index == 0,
                 onTap: () => setState(() {
                   // Every tap on home re-reads the doctor row — including
@@ -167,25 +168,25 @@ class _PatientHomeShellState extends State<PatientHomeShell> {
               ),
               _NavItem(
                 icon: Icons.event_note_outlined,
-                label: 'กิจกรรม',
+                label: t('กิจกรรม', 'Activity'),
                 selected: _index == 1,
                 onTap: () => setState(() => _index = 1),
               ),
               _NavItem(
                 icon: Icons.local_pharmacy_outlined,
-                label: 'ร้านยา',
+                label: t('ร้านยา', 'Pharmacy'),
                 selected: false,
                 onTap: _openPharmacyFinder,
               ),
               _NavItem(
                 icon: Icons.alarm,
-                label: 'เตือนกินยา',
+                label: t('เตือนกินยา', 'Reminders'),
                 selected: _index == 2,
                 onTap: () => setState(() => _index = 2),
               ),
               _NavItem(
                 icon: Icons.person_outline,
-                label: 'โปรไฟล์',
+                label: t('โปรไฟล์', 'Profile'),
                 selected: _index == 3,
                 onTap: () => setState(() => _index = 3),
               ),

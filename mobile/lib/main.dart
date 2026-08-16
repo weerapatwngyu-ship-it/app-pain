@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'app/app.dart';
+import 'core/i18n/app_locale.dart';
 import 'core/notification/notification_service.dart';
 import 'features/reminders/data/reminder_watch_service.dart';
 
@@ -34,6 +35,10 @@ const _googleWebClientId = String.fromEnvironment('GOOGLE_WEB_CLIENT_ID');
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Before anything is drawn: the first screen should already be in the
+  // chosen language rather than appearing in Thai and switching a frame later.
+  await LocaleController.instance.load();
 
   // Never let notification setup stop the app from starting. It already did
   // once: an icon name that failed to resolve threw here, main() ended before

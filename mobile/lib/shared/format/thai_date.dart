@@ -26,6 +26,28 @@ String thaiDate(DateTime date) =>
 String thaiDateFull(DateTime date) =>
     '${date.day} ${thaiMonthsFull[date.month - 1]} ${date.year + 543}';
 
+const englishWeekdays = [
+  'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday',
+];
+
+const englishMonthsShort = [
+  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+];
+
+const englishMonthsFull = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+];
+
+/// "12 Aug 2025" — the Gregorian year, since a Buddhist year written in
+/// English reads as a typo rather than as a date.
+String englishDate(DateTime date) =>
+    '${date.day} ${englishMonthsShort[date.month - 1]} ${date.year}';
+
+String englishDateFull(DateTime date) =>
+    '${date.day} ${englishMonthsFull[date.month - 1]} ${date.year}';
+
 /// Whole years since [birthDate], as a chart shows an age.
 int ageFrom(DateTime birthDate, {DateTime? asOf}) {
   final now = asOf ?? DateTime.now();

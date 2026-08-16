@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/i18n/app_locale.dart';
 import '../../../shared/format/thai_date.dart';
 import '../../../shared/widgets/auto_scroll_strip.dart';
 import '../../../shared/widgets/avatar_picker.dart';
@@ -248,7 +249,9 @@ class _TodayScheduleScreenState extends State<TodayScheduleScreen> {
     if (!mounted) return;
     setState(() => _actionedScheduleIds.add(item.scheduleId));
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('บันทึกแล้ว: ${item.medicationName}')),
+      SnackBar(
+          content: Text(t('บันทึกแล้ว: ${item.medicationName}',
+              'Recorded: ${item.medicationName}'))),
     );
   }
 
@@ -281,10 +284,10 @@ class _TodayScheduleScreenState extends State<TodayScheduleScreen> {
 
   String get _greeting {
     final hour = DateTime.now().hour;
-    if (hour < 6) return 'สวัสดีตอนดึก';
-    if (hour < 12) return 'สวัสดีตอนเช้า';
-    if (hour < 18) return 'สวัสดีตอนบ่าย';
-    return 'สวัสดีตอนเย็น';
+    if (hour < 6) return t('สวัสดีตอนดึก', 'Good night');
+    if (hour < 12) return t('สวัสดีตอนเช้า', 'Good morning');
+    if (hour < 18) return t('สวัสดีตอนบ่าย', 'Good afternoon');
+    return t('สวัสดีตอนเย็น', 'Good evening');
   }
 
   @override
@@ -303,7 +306,9 @@ class _TodayScheduleScreenState extends State<TodayScheduleScreen> {
               return const Center(child: CircularProgressIndicator());
             }
             if (snapshot.hasError) {
-              return const Center(child: Text('โหลดตารางยาไม่สำเร็จ'));
+              return Center(
+                child: Text(t('โหลดตารางยาไม่สำเร็จ',
+                    'Could not load your doses')));
             }
             final items = snapshot.data ?? [];
             final doneCount = items
@@ -351,8 +356,8 @@ class _TodayScheduleScreenState extends State<TodayScheduleScreen> {
                 if (items.isNotEmpty) ...[
                   const SizedBox(height: 28),
                   _SectionHeader(
-                    title: 'ตารางยาวันนี้',
-                    actionLabel: 'ยาของฉัน',
+                    title: t('ตารางยาวันนี้', "Today's doses"),
+                    actionLabel: t('ยาของฉัน', 'My medication'),
                     actionIcon: Icons.medication_outlined,
                     onAction: _openMedicationList,
                   ),
@@ -367,8 +372,8 @@ class _TodayScheduleScreenState extends State<TodayScheduleScreen> {
                 ],
                 const SizedBox(height: 28),
                 _SectionHeader(
-                  title: 'ปรึกษาแพทย์',
-                  actionLabel: 'ดูทั้งหมด',
+                  title: t('ปรึกษาแพทย์', 'Talk to a doctor'),
+                  actionLabel: t('ดูทั้งหมด', 'See all'),
                   onAction: _openDoctorList,
                 ),
                 const SizedBox(height: 10),
@@ -380,12 +385,12 @@ class _TodayScheduleScreenState extends State<TodayScheduleScreen> {
                     // by an admin, so an empty row means nobody has been
                     // approved yet — not that the patient should add someone.
                     if (doctors.isEmpty) {
-                      return const SizedBox(
+                      return SizedBox(
                         height: 72,
                         child: Center(
                           child: Text(
-                            'ยังไม่มีแพทย์ในระบบ',
-                            style: TextStyle(
+                            t('ยังไม่มีแพทย์ในระบบ', 'No doctors listed yet'),
+                            style: const TextStyle(
                               fontSize: 13,
                               color: OnboardingColors.textMuted,
                             ),
@@ -408,8 +413,8 @@ class _TodayScheduleScreenState extends State<TodayScheduleScreen> {
                 ),
                 const SizedBox(height: 28),
                 _SectionHeader(
-                  title: 'คลินิกออนไลน์',
-                  actionLabel: 'ดูทั้งหมด',
+                  title: t('คลินิกออนไลน์', 'Online clinic'),
+                  actionLabel: t('ดูทั้งหมด', 'See all'),
                   onAction: _openHealthTopics,
                 ),
                 const SizedBox(height: 10),
@@ -475,6 +480,9 @@ class _TodayScheduleScreenState extends State<TodayScheduleScreen> {
 /// which day that is.
 String _thaiToday() {
   final now = DateTime.now();
+  if (LocaleController.instance.isEnglish) {
+    return '${englishWeekdays[now.weekday - 1]} ${englishDate(now)}';
+  }
   return 'วัน${thaiWeekdays[now.weekday - 1]} ${thaiDate(now)}';
 }
 
@@ -856,11 +864,15 @@ class _TodaySummaryPanel extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('ยาวันนี้',
-                      style: TextStyle(color: Colors.white70, fontSize: 13)),
+                  Text(t('ยาวันนี้', "Today's doses"),
+                      style: const TextStyle(
+                          color: Colors.white70, fontSize: 13)),
                   const SizedBox(height: 6),
                   Text(
-                    allDone ? 'ครบแล้ววันนี้' : 'บันทึกแล้ว $done จาก $total',
+                    allDone
+                        ? t('ครบแล้ววันนี้', 'All done for today')
+                        : t('บันทึกแล้ว $done จาก $total',
+                            '$done of $total recorded'),
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 21,
@@ -910,7 +922,8 @@ class _TodaySummaryPanel extends StatelessWidget {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  'ถัดไป ${nextDose!.scheduledTime} · ${nextDose!.medicationName}',
+                  t('ถัดไป ${nextDose!.scheduledTime} · ${nextDose!.medicationName}',
+                      'Next ${nextDose!.scheduledTime} · ${nextDose!.medicationName}'),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
@@ -1017,23 +1030,27 @@ class _ReminderNote extends StatelessWidget {
           color: const Color(0xFFEAF5F3),
           borderRadius: BorderRadius.circular(14),
         ),
-        child: const Row(
+        child: Row(
           children: [
-            Icon(Icons.notifications_active_outlined,
+            const Icon(Icons.notifications_active_outlined,
                 size: 18, color: OnboardingColors.teal),
-            SizedBox(width: 10),
+            const SizedBox(width: 10),
             Expanded(
               child: Text(
-                'แพทย์ตั้งเวลาให้ แอปจะเตือนอัตโนมัติทุกวัน\n'
-                'กด "กินแล้ว" บนการแจ้งเตือนได้เลย ระบบบันทึกให้ทันที',
-                style: TextStyle(
+                t(
+                  'แพทย์ตั้งเวลาให้ แอปจะเตือนอัตโนมัติทุกวัน\n'
+                      'กด "กินแล้ว" บนการแจ้งเตือนได้เลย ระบบบันทึกให้ทันที',
+                  'Your doctor set these times; the app reminds you daily.\n'
+                      'Press "Taken" on the notification and it is recorded.',
+                ),
+                style: const TextStyle(
                   fontSize: 12,
                   height: 1.5,
                   color: OnboardingColors.teal,
                 ),
               ),
             ),
-            Icon(Icons.chevron_right,
+            const Icon(Icons.chevron_right,
                 size: 18, color: OnboardingColors.teal),
           ],
         ),
@@ -1056,11 +1073,11 @@ class _DoseTile extends StatelessWidget {
     final hour = int.tryParse(item.scheduledTime.split(':').first) ?? 0;
     // Before 05:00 is still the night before, not the morning — a 02:00 dose
     // labelled "เช้า" would send someone looking for it at breakfast.
-    if (hour < 5) return 'กลางคืน';
-    if (hour < 11) return 'เช้า';
-    if (hour < 15) return 'กลางวัน';
-    if (hour < 19) return 'เย็น';
-    return 'ก่อนนอน';
+    if (hour < 5) return t('กลางคืน', 'Night');
+    if (hour < 11) return t('เช้า', 'Morning');
+    if (hour < 15) return t('กลางวัน', 'Midday');
+    if (hour < 19) return t('เย็น', 'Evening');
+    return t('ก่อนนอน', 'Bedtime');
   }
 
   @override
@@ -1154,7 +1171,7 @@ class _DoseTile extends StatelessWidget {
                     child: FilledButton.icon(
                       onPressed: () => onLog(DoseLogStatus.taken),
                       icon: const Icon(Icons.check, size: 18),
-                      label: const Text('กินแล้ว'),
+                      label: Text(t('กินแล้ว', 'Taken')),
                       style: FilledButton.styleFrom(
                         backgroundColor: OnboardingColors.teal,
                         foregroundColor: Colors.white,
@@ -1177,7 +1194,7 @@ class _DoseTile extends StatelessWidget {
                           borderRadius: BorderRadius.circular(12),
                         ),
                       ),
-                      child: const Text('ข้าม'),
+                      child: Text(t('ข้าม', 'Skip')),
                     ),
                   ),
                 ],
