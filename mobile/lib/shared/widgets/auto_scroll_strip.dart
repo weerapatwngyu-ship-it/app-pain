@@ -76,6 +76,16 @@ class _AutoScrollStripState extends State<AutoScrollStrip>
   Timer? _resumeTimer;
   bool _paused = false;
 
+  /// Whether the system asked for reduced motion, captured during build where
+  /// depending on MediaQuery is safe.
+  bool _reduceMotion = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _reduceMotion = MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -109,7 +119,14 @@ class _AutoScrollStripState extends State<AutoScrollStrip>
     if (!mounted || _looping) return;
     // Someone who has asked the system to reduce motion should not be handed a
     // row that moves by itself.
-    if (MediaQuery.maybeOf(context)?.disableAnimations ?? false) return;
+    //
+    // Read from the field, not from MediaQuery here. _start runs in a
+    // post-frame callback, and reading an inherited widget outside build
+    // registers a dependency at a moment the framework does not expect one —
+    // which leaves an InheritedElement holding dependents when it unmounts and
+    // trips "_dependents.isEmpty is not true" on the next teardown, hot
+    // restart included.
+    if (_reduceMotion) return;
     if (widget.itemCount < 2) return;
     if (!_controller.hasClients) return;
 
