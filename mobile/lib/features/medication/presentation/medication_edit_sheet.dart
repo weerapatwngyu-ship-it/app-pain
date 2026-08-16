@@ -29,10 +29,10 @@ class MedicationDraft {
 /// as separate entries rather than as a sentence — this is the moment it pays
 /// for itself.
 class MedicationEditSheet extends StatefulWidget {
-  MedicationEditSheet({
+  const MedicationEditSheet({
     super.key,
     this.allergies = const [],
-    this.title = t('เพิ่มยา', 'Add medication'),
+    this.title,
   });
 
   final List<String> allergies;
@@ -40,7 +40,13 @@ class MedicationEditSheet extends StatefulWidget {
   /// Heading on the sheet. A doctor prescribing needs to see whose record
   /// they are writing to; getting that wrong writes a drug onto the wrong
   /// patient.
-  final String title;
+  ///
+  /// Null means the default heading. It cannot be defaulted in the parameter
+  /// list any more: a default value has to be a constant expression, and the
+  /// translated wording is decided at run time.
+  final String? title;
+
+  String get heading => title ?? t('เพิ่มยา', 'Add medication');
 
   @override
   State<MedicationEditSheet> createState() => _MedicationEditSheetState();
@@ -207,7 +213,7 @@ class _MedicationEditSheetState extends State<MedicationEditSheet> {
                 children: [
                   Expanded(
                     child: Text(
-                      widget.title,
+                      widget.heading,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(

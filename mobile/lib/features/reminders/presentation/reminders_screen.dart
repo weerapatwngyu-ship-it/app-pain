@@ -656,12 +656,17 @@ class _ReminderSheetState extends State<_ReminderSheet> {
 }
 
 enum _Repeat {
-  once(t('ดังครั้งเดียว', 'Once')),
-  everyDay(t('ทุกวัน', 'Every day')),
-  custom(t('กำหนดเอง', 'Custom'));
+  once,
+  everyDay,
+  custom;
 
-  const _Repeat(this.label);
-  final String label;
+  /// A getter rather than a constructor argument: an enum constant is a const
+  /// expression, and a translated label is decided at run time.
+  String get label => switch (this) {
+        _Repeat.once => t('ดังครั้งเดียว', 'Once'),
+        _Repeat.everyDay => t('ทุกวัน', 'Every day'),
+        _Repeat.custom => t('กำหนดเอง', 'Custom'),
+      };
 }
 
 /// Says out loud what the OS is doing with our reminders.
@@ -689,11 +694,22 @@ class _StatusBanner extends StatelessWidget {
     if (!blocked && !enabledButUnscheduled) return const SizedBox.shrink();
 
     final message = blocked
-        ? t('ระบบปิดกั้นการแจ้งเตือนของแอปนี้อยู่ จึงจะไม่มีเสียงเตือนแม้ตั้งเวลาไว้\n\n', 'Notifications are blocked for this app, so nothing will ring however it is set.\n\n')
-            t('เปิดที่ ตั้งค่า > แอป > MediGo > การแจ้งเตือน', 'Turn them on in Settings > Apps > MediGo > Notifications')
-        : t('ตั้งเวลาไว้ $reminderCount รายการ แต่ระบบไม่ได้รับนาฬิกาไว้เลย\n\n', '$reminderCount reminders are set, but the system is holding no alarms.\n\n')
-            t('มักเกิดจากสิทธิ์ "การปลุกและการเตือนความจำ" ยังไม่ได้เปิด ', 'Usually the "alarms and reminders" permission is off, ')
-            t('หรือเครื่องปิดการทำงานเบื้องหลังของแอปไว้', 'or the phone is blocking the app from running in the background.');
+        ? t(
+            'ระบบปิดกั้นการแจ้งเตือนของแอปนี้อยู่ จึงจะไม่มีเสียงเตือนแม้ตั้งเวลาไว้\n\n'
+                'เปิดที่ ตั้งค่า > แอป > MediGo > การแจ้งเตือน',
+            'Notifications are blocked for this app, so nothing will ring '
+                'however it is set.\n\n'
+                'Turn them on in Settings > Apps > MediGo > Notifications',
+          )
+        : t(
+            'ตั้งเวลาไว้ $reminderCount รายการ แต่ระบบไม่ได้รับนาฬิกาไว้เลย\n\n'
+                'มักเกิดจากสิทธิ์ "การปลุกและการเตือนความจำ" ยังไม่ได้เปิด '
+                'หรือเครื่องปิดการทำงานเบื้องหลังของแอปไว้',
+            '$reminderCount reminders are set, but the system is holding no '
+                'alarms.\n\n'
+                'Usually the "alarms and reminders" permission is off, or the '
+                'phone is blocking the app from running in the background.',
+          );
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),

@@ -193,6 +193,10 @@ class _PersonalInfoDetailScreenState extends State<PersonalInfoDetailScreen> {
   Widget _buildHealthCard(BuildContext context, PatientProfile? profile) {
     final allergies = profile?.drugAllergies ?? const <String>[];
     final foodAllergies = profile?.foodAllergies ?? const <String>[];
+    final weightKg = profile?.weightKg;
+    final heightCm = profile?.heightCm;
+    final weight = weightKg == null ? null : _numberText(weightKg);
+    final height = heightCm == null ? null : _numberText(heightCm);
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -240,15 +244,14 @@ class _PersonalInfoDetailScreenState extends State<PersonalInfoDetailScreen> {
           _InfoRow(label: t('กรุ๊ปเลือด', 'Blood type'), value: profile?.bloodType ?? '-'),
           _InfoRow(
             label: t('น้ำหนัก', 'Weight'),
-            value: profile?.weightKg == null
-                ? '-'
-                : t('${_numberText(profile!.weightKg)} กก.', '${_numberText(profile!.weightKg)} kg'),
+            // Formatted once into a local: repeating `profile!` inside both
+            // halves of t() makes the second assertion redundant, which the
+            // analyzer rightly complains about.
+            value: weight == null ? '-' : t('$weight กก.', '$weight kg'),
           ),
           _InfoRow(
             label: t('ส่วนสูง', 'Height'),
-            value: profile?.heightCm == null
-                ? '-'
-                : t('${_numberText(profile!.heightCm)} ซม.', '${_numberText(profile!.heightCm)} cm'),
+            value: height == null ? '-' : t('$height ซม.', '$height cm'),
             showDivider: false,
           ),
         ],
