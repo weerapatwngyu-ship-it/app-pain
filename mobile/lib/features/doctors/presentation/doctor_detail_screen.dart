@@ -172,11 +172,11 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
             ),
           if (!canChat)
             Padding(
-              padding: EdgeInsets.symmetric(vertical: 16),
+              padding: const EdgeInsets.symmetric(vertical: 16),
               child: Text(
                 t('บัญชีนี้ไม่มีข้อมูลผู้ป่วย จึงยังส่งข้อความไม่ได้', 'This account has no patient record, so messages cannot be sent yet'),
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 13, color: OnboardingColors.textMuted),
+                style: const TextStyle(fontSize: 13, color: OnboardingColors.textMuted),
               ),
             ),
           const SizedBox(height: 8),
@@ -188,13 +188,13 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
             ),
             child: Row(
               children: [
-                Icon(Icons.warning_amber_rounded,
+                const Icon(Icons.warning_amber_rounded,
                     color: Color(0xFFC0392B), size: 20),
-                SizedBox(width: 10),
+                const SizedBox(width: 10),
                 Expanded(
                   child: Text(
                     t('ข้อความในแอปไม่ใช่ช่องทางฉุกเฉิน — หากมีอาการรุนแรง โทร 1669', 'In-app messages are not for emergencies — if it is severe, call 1669'),
-                    style: TextStyle(
+                    style: const TextStyle(
                         fontSize: 12.5, height: 1.4, color: Color(0xFFC0392B)),
                   ),
                 ),

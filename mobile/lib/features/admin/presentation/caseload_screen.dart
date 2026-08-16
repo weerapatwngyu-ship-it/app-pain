@@ -351,7 +351,7 @@ class _PatientRecordScreenState extends State<PatientRecordScreen> {
                     )
                   : const Icon(Icons.chat_bubble_outline, color: Colors.white),
               label: Text(t('ส่งข้อความ', 'Message'),
-                  style: TextStyle(color: Colors.white)),
+                  style: const TextStyle(color: Colors.white)),
             )
           : null,
       body: FutureBuilder<PatientRecord>(
@@ -406,7 +406,7 @@ class _PatientRecordScreenState extends State<PatientRecordScreen> {
               const SizedBox(height: 24),
               Text(
                 t('หน้านี้แสดงข้อมูลอย่างเดียว การแก้ใบสั่งยาต้องเป็นแพทย์ที่ดูแลผู้ป่วยรายนี้', 'This screen is read-only. Changing a prescription requires being this patient’s provider.'),
-                style: TextStyle(fontSize: 12, color: OnboardingColors.textMuted),
+                style: const TextStyle(fontSize: 12, color: OnboardingColors.textMuted),
               ),
             ],
           );

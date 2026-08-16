@@ -134,7 +134,7 @@ class _PersonalInfoDetailScreenState extends State<PersonalInfoDetailScreen> {
                   Expanded(
                     child: Text(
                       t('ข้อมูลส่วนตัว', 'Personal details'),
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.w700,
                         color: OnboardingColors.text,
@@ -143,7 +143,7 @@ class _PersonalInfoDetailScreenState extends State<PersonalInfoDetailScreen> {
                   ),
                   TextButton(
                     onPressed: _openEdit,
-                    child: Text(t('แก้ไข', 'Edit'), style: TextStyle(color: OnboardingColors.teal)),
+                    child: Text(t('แก้ไข', 'Edit'), style: const TextStyle(color: OnboardingColors.teal)),
                   ),
                 ],
               ),
@@ -211,13 +211,13 @@ class _PersonalInfoDetailScreenState extends State<PersonalInfoDetailScreen> {
               Expanded(
                 child: Text(
                   t('ข้อมูลสุขภาพ', 'Health information'),
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
                 ),
               ),
               TextButton(
                 onPressed: _user.patientId == null ? null : _openHealthEdit,
                 child: Text(t('แก้ไข', 'Edit'),
-                    style: TextStyle(color: OnboardingColors.teal)),
+                    style: const TextStyle(color: OnboardingColors.teal)),
               ),
             ],
           ),

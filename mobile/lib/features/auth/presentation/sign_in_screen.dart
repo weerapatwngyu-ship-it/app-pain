@@ -231,15 +231,15 @@ class _SignInScreenState extends State<SignInScreen> {
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      Expanded(child: Divider(color: OnboardingColors.border)),
+                      const Expanded(child: Divider(color: OnboardingColors.border)),
                       Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 12),
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
                         child: Text(
                           t('หรือ', 'or'),
-                          style: TextStyle(fontSize: 13, color: OnboardingColors.textMuted),
+                          style: const TextStyle(fontSize: 13, color: OnboardingColors.textMuted),
                         ),
                       ),
-                      Expanded(child: Divider(color: OnboardingColors.border)),
+                      const Expanded(child: Divider(color: OnboardingColors.border)),
                     ],
                   ),
                   const SizedBox(height: 16),
@@ -261,7 +261,7 @@ class _SignInScreenState extends State<SignInScreen> {
                           : const _GoogleMark(),
                       label: Text(
                         t('เข้าสู่ระบบด้วย Google', 'Sign in with Google'),
-                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                        style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
                       ),
                     ),
                   ),
@@ -270,7 +270,7 @@ class _SignInScreenState extends State<SignInScreen> {
                 Text(
                   t('การเข้าสู่ระบบถือว่าคุณยอมรับให้แอปเก็บข้อมูลสุขภาพ\nเพื่อใช้ติดตามการรักษาของคุณ', 'By signing in you agree to let the app store health information\nused to follow your treatment'),
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 12, color: OnboardingColors.textMuted),
+                  style: const TextStyle(fontSize: 12, color: OnboardingColors.textMuted),
                 ),
               ],
             ),

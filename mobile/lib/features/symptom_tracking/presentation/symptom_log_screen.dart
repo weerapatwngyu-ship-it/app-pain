@@ -199,10 +199,10 @@ class _SymptomLogScreenState extends State<SymptomLogScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(t('ไม่มีอาการ', 'None'),
-                        style: TextStyle(
+                        style: const TextStyle(
                             fontSize: 12, color: OnboardingColors.textMuted)),
                     Text(t('รุนแรงที่สุด', 'Worst'),
-                        style: TextStyle(
+                        style: const TextStyle(
                             fontSize: 12, color: OnboardingColors.textMuted)),
                   ],
                 ),
@@ -261,7 +261,7 @@ class _SymptomLogScreenState extends State<SymptomLogScreen> {
           const SizedBox(height: 24),
           Text(
             t('บันทึกล่าสุด', 'Recent entries'),
-            style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 10),
           FutureBuilder<List<SymptomLog>>(
@@ -276,11 +276,11 @@ class _SymptomLogScreenState extends State<SymptomLogScreen> {
               final logs = snapshot.data ?? const <SymptomLog>[];
               if (logs.isEmpty) {
                 return Padding(
-                  padding: EdgeInsets.symmetric(vertical: 20),
+                  padding: const EdgeInsets.symmetric(vertical: 20),
                   child: Text(
                     t('ยังไม่มีบันทึก — บันทึกครั้งแรกได้จากด้านบน', 'No entries yet — add your first one above'),
                     textAlign: TextAlign.center,
-                    style: TextStyle(color: OnboardingColors.textMuted),
+                    style: const TextStyle(color: OnboardingColors.textMuted),
                   ),
                 );
               }

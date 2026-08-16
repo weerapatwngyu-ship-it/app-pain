@@ -164,14 +164,14 @@ class _HealthTopicDetailScreenState extends State<HealthTopicDetailScreen> {
             const SizedBox(height: 28),
             Text(
               t('ปรึกษาบุคลากร', 'Talk to a professional'),
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 12),
             _buildDoctors(),
             const SizedBox(height: 28),
             Text(
               t('คำถามของฉันในหมวดนี้', 'My questions in this topic'),
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 12),
             _buildQuestions(),
@@ -184,7 +184,7 @@ class _HealthTopicDetailScreenState extends State<HealthTopicDetailScreen> {
             else
               Text(
                 t('ยังไม่มีข้อมูลผู้ป่วยในบัญชีนี้ จึงยังฝากคำถามไม่ได้', 'This account has no patient record yet, so questions cannot be sent'),
-                style: TextStyle(fontSize: 13, color: OnboardingColors.textMuted),
+                style: const TextStyle(fontSize: 13, color: OnboardingColors.textMuted),
               ),
           ],
         ),
@@ -206,7 +206,7 @@ class _HealthTopicDetailScreenState extends State<HealthTopicDetailScreen> {
         if (all.isEmpty) {
           return Text(
             t('ยังไม่มีรายชื่อบุคลากรในระบบ — ฝากคำถามไว้ได้ แพทย์จะตอบกลับภายหลัง', 'No professionals listed yet — you can still ask, and a doctor will reply later'),
-            style: TextStyle(fontSize: 13, color: OnboardingColors.textMuted),
+            style: const TextStyle(fontSize: 13, color: OnboardingColors.textMuted),
           );
         }
 
@@ -236,10 +236,10 @@ class _HealthTopicDetailScreenState extends State<HealthTopicDetailScreen> {
               ),
             if (related.isEmpty)
               Padding(
-                padding: EdgeInsets.only(bottom: 8),
+                padding: const EdgeInsets.only(bottom: 8),
                 child: Text(
                   t('ยังไม่มีบุคลากรที่ระบุความเชี่ยวชาญตรงหมวดนี้ — แสดงรายชื่อทั้งหมดแทน', 'No one lists this speciality — showing everyone instead'),
-                  style: TextStyle(fontSize: 12, color: OnboardingColors.textMuted),
+                  style: const TextStyle(fontSize: 12, color: OnboardingColors.textMuted),
                 ),
               ),
             const SizedBox(height: 8),
@@ -268,7 +268,7 @@ class _HealthTopicDetailScreenState extends State<HealthTopicDetailScreen> {
     if (widget.patientId == null) {
       return Text(
         t('เข้าสู่ระบบด้วยบัญชีผู้ป่วยเพื่อดูคำถามของคุณ', 'Sign in with a patient account to see your questions'),
-        style: TextStyle(fontSize: 13, color: OnboardingColors.textMuted),
+        style: const TextStyle(fontSize: 13, color: OnboardingColors.textMuted),
       );
     }
     return FutureBuilder<List<HealthQuestion>>(
@@ -290,7 +290,7 @@ class _HealthTopicDetailScreenState extends State<HealthTopicDetailScreen> {
         if (questions.isEmpty) {
           return Text(
             t('ยังไม่เคยถามในหมวดนี้', 'No questions in this topic yet'),
-            style: TextStyle(fontSize: 13, color: OnboardingColors.textMuted),
+            style: const TextStyle(fontSize: 13, color: OnboardingColors.textMuted),
           );
         }
         return Column(
@@ -510,7 +510,7 @@ class QuestionCard extends StatelessWidget {
                 children: [
                   Text(
                     t('คำตอบจากแพทย์', "Doctor's reply"),
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w700,
                       color: OnboardingColors.teal,
@@ -610,7 +610,7 @@ class _AskQuestionSheetState extends State<_AskQuestionSheet> {
           const SizedBox(height: 4),
           Text(
             t('อธิบายอาการ ระยะเวลาที่เป็น และยาที่กินอยู่ จะช่วยให้แพทย์ตอบได้ตรงขึ้น', 'Describing the symptom, how long you have had it, and what you are taking helps the doctor answer'),
-            style: TextStyle(fontSize: 13, color: OnboardingColors.textMuted),
+            style: const TextStyle(fontSize: 13, color: OnboardingColors.textMuted),
           ),
           const SizedBox(height: 16),
           TextField(
@@ -641,7 +641,7 @@ class _AskQuestionSheetState extends State<_AskQuestionSheet> {
           const SizedBox(height: 8),
           Text(
             t('หากเป็นเหตุฉุกเฉิน อย่ารอคำตอบในแอป — โทร 1669', 'In an emergency do not wait for a reply here — call 1669'),
-            style: TextStyle(fontSize: 12, color: Color(0xFFC0392B)),
+            style: const TextStyle(fontSize: 12, color: Color(0xFFC0392B)),
           ),
           const SizedBox(height: 16),
           OnboardingPrimaryButton(

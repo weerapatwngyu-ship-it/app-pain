@@ -277,7 +277,7 @@ class _MedicationEditSheetState extends State<MedicationEditSheet> {
               _Label(t('ความถี่', 'How often')),
               Text(
                 t('เว้นว่างได้ — ระบบจะเติมให้จากจำนวนเวลาที่เลือก', 'Optional — filled in from the number of times you choose'),
-                style: TextStyle(fontSize: 12, color: OnboardingColors.textMuted),
+                style: const TextStyle(fontSize: 12, color: OnboardingColors.textMuted),
               ),
               const SizedBox(height: 8),
               TextFormField(
@@ -290,7 +290,7 @@ class _MedicationEditSheetState extends State<MedicationEditSheet> {
               _Label(t('เวลาที่ต้องกิน*', 'Times to take it*')),
               Text(
                 t('เลือกอย่างน้อย 1 เวลา ระบบจะเตือนและขึ้นในตารางวันนี้ตามนี้', 'Pick at least one time. Reminders and the daily schedule follow it.'),
-                style: TextStyle(fontSize: 12, color: OnboardingColors.textMuted),
+                style: const TextStyle(fontSize: 12, color: OnboardingColors.textMuted),
               ),
               const SizedBox(height: 10),
               Wrap(

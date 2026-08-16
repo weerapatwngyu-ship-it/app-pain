@@ -59,10 +59,10 @@ class HealthTopicsScreen extends StatelessWidget {
               ),
             ),
             Padding(
-              padding: EdgeInsets.fromLTRB(20, 12, 20, 0),
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
               child: Text(
                 t('เลือกหมวดที่ตรงกับอาการหรือเรื่องที่สงสัย เพื่ออ่านข้อมูลและฝากคำถามถึงแพทย์', 'Pick the topic that matches your symptom or question, to read about it and ask a doctor'),
-                style: TextStyle(fontSize: 13, color: OnboardingColors.textMuted),
+                style: const TextStyle(fontSize: 13, color: OnboardingColors.textMuted),
               ),
             ),
             const SizedBox(height: 16),

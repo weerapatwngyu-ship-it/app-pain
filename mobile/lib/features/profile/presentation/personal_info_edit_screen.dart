@@ -183,7 +183,7 @@ class _PersonalInfoEditScreenState extends State<PersonalInfoEditScreen> {
                 child: ListView(
                   padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
                   children: [
-                    Text(t('ชื่อจริง*', 'First name*'), style: TextStyle(fontWeight: FontWeight.w600)),
+                    Text(t('ชื่อจริง*', 'First name*'), style: const TextStyle(fontWeight: FontWeight.w600)),
                     const SizedBox(height: 8),
                     TextFormField(
                       controller: _firstNameController,
@@ -191,7 +191,7 @@ class _PersonalInfoEditScreenState extends State<PersonalInfoEditScreen> {
                       validator: (v) => (v == null || v.trim().isEmpty) ? t('กรอกชื่อจริง', 'Enter your first name') : null,
                     ),
                     const SizedBox(height: 16),
-                    Text(t('นามสกุล*', 'Last name*'), style: TextStyle(fontWeight: FontWeight.w600)),
+                    Text(t('นามสกุล*', 'Last name*'), style: const TextStyle(fontWeight: FontWeight.w600)),
                     const SizedBox(height: 8),
                     TextFormField(
                       controller: _lastNameController,
@@ -199,7 +199,7 @@ class _PersonalInfoEditScreenState extends State<PersonalInfoEditScreen> {
                       validator: (v) => (v == null || v.trim().isEmpty) ? t('กรอกนามสกุล', 'Enter your last name') : null,
                     ),
                     const SizedBox(height: 16),
-                    Text(t('เบอร์โทรศัพท์*', 'Phone number*'), style: TextStyle(fontWeight: FontWeight.w600)),
+                    Text(t('เบอร์โทรศัพท์*', 'Phone number*'), style: const TextStyle(fontWeight: FontWeight.w600)),
                     const SizedBox(height: 8),
                     TextFormField(
                       controller: _phoneController,
@@ -208,7 +208,7 @@ class _PersonalInfoEditScreenState extends State<PersonalInfoEditScreen> {
                       validator: validateThaiPhone,
                     ),
                     const SizedBox(height: 16),
-                    Text(t('อีเมล*', 'Email*'), style: TextStyle(fontWeight: FontWeight.w600)),
+                    Text(t('อีเมล*', 'Email*'), style: const TextStyle(fontWeight: FontWeight.w600)),
                     const SizedBox(height: 8),
                     TextFormField(
                       controller: _emailController,
@@ -218,7 +218,7 @@ class _PersonalInfoEditScreenState extends State<PersonalInfoEditScreen> {
                           (v == null || !v.contains('@')) ? t('กรอกอีเมลให้ถูกต้อง', 'Enter a valid email') : null,
                     ),
                     const SizedBox(height: 16),
-                    Text(t('วันเกิด', 'Date of birth'), style: TextStyle(fontWeight: FontWeight.w600)),
+                    Text(t('วันเกิด', 'Date of birth'), style: const TextStyle(fontWeight: FontWeight.w600)),
                     const SizedBox(height: 8),
                     InkWell(
                       onTap: _pickBirthDate,
@@ -233,7 +233,7 @@ class _PersonalInfoEditScreenState extends State<PersonalInfoEditScreen> {
                       ),
                     ),
                     const SizedBox(height: 16),
-                    Text(t('เพศสภาพ', 'Gender'), style: TextStyle(fontWeight: FontWeight.w600)),
+                    Text(t('เพศสภาพ', 'Gender'), style: const TextStyle(fontWeight: FontWeight.w600)),
                     const SizedBox(height: 8),
                     Row(
                       children: _genderOptions.entries.map((entry) {

@@ -85,11 +85,11 @@ class _MyQuestionsScreenState extends State<MyQuestionsScreen> {
                   if (questions.isEmpty) {
                     return Center(
                       child: Padding(
-                        padding: EdgeInsets.all(32),
+                        padding: const EdgeInsets.all(32),
                         child: Text(
                           t('ยังไม่เคยฝากคำถามถึงแพทย์\nเลือกหมวดในคลินิกออนไลน์เพื่อเริ่มถาม', 'You have not asked anything yet\nPick a topic in the online clinic to start'),
                           textAlign: TextAlign.center,
-                          style: TextStyle(color: OnboardingColors.textMuted),
+                          style: const TextStyle(color: OnboardingColors.textMuted),
                         ),
                       ),
                     );

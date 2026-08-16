@@ -202,12 +202,12 @@ class _PharmacyFinderScreenState extends State<PharmacyFinderScreen> {
     if (_places.isEmpty) {
       return Center(
         child: Padding(
-          padding: EdgeInsets.all(32),
+          padding: const EdgeInsets.all(32),
           child: Text(
             'ค้นหาออกไปไกลถึง 100 กม. แล้วยังไม่พบ\n'
             t('พื้นที่นี้อาจยังไม่มีข้อมูลใน OpenStreetMap', 'This area may not be mapped in OpenStreetMap yet'),
             textAlign: TextAlign.center,
-            style: TextStyle(color: OnboardingColors.textMuted, height: 1.5),
+            style: const TextStyle(color: OnboardingColors.textMuted, height: 1.5),
           ),
         ),
       );
@@ -615,10 +615,10 @@ class _DetailSheet extends StatelessWidget {
               place.phone == null &&
               place.website == null)
             Padding(
-              padding: EdgeInsets.symmetric(vertical: 8),
+              padding: const EdgeInsets.symmetric(vertical: 8),
               child: Text(
                 t('OpenStreetMap ยังไม่มีข้อมูลติดต่อของสถานที่นี้', 'OpenStreetMap has no contact details for this place'),
-                style: TextStyle(fontSize: 13, color: OnboardingColors.textMuted),
+                style: const TextStyle(fontSize: 13, color: OnboardingColors.textMuted),
               ),
             ),
           const SizedBox(height: 20),

@@ -180,11 +180,11 @@ class _ChatScreenState extends State<ChatScreen> {
     if (_messages.isEmpty) {
       return Center(
         child: Padding(
-          padding: EdgeInsets.all(32),
+          padding: const EdgeInsets.all(32),
           child: Text(
             t('ยังไม่มีข้อความ\nพิมพ์ข้อความแรกได้เลย', 'No messages yet\nSend the first one'),
             textAlign: TextAlign.center,
-            style: TextStyle(color: OnboardingColors.textMuted),
+            style: const TextStyle(color: OnboardingColors.textMuted),
           ),
         ),
       );

@@ -92,11 +92,11 @@ class _DoctorListScreenState extends State<DoctorListScreen> {
           if (doctors.isEmpty) {
             return Center(
               child: Padding(
-                padding: EdgeInsets.all(32),
+                padding: const EdgeInsets.all(32),
                 child: Text(
                   t('ยังไม่มีแพทย์ในระบบ\nผู้ดูแลระบบจะเป็นผู้เพิ่มรายชื่อแพทย์', 'No doctors listed yet\nAn administrator adds them'),
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: OnboardingColors.textMuted),
+                  style: const TextStyle(color: OnboardingColors.textMuted),
                 ),
               ),
             );

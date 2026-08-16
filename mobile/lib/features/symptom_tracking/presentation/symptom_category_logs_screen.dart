@@ -99,13 +99,13 @@ class _SymptomCategoryLogsScreenState extends State<SymptomCategoryLogsScreen> {
                     const SizedBox(height: 12),
                     Text(
                       t('ยังไม่มีบันทึกในหมวดนี้', 'Nothing recorded in this category yet'),
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
                     ),
                     const SizedBox(height: 6),
                     Text(
                       t('บันทึกไว้เรื่อย ๆ จะเห็นว่าอาการดีขึ้นหรือแย่ลง\nและเล่าให้แพทย์ฟังได้ตรงขึ้น', 'Recording regularly shows whether things are improving\nand gives your doctor something concrete'),
                       textAlign: TextAlign.center,
-                      style: TextStyle(
+                      style: const TextStyle(
                           color: OnboardingColors.textMuted, height: 1.5),
                     ),
                     const SizedBox(height: 18),

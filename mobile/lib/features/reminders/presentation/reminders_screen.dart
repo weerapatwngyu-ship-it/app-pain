@@ -583,7 +583,7 @@ class _ReminderSheetState extends State<_ReminderSheet> {
                     const SizedBox(height: 2),
                     Text(
                       t('แตะเพื่อเปลี่ยนเวลา', 'Tap to change the time'),
-                      style: TextStyle(
+                      style: const TextStyle(
                           fontSize: 12, color: OnboardingColors.textMuted),
                     ),
                   ],
@@ -644,7 +644,7 @@ class _ReminderSheetState extends State<_ReminderSheet> {
                       Navigator.of(context).pop(const _EditResult.remove()),
                   icon: const Icon(Icons.delete_outline, color: Color(0xFFC0392B)),
                   label: Text(t('ลบการเตือนนี้', 'Delete this reminder'),
-                      style: TextStyle(color: Color(0xFFC0392B))),
+                      style: const TextStyle(color: Color(0xFFC0392B))),
                 ),
               ),
             ],

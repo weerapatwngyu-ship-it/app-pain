@@ -177,12 +177,12 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
         ],
         const SizedBox(height: 12),
         Padding(
-          padding: EdgeInsets.symmetric(vertical: 8),
+          padding: const EdgeInsets.symmetric(vertical: 8),
           child: Text(
             'ข้อมูลนี้คือสิ่งที่ผู้ป่วยเห็นในหน้าแรก '
             'รูปแตะเพื่อเปลี่ยนได้เอง ส่วนชื่อและสาขาความเชี่ยวชาญ '
             t('ต้องติดต่อผู้ดูแลระบบ', 'ask an administrator'),
-            style: TextStyle(fontSize: 12, color: OnboardingColors.textMuted),
+            style: const TextStyle(fontSize: 12, color: OnboardingColors.textMuted),
           ),
         ),
         const Divider(height: 32),

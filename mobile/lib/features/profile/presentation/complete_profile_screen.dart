@@ -194,7 +194,7 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
                     Expanded(
                       child: Text(
                         t('กรอกข้อมูลส่วนตัว', 'Your details'),
-                        style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
+                        style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
                       ),
                     ),
                     TextButton(
@@ -205,12 +205,12 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
                 ),
               ),
               Padding(
-                padding: EdgeInsets.fromLTRB(20, 4, 20, 0),
+                padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
                 child: Align(
                   alignment: Alignment.centerLeft,
                   child: Text(
                     t('กรอกครั้งเดียว แก้ไขภายหลังได้ที่โปรไฟล์', 'Once only — you can change these later in your profile'),
-                    style: TextStyle(color: OnboardingColors.textMuted, fontSize: 13),
+                    style: const TextStyle(color: OnboardingColors.textMuted, fontSize: 13),
                   ),
                 ),
               ),
@@ -236,7 +236,7 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
                           const SizedBox(height: 8),
                           Text(
                             t('แตะเพื่อใส่รูปโปรไฟล์', 'Tap to add a profile photo'),
-                            style: TextStyle(
+                            style: const TextStyle(
                               color: OnboardingColors.textMuted,
                               fontSize: 13,
                             ),

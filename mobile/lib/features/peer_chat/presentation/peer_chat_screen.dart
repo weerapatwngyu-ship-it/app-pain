@@ -146,7 +146,7 @@ class _PeerChatScreenState extends State<PeerChatScreen> {
               onPressed: _openDirectory,
               backgroundColor: OnboardingColors.teal,
               icon: const Icon(Icons.person_search, color: Colors.white),
-              label: Text(t('หาเพื่อนคุย', 'Find someone'), style: TextStyle(color: Colors.white)),
+              label: Text(t('หาเพื่อนคุย', 'Find someone'), style: const TextStyle(color: Colors.white)),
             )
           : null,
     );
@@ -206,12 +206,12 @@ class _PeerChatScreenState extends State<PeerChatScreen> {
     if (!_enabled) {
       return Center(
         child: Padding(
-          padding: EdgeInsets.all(32),
+          padding: const EdgeInsets.all(32),
           child: Text(
             'เปิดสวิตช์ด้านบนเพื่อเริ่มคุยกับผู้ป่วยคนอื่น\n\n'
             t('ข้อความที่นี่เป็นการคุยกันเองระหว่างผู้ป่วย\nไม่ใช่คำแนะนำจากแพทย์', 'Messages here are between patients\nnot medical advice'),
             textAlign: TextAlign.center,
-            style: TextStyle(color: OnboardingColors.textMuted, height: 1.5),
+            style: const TextStyle(color: OnboardingColors.textMuted, height: 1.5),
           ),
         ),
       );
@@ -219,11 +219,11 @@ class _PeerChatScreenState extends State<PeerChatScreen> {
     if (_threads.isEmpty) {
       return Center(
         child: Padding(
-          padding: EdgeInsets.all(32),
+          padding: const EdgeInsets.all(32),
           child: Text(
             t('ยังไม่มีแชท\nกด "หาเพื่อนคุย" เพื่อเริ่มคุยกับใครสักคน', 'No chats yet\nPress "Find someone" to start one'),
             textAlign: TextAlign.center,
-            style: TextStyle(color: OnboardingColors.textMuted),
+            style: const TextStyle(color: OnboardingColors.textMuted),
           ),
         ),
       );

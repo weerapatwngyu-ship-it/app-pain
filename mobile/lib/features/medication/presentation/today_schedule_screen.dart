@@ -816,7 +816,7 @@ class _TodaySummaryPanel extends StatelessWidget {
       children: [
         Text(
           t('ยังไม่มียาที่ต้องกินวันนี้', 'No doses due today'),
-          style: TextStyle(
+          style: const TextStyle(
             color: Colors.white,
             fontSize: 18,
             fontWeight: FontWeight.w700,
@@ -828,7 +828,7 @@ class _TodaySummaryPanel extends StatelessWidget {
         Text(
           t('เมื่อแพทย์สั่งยาให้ ยาจะขึ้นที่นี่พร้อมเวลาที่ต้องกิน ', 'When your doctor prescribes, it appears here with its times ')
           t('และแอปจะเตือนตามเวลานั้นทุกวัน', 'and the app reminds you daily.'),
-          style: TextStyle(color: Colors.white, fontSize: 13, height: 1.5),
+          style: const TextStyle(color: Colors.white, fontSize: 13, height: 1.5),
         ),
         const SizedBox(height: 14),
         SizedBox(
@@ -942,8 +942,8 @@ class _TodaySummaryPanel extends StatelessWidget {
           child: Row(
             children: [
               Text(t('ดูยาทั้งหมดของฉัน', 'See all my medication'),
-                  style: TextStyle(color: Colors.white, fontSize: 13.5)),
-              Icon(Icons.chevron_right, size: 18, color: Colors.white),
+                  style: const TextStyle(color: Colors.white, fontSize: 13.5)),
+              const Icon(Icons.chevron_right, size: 18, color: Colors.white),
             ],
           ),
         ),

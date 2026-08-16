@@ -158,11 +158,11 @@ class _PeerDirectoryScreenState extends State<PeerDirectoryScreen> {
     if (_contacts.isEmpty) {
       return Center(
         child: Padding(
-          padding: EdgeInsets.all(32),
+          padding: const EdgeInsets.all(32),
           child: Text(
             t('ยังไม่พบใคร\nจะเห็นเฉพาะคนที่เปิดให้คุยด้วยเท่านั้น', 'Nobody found\nYou only see people who opted in'),
             textAlign: TextAlign.center,
-            style: TextStyle(color: OnboardingColors.textMuted),
+            style: const TextStyle(color: OnboardingColors.textMuted),
           ),
         ),
       );
