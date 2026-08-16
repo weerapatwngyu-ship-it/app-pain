@@ -39,6 +39,9 @@ class MediGoApp extends StatefulWidget {
 }
 
 class _MediGoAppState extends State<MediGoApp> {
+  /// Gives _confirmLogout a context below MaterialApp to show its dialog in.
+  final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
+
   final AuthRepositoryImpl _authRepository = AuthRepositoryImpl();
   final MedicationRepositoryImpl _medicationRepository =
       MedicationRepositoryImpl(LocalDatabase.instance);
@@ -126,6 +129,7 @@ class _MediGoAppState extends State<MediGoApp> {
       listenable: LocaleController.instance,
       builder: (context, _) => MaterialApp(
         title: 'MediGo',
+        navigatorKey: _navigatorKey,
         theme: AppTheme.light(),
         home: _buildHome(),
       ),
@@ -161,7 +165,9 @@ class _MediGoAppState extends State<MediGoApp> {
                 onPressed: () => _applySession(Supabase.instance.client.auth.currentSession),
                 child: const Text('ลองอีกครั้ง'),
               ),
-              TextButton(onPressed: _logout, child: const Text('ออกจากระบบ')),
+              TextButton(
+                  onPressed: _confirmLogout,
+                  child: Text(t('ออกจากระบบ', 'Sign out'))),
             ],
           ),
         ),
@@ -170,6 +176,42 @@ class _MediGoAppState extends State<MediGoApp> {
   }
 
   void _handleUserUpdated(AppUser user) => setState(() => _currentUser = user);
+
+  /// Asks first, every time, from wherever sign-out was reached.
+  ///
+  /// The confirmation lives here rather than on each screen that offers the
+  /// action: every one of them calls this same callback, so a screen added
+  /// later cannot forget to ask. Signing out is one tap from losing an unsent
+  /// message or a dose that has not synced, and it is never what a mis-tap
+  /// should cause.
+  Future<void> _confirmLogout() async {
+    // The State's own context sits above MaterialApp, where there is no
+    // Navigator to host a dialog — the app's navigator is what we need.
+    final context = _navigatorKey.currentContext;
+    if (context == null) {
+      _logout();
+      return;
+    }
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(t('ออกจากระบบ', 'Sign out')),
+        content: Text(t('ต้องการออกจากระบบใช่ไหม?', 'Sign out of your account?')),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(t('ยกเลิก', 'Cancel')),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(t('ออกจากระบบ', 'Sign out')),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) _logout();
+  }
 
   void _logout() {
     unawaited(Supabase.instance.client.auth.signOut());
@@ -190,7 +232,7 @@ class _MediGoAppState extends State<MediGoApp> {
         authRepository: _authRepository,
         patientProfileRepository: _patientProfileRepository,
         onCompleted: _handleUserUpdated,
-        onLogout: _logout,
+        onLogout: _confirmLogout,
       );
     }
 
@@ -207,7 +249,7 @@ class _MediGoAppState extends State<MediGoApp> {
           }
           final doctor = snapshot.data;
           if (doctor == null) {
-            return DoctorPendingScreen(user: user, onLogout: _logout);
+            return DoctorPendingScreen(user: user, onLogout: _confirmLogout);
           }
           return DoctorHomeShell(
             user: user,
@@ -218,7 +260,7 @@ class _MediGoAppState extends State<MediGoApp> {
             pharmacyFinderRepository: _pharmacyFinderRepository,
             healthQuestionRepository: _healthQuestionRepository,
             doctorRepository: _doctorRepository,
-            onLogout: _logout,
+            onLogout: _confirmLogout,
           );
         },
       );
@@ -230,7 +272,10 @@ class _MediGoAppState extends State<MediGoApp> {
         appBar: AppBar(
           title: const Text('MediGo'),
           actions: [
-            IconButton(onPressed: _logout, icon: const Icon(Icons.logout), tooltip: 'ออกจากระบบ'),
+            IconButton(
+                onPressed: _confirmLogout,
+                icon: const Icon(Icons.logout),
+                tooltip: t('ออกจากระบบ', 'Sign out')),
           ],
         ),
         body: Center(
@@ -261,7 +306,7 @@ class _MediGoAppState extends State<MediGoApp> {
       peerChatRepository: _peerChatRepository,
       adminRepository: _adminRepository,
       caseloadRepository: _caseloadRepository,
-      onLogout: _logout,
+      onLogout: _confirmLogout,
       onUserUpdated: _handleUserUpdated,
     );
   }

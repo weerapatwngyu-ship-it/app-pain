@@ -100,26 +100,9 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
     }
   }
 
-  Future<void> _confirmLogout(BuildContext context) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(t('ออกจากระบบ', 'Sign out')),
-        content: Text(t('ต้องการออกจากระบบใช่ไหม?', 'Sign out of your account?')),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: Text(t('ยกเลิก', 'Cancel')),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: Text(t('ออกจากระบบ', 'Sign out')),
-          ),
-        ],
-      ),
-    );
-    if (confirmed == true) widget.onLogout();
-  }
+  // No dialog here any more: MediGoApp asks before signing anyone out, from
+  // whichever screen the action was reached. Confirming twice reads as though
+  // the first answer did not register.
 
   @override
   Widget build(BuildContext context) {
@@ -236,7 +219,7 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
         _MenuTile(
           icon: Icons.logout,
           label: t('ออกจากระบบ', 'Sign out'),
-          onTap: () => _confirmLogout(context),
+          onTap: widget.onLogout,
         ),
       ],
     );
