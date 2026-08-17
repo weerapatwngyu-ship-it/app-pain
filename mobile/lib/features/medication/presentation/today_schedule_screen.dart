@@ -15,6 +15,7 @@ import '../../doctors/data/doctor_repository.dart';
 import '../../doctors/domain/entities/doctor.dart';
 import '../../doctors/presentation/doctor_detail_screen.dart';
 import '../../chat/data/chat_repository.dart';
+import '../../chat/presentation/conversation_list_screen.dart';
 import '../../doctors/presentation/doctor_list_screen.dart';
 import '../../health_topics/data/health_question_repository.dart';
 import '../../health_topics/domain/entities/health_topic.dart';
@@ -255,6 +256,21 @@ class _TodayScheduleScreenState extends State<TodayScheduleScreen> {
     );
   }
 
+  /// The patient's own thread list. Reached from the banner as well as from
+  /// the profile menu: the same screen either way, so a reply is not hiding
+  /// behind a menu the patient has no reason to open.
+  void _openMessages() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => ConversationListScreen(
+          repository: widget.chatRepository,
+          ownerId: widget.patientId,
+          isDoctorView: false,
+        ),
+      ),
+    );
+  }
+
   /// Opens the medication list, then refreshes today's schedule — adding a
   /// medication with a time for later today should show up on return.
   Future<void> _openMedicationList() async {
@@ -342,6 +358,7 @@ class _TodayScheduleScreenState extends State<TodayScheduleScreen> {
                   done: doneCount,
                   nextDose: nextDose,
                   onOpenList: _openMedicationList,
+                  onOpenMessages: _openMessages,
                 ),
                 const SizedBox(height: 4),
                 Padding(
@@ -503,6 +520,7 @@ class _HomeBanner extends StatelessWidget {
     required this.done,
     required this.nextDose,
     required this.onOpenList,
+    required this.onOpenMessages,
   });
 
   final String greeting;
@@ -514,6 +532,11 @@ class _HomeBanner extends StatelessWidget {
   final int done;
   final DoseScheduleItem? nextDose;
   final VoidCallback onOpenList;
+
+  /// Opens the message list. In the banner rather than only in the profile
+  /// menu because a reply from a doctor is the one thing on this screen the
+  /// patient is waiting for, and it was three taps away.
+  final VoidCallback onOpenMessages;
 
   @override
   Widget build(BuildContext context) {
@@ -571,6 +594,11 @@ class _HomeBanner extends StatelessWidget {
                   ],
                 ),
               ),
+              _BannerAction(
+                icon: Icons.chat_bubble_outline,
+                tooltip: t('ข้อความของฉัน', 'My messages'),
+                onTap: onOpenMessages,
+              ),
             ],
           ),
           const SizedBox(height: 18),
@@ -589,6 +617,43 @@ class _HomeBanner extends StatelessWidget {
   }
 }
 
+
+/// A round translucent button for the coloured banner.
+///
+/// Its own widget because a plain IconButton on teal is a white glyph floating
+/// with nothing to press — the tinted circle is what makes the target visible
+/// and gives it a 44px area to hit.
+class _BannerAction extends StatelessWidget {
+  const _BannerAction({
+    required this.icon,
+    required this.tooltip,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: tooltip,
+      child: Material(
+        color: Colors.white.withValues(alpha: 0.18),
+        shape: const CircleBorder(),
+        child: InkWell(
+          onTap: onTap,
+          customBorder: const CircleBorder(),
+          child: SizedBox(
+            width: 44,
+            height: 44,
+            child: Icon(icon, color: Colors.white, size: 21),
+          ),
+        ),
+      ),
+    );
+  }
+}
 
 class _DoctorTile extends StatelessWidget {
   const _DoctorTile({required this.doctor, required this.onTap});
