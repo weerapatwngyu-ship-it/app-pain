@@ -1370,3 +1370,66 @@ begin;
   select status from public.dose_logs where schedule_id = :'sch';
   reset role;
 rollback;
+
+\echo ''
+\echo '=== CONTROL 53: ผู้ป่วยเพิกถอนสิทธิ์หมอได้เอง (ต้องได้) ==='
+begin;
+  select id as pa from public.patients
+   where owner_user_id='11111111-1111-1111-1111-111111111111' \gset
+
+  insert into auth.users (id, email)
+    values ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb','revoke-doc@test.com');
+  update public.profiles set role='provider'
+   where id='bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
+  insert into public.doctors (user_id, name, specialty)
+  values ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb','นพ.ทดสอบเพิกถอน','ทั่วไป')
+  returning id as doc \gset
+  insert into public.conversations (patient_id, doctor_id) values (:'pa', :'doc');
+
+  set local role authenticated;
+  select public.as_user('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb');
+  \echo '  -- หมอดูแลได้ก่อนเพิกถอน expect t:'
+  select public.can_manage_patient_care(:'pa'::uuid) as before_revoke;
+  reset role;
+
+  set local role authenticated;
+  select public.as_user('11111111-1111-1111-1111-111111111111');
+  \echo '  -- ผู้ป่วยเห็นว่าใครมีสิทธิ์ expect 1 row:'
+  select role, status from public.patient_links where patient_id = :'pa';
+  \echo '  -- และเพิกถอนได้ expect UPDATE 1:'
+  update public.patient_links set status = 'revoked' where patient_id = :'pa';
+  reset role;
+
+  set local role authenticated;
+  select public.as_user('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb');
+  \echo '  -- หลังเพิกถอน ดูแลไม่ได้ expect f:'
+  select public.can_manage_patient_care(:'pa'::uuid) as after_revoke;
+  \echo '  -- และสั่งยาไม่ได้ expect RLS refusal:'
+  savepoint s1;
+  insert into public.prescriptions
+    (patient_id, medication_name, dosage, frequency, start_date, source)
+  values (:'pa','ยาหลังถูกเพิกถอน','1 เม็ด','วันละครั้ง', current_date, 'clinician');
+  rollback to savepoint s1;
+  reset role;
+rollback;
+
+\echo ''
+\echo '=== EXPLOIT 54: ผู้ป่วยอีกคนแก้สิทธิ์ในประวัติคนอื่น (ต้องไม่ได้) ==='
+begin;
+  select id as pa from public.patients
+   where owner_user_id='11111111-1111-1111-1111-111111111111' \gset
+  insert into public.patient_links (patient_id, user_id, role, status)
+  values (:'pa','22222222-2222-2222-2222-222222222222','provider','revoked');
+
+  set local role authenticated;
+  select public.as_user('22222222-2222-2222-2222-222222222222');
+  \echo '  -- แก้สถานะของตัวเองในประวัติคนอื่นไม่ได้ expect UPDATE 0:'
+  update public.patient_links set status = 'active'
+   where patient_id = :'pa' and user_id = '22222222-2222-2222-2222-222222222222';
+  \echo '  -- และเพิ่มสิทธิ์ใหม่ให้ตัวเองไม่ได้ expect RLS refusal:'
+  savepoint s1;
+  insert into public.patient_links (patient_id, user_id, role, status)
+  values (:'pa','99999999-9999-9999-9999-999999999999','provider','active');
+  rollback to savepoint s1;
+  reset role;
+rollback;

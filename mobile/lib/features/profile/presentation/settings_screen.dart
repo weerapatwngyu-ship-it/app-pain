@@ -2,10 +2,25 @@ import 'package:flutter/material.dart';
 
 import '../../../core/i18n/app_locale.dart';
 import '../../auth/presentation/onboarding/onboarding_theme.dart';
+import '../../peer_chat/data/peer_chat_repository.dart';
+import '../data/privacy_repository.dart';
+import '../domain/legal_documents.dart';
+import 'legal_document_screen.dart';
+import 'privacy_settings_screen.dart';
 import '../../reminders/presentation/notification_check_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
-  const SettingsScreen({super.key});
+  const SettingsScreen({
+    super.key,
+    this.patientId,
+    this.peerChatRepository,
+  });
+
+  /// Null for an account with no patient record — a doctor or an admin. The
+  /// privacy controls are about a patient's own record, so the row is left out
+  /// rather than opening a screen with nothing on it.
+  final String? patientId;
+  final PeerChatRepository? peerChatRepository;
 
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();
@@ -20,12 +35,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (mounted) setState(() {});
   }
 
-  void _comingSoon() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(t('ฟีเจอร์นี้อยู่ระหว่างการพัฒนา',
-            'This feature is still being built')),
+  /// Built here rather than passed in: it holds no state and takes no
+  /// dependencies, so threading one more object through four widgets to reach
+  /// this screen would buy nothing.
+  final PrivacyRepository _privacyRepository = PrivacyRepository();
+
+  bool get _canManagePrivacy =>
+      widget.patientId != null && widget.peerChatRepository != null;
+
+  void _openPrivacySettings() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => PrivacySettingsScreen(
+          patientId: widget.patientId!,
+          repository: _privacyRepository,
+          peerChatRepository: widget.peerChatRepository!,
+        ),
       ),
+    );
+  }
+
+  void _openDocument(LegalDocument document) {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => LegalDocumentScreen(document: document)),
     );
   }
 
@@ -85,11 +117,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                 ),
               ),
-              _MenuRow(
-                label: t('ตั้งค่าความเป็นส่วนตัว', 'Privacy settings'),
-                trailing: Icons.lock_outline,
-                onTap: _comingSoon,
-              ),
+              if (_canManagePrivacy)
+                _MenuRow(
+                  label: t('ตั้งค่าความเป็นส่วนตัว', 'Privacy settings'),
+                  trailing: Icons.chevron_right,
+                  onTap: _openPrivacySettings,
+                ),
               const SizedBox(height: 16),
               const Divider(color: OnboardingColors.border),
               const SizedBox(height: 12),
@@ -99,12 +132,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
               _MenuRow(
                 label: t('นโยบายความเป็นส่วนตัว', 'Privacy policy'),
                 trailing: Icons.chevron_right,
-                onTap: _comingSoon,
+                onTap: () => _openDocument(privacyPolicy),
               ),
               _MenuRow(
                 label: t('ข้อตกลงและเงื่อนไข', 'Terms and conditions'),
                 trailing: Icons.chevron_right,
-                onTap: _comingSoon,
+                onTap: () => _openDocument(termsOfUse),
               ),
             ],
           ),

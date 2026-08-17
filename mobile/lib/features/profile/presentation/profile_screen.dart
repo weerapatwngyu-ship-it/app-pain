@@ -171,7 +171,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   onDark: true,
                   icon: Icons.settings_outlined,
                   onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                    MaterialPageRoute(
+                      builder: (_) => SettingsScreen(
+                        patientId: widget.patientId,
+                        peerChatRepository: widget.peerChatRepository,
+                      ),
+                    ),
                   ),
                 ),
               ],

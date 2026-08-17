@@ -1,3 +1,5 @@
+import '../../core/i18n/app_locale.dart';
+
 /// Thai weekday and month names, written out rather than pulled from intl,
 /// which the project does not depend on and which would be a lot of weight
 /// for a handful of strings.

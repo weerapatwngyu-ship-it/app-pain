@@ -222,7 +222,12 @@ class AllMenuScreen extends StatelessWidget {
               icon: Icons.settings_outlined,
               label: t('ตั้งค่า', 'Settings'),
               onTap: () => Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                MaterialPageRoute(
+                      builder: (_) => SettingsScreen(
+                        patientId: patientId,
+                        peerChatRepository: peerChatRepository,
+                      ),
+                    ),
               ),
             ),
             _MenuItem(
