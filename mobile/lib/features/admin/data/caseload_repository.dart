@@ -175,6 +175,7 @@ class DoseLogEntry {
 
 class PrescriptionSummary {
   const PrescriptionSummary({
+    required this.id,
     required this.medicationName,
     required this.dosage,
     required this.frequency,
@@ -182,16 +183,29 @@ class PrescriptionSummary {
     this.endDate,
   });
 
+  /// Needed so the doctor's screen can stop or remove this exact row.
+  final String id;
+
   final String medicationName;
   final String dosage;
   final String frequency;
   final DateTime startDate;
   final DateTime? endDate;
 
-  bool get isActive => endDate == null || endDate!.isAfter(DateTime.now());
+  /// end_date is a date, so "ends today" has to count as still running —
+  /// comparing a midnight DateTime against now would call today's last day
+  /// finished from one minute past midnight.
+  bool get isActive {
+    final end = endDate;
+    if (end == null) return true;
+    final now = DateTime.now();
+    return !DateTime(end.year, end.month, end.day)
+        .isBefore(DateTime(now.year, now.month, now.day));
+  }
 
   factory PrescriptionSummary.fromRow(Map<String, dynamic> row) {
     return PrescriptionSummary(
+      id: row['id'] as String,
       medicationName: row['medication_name'] as String,
       dosage: row['dosage'] as String,
       frequency: row['frequency'] as String,
@@ -260,7 +274,7 @@ class CaseloadRepository {
 
     final prescriptions = await db
         .from('prescriptions')
-        .select('medication_name, dosage, frequency, start_date, end_date')
+        .select('id, medication_name, dosage, frequency, start_date, end_date, source')
         .eq('patient_id', patient.id)
         .order('start_date', ascending: false);
 

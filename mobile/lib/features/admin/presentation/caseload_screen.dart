@@ -228,6 +228,128 @@ class _PatientRecordScreenState extends State<PatientRecordScreen> {
     return record;
   }
 
+  bool get _canPrescribe => widget.medicationRepository != null;
+
+  /// Ends a course of treatment. The row stays, so the record still shows the
+  /// drug was prescribed, what was taken, and when it stopped.
+  ///
+  /// Two dates on offer because "the patient has recovered" and "finish the
+  /// course today" are different instructions, and only the doctor knows which
+  /// one they mean. Stopping as of yesterday takes today's remaining doses off
+  /// the patient's schedule immediately; stopping today leaves them standing.
+  Future<void> _stop(PrescriptionSummary prescription) async {
+    final medicationRepository = widget.medicationRepository;
+    if (medicationRepository == null) return;
+
+    final choice = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(t('หยุด ${prescription.medicationName}',
+            'Stop ${prescription.medicationName}')),
+        content: Text(t(
+          'ประวัติการกินยาที่บันทึกไว้จะยังอยู่ครบ\n\n'
+              'หยุดทันที — ยาหายจากตารางของผู้ป่วยเลย รวมมื้อที่เหลือของวันนี้\n'
+              'หยุดวันนี้ — มื้อที่เหลือของวันนี้ยังกินตามเดิม แล้วหยุดพรุ่งนี้',
+          'The dose history already recorded is kept in full.\n\n'
+              'Stop now — it leaves the schedule immediately, including the '
+              'doses left today.\n'
+              'Stop today — the doses left today stand, then it stops tomorrow.',
+        )),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: Text(t('ยกเลิก', 'Cancel')),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop('today'),
+            child: Text(t('หยุดวันนี้', 'Stop today')),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop('now'),
+            child: Text(t('หยุดทันที', 'Stop now')),
+          ),
+        ],
+      ),
+    );
+    if (choice == null) return;
+
+    final endDate = choice == 'now'
+        ? DateTime.now().subtract(const Duration(days: 1))
+        : DateTime.now();
+    await _writeMedication(
+      () => medicationRepository.stop(prescription.id, endDate: endDate),
+      t('หยุด ${prescription.medicationName} แล้ว',
+          'Stopped ${prescription.medicationName}'),
+    );
+  }
+
+  /// For an order written by mistake. It destroys the dose history along with
+  /// the prescription, which is why it is worded as a mistake rather than as a
+  /// way to end treatment.
+  Future<void> _delete(PrescriptionSummary prescription) async {
+    final medicationRepository = widget.medicationRepository;
+    if (medicationRepository == null) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(t('ลบ ${prescription.medicationName}',
+            'Delete ${prescription.medicationName}')),
+        content: Text(t(
+          'ใช้เมื่อสั่งผิดเท่านั้น\n\n'
+              'การลบจะลบประวัติการกินยาของรายการนี้ทั้งหมดไปด้วย และกู้คืนไม่ได้ '
+              'ถ้าต้องการจบการรักษา ให้ใช้ "หยุดยา" ซึ่งเก็บประวัติไว้',
+          'Only for an order entered by mistake.\n\n'
+              'Deleting also removes every dose recorded against it, and cannot '
+              'be undone. To end treatment use "Stop", which keeps the history.',
+        )),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(t('ยกเลิก', 'Cancel')),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(t('ลบทิ้ง', 'Delete'),
+                style: const TextStyle(color: Color(0xFFC0392B))),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    await _writeMedication(
+      () => medicationRepository.remove(prescription.id),
+      t('ลบ ${prescription.medicationName} แล้ว',
+          'Deleted ${prescription.medicationName}'),
+    );
+  }
+
+  Future<void> _writeMedication(
+    Future<void> Function() action,
+    String success,
+  ) async {
+    try {
+      await action();
+      if (!mounted) return;
+      setState(() => _future = _load());
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(success)));
+    } on StateError catch (e) {
+      // Already worded for a clinician by the repository — a refusal here
+      // means this doctor is no longer in charge of this patient.
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(e.message)));
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(friendlyError(e,
+            whileDoing: t('ทำรายการไม่สำเร็จ', 'That did not work'))),
+      ));
+    }
+  }
+
   bool get _canMessage =>
       widget.chatRepository != null && widget.doctorId != null;
 
@@ -389,11 +511,21 @@ class _PatientRecordScreenState extends State<PatientRecordScreen> {
               if (active.isEmpty)
                 _Empty(t('ไม่มีรายการยาที่ใช้อยู่', 'No current medication'))
               else
-                ...active.map((p) => _PrescriptionTile(prescription: p)),
+                ...active.map((p) => _PrescriptionTile(
+                      prescription: p,
+                      // Null when this viewer may read but not prescribe, so
+                      // the actions are absent rather than shown and refused.
+                      onStop: _canPrescribe ? () => _stop(p) : null,
+                      onDelete: _canPrescribe ? () => _delete(p) : null,
+                    )),
               if (past.isNotEmpty) ...[
                 const SizedBox(height: 20),
                 _SectionTitle(t('ยาที่หยุดแล้ว', 'Stopped medication')),
-                ...past.map((p) => _PrescriptionTile(prescription: p, faded: true)),
+                ...past.map((p) => _PrescriptionTile(
+                      prescription: p,
+                      faded: true,
+                      onDelete: _canPrescribe ? () => _delete(p) : null,
+                    )),
               ],
               const SizedBox(height: 24),
               _SectionTitle(t('การกินยา 7 วันล่าสุด', 'Adherence, last 7 days')),
@@ -896,10 +1028,19 @@ class _Empty extends StatelessWidget {
 }
 
 class _PrescriptionTile extends StatelessWidget {
-  const _PrescriptionTile({required this.prescription, this.faded = false});
+  const _PrescriptionTile({
+    required this.prescription,
+    this.faded = false,
+    this.onStop,
+    this.onDelete,
+  });
 
   final PrescriptionSummary prescription;
   final bool faded;
+
+  /// Both null for a viewer who may read the record but not change it.
+  final VoidCallback? onStop;
+  final VoidCallback? onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -923,13 +1064,47 @@ class _PrescriptionTile extends StatelessWidget {
                   Text(prescription.medicationName,
                       style: const TextStyle(fontWeight: FontWeight.w600)),
                   Text(
-                    '${prescription.dosage} · ${prescription.frequency}',
+                    [
+                      prescription.dosage,
+                      prescription.frequency,
+                      // The stop date, once there is one: a list of stopped
+                      // medication with no dates on it cannot answer "when did
+                      // they come off this".
+                      if (prescription.endDate != null)
+                        t('ถึง ${thaiOrEnglishDate(prescription.endDate!)}',
+                            'until ${thaiOrEnglishDate(prescription.endDate!)}'),
+                    ].where((part) => part.trim().isNotEmpty).join(' · '),
                     style: const TextStyle(
                         fontSize: 12, color: OnboardingColors.textMuted),
                   ),
                 ],
               ),
             ),
+            if (onStop != null || onDelete != null)
+              PopupMenuButton<String>(
+                icon: const Icon(Icons.more_vert,
+                    size: 20, color: OnboardingColors.textMuted),
+                tooltip: t('จัดการยานี้', 'Manage this medication'),
+                onSelected: (value) {
+                  if (value == 'stop') onStop?.call();
+                  if (value == 'delete') onDelete?.call();
+                },
+                itemBuilder: (context) => [
+                  if (onStop != null)
+                    PopupMenuItem(
+                      value: 'stop',
+                      child: Text(t('หยุดยา', 'Stop')),
+                    ),
+                  if (onDelete != null)
+                    PopupMenuItem(
+                      value: 'delete',
+                      child: Text(
+                        t('ลบ (สั่งผิด)', 'Delete (entered by mistake)'),
+                        style: const TextStyle(color: Color(0xFFC0392B)),
+                      ),
+                    ),
+                ],
+              ),
           ],
         ),
       ),

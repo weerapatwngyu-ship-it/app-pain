@@ -1433,3 +1433,51 @@ begin;
   rollback to savepoint s1;
   reset role;
 rollback;
+
+\echo ''
+\echo '=== CONTROL 55: หมอที่ดูแลอยู่ หยุดยาและลบยาที่สั่งไว้ได้ ==='
+begin;
+  select id as pa from public.patients
+   where owner_user_id='11111111-1111-1111-1111-111111111111' \gset
+
+  insert into auth.users (id, email)
+    values ('cccccccc-cccc-cccc-cccc-cccccccccccc','stop-doc@test.com');
+  update public.profiles set role='provider'
+   where id='cccccccc-cccc-cccc-cccc-cccccccccccc';
+  insert into public.doctors (user_id, name, specialty)
+  values ('cccccccc-cccc-cccc-cccc-cccccccccccc','นพ.ทดสอบหยุดยา','ทั่วไป')
+  returning id as doc \gset
+  insert into public.conversations (patient_id, doctor_id) values (:'pa', :'doc');
+
+  set local role authenticated;
+  select public.as_user('cccccccc-cccc-cccc-cccc-cccccccccccc');
+  insert into public.prescriptions
+    (patient_id, medication_name, dosage, frequency, start_date, source)
+  values (:'pa','ยาที่จะหยุด','1 เม็ด','วันละครั้ง', current_date, 'clinician')
+  returning id as rx \gset
+
+  \echo '  -- หยุดยา (ใส่ end_date) expect UPDATE 1:'
+  update public.prescriptions set end_date = current_date where id = :'rx';
+  \echo '  -- ลบยาที่สั่งผิด expect DELETE 1:'
+  delete from public.prescriptions where id = :'rx';
+  reset role;
+rollback;
+
+\echo ''
+\echo '=== EXPLOIT 56: ผู้ป่วยหยุด/ลบยาที่หมอสั่ง (ต้องไม่ได้) ==='
+begin;
+  select id as pa from public.patients
+   where owner_user_id='11111111-1111-1111-1111-111111111111' \gset
+  insert into public.prescriptions
+    (patient_id, medication_name, dosage, frequency, start_date, source)
+  values (:'pa','ยาที่หมอสั่ง','1 เม็ด','วันละครั้ง', current_date, 'clinician')
+  returning id as rx \gset
+
+  set local role authenticated;
+  select public.as_user('11111111-1111-1111-1111-111111111111');
+  \echo '  -- ผู้ป่วยหยุดยาของหมอเองไม่ได้ expect UPDATE 0:'
+  update public.prescriptions set end_date = current_date where id = :'rx';
+  \echo '  -- และลบไม่ได้ expect DELETE 0:'
+  delete from public.prescriptions where id = :'rx';
+  reset role;
+rollback;

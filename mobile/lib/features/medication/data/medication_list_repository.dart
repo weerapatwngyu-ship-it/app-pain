@@ -1,3 +1,4 @@
+import '../../../core/i18n/app_locale.dart';
 import '../../../core/supabase/supabase_refs.dart';
 import '../domain/entities/medication.dart';
 
@@ -59,22 +60,37 @@ class MedicationListRepository {
     return (await forPatient(patientId)).firstWhere((m) => m.id == id);
   }
 
-  /// Stops a medication by ending it today, rather than deleting the row.
+  /// Stops a medication by giving it an end date, rather than deleting the row.
   /// The dose logs against it are a record of what was actually taken, and
   /// deleting the prescription would cascade them away.
-  Future<void> stop(String medicationId) async {
+  ///
+  /// [endDate] is the last day the medication counts as prescribed, and today
+  /// by default. A doctor stopping treatment because the patient has recovered
+  /// may want it to stop before today's remaining doses instead — only they
+  /// know which, so the caller decides rather than this method.
+  Future<void> stop(String medicationId, {DateTime? endDate}) async {
     final updated = await db
         .from('prescriptions')
-        .update({'end_date': _isoDate(DateTime.now())})
+        .update({'end_date': _isoDate(endDate ?? DateTime.now())})
         .eq('id', medicationId)
         .select();
     if (updated.isEmpty) {
-      throw StateError('หยุดยาไม่สำเร็จ — รายการนี้แก้ไขได้เฉพาะผู้ที่เพิ่มไว้');
+      // Nothing matched, which under RLS means the row exists but the caller
+      // may not touch it — a patient reaching for a clinician's order, or a
+      // doctor no longer in charge of this patient.
+      throw StateError(t(
+        'หยุดยาไม่สำเร็จ — ไม่มีสิทธิ์แก้รายการนี้',
+        'Could not stop it — you do not have permission to change this entry',
+      ));
     }
   }
 
-  /// Removes a medication the patient added. Refused by the backend for
-  /// anything a clinician entered.
+  /// Deletes the prescription outright, along with its times and the record of
+  /// every dose taken against it.
+  ///
+  /// For an order written by mistake. Stopping is what ends treatment: it
+  /// keeps the history, and a patient's medication record with the doses cut
+  /// out of it is a worse record than one showing a drug that was stopped.
   Future<void> remove(String medicationId) async {
     final deleted = await db
         .from('prescriptions')
@@ -82,7 +98,10 @@ class MedicationListRepository {
         .eq('id', medicationId)
         .select();
     if (deleted.isEmpty) {
-      throw StateError('ลบไม่สำเร็จ — รายการนี้ลบได้เฉพาะผู้ที่เพิ่มไว้');
+      throw StateError(t(
+        'ลบไม่สำเร็จ — ไม่มีสิทธิ์ลบรายการนี้',
+        'Could not delete it — you do not have permission to remove this entry',
+      ));
     }
   }
 
