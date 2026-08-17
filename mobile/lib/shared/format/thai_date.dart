@@ -59,3 +59,8 @@ int ageFrom(DateTime birthDate, {DateTime? asOf}) {
   if (!hadBirthday) years -= 1;
   return years;
 }
+
+/// The date in whichever language is showing, so a caller does not have to
+/// branch on the locale every time it prints one.
+String thaiOrEnglishDate(DateTime date) =>
+    LocaleController.instance.isEnglish ? englishDate(date) : thaiDate(date);
