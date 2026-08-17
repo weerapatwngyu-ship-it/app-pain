@@ -109,6 +109,7 @@ class _PatientHomeShellState extends State<PatientHomeShell> {
         doctorRepository: widget.doctorRepository,
         healthQuestionRepository: widget.healthQuestionRepository,
         chatRepository: widget.chatRepository,
+        peerChatRepository: widget.peerChatRepository,
         reminderRepository: _reminderRepository,
         onOpenReminders: () => setState(() => _index = 2),
         onUserUpdated: widget.onUserUpdated,

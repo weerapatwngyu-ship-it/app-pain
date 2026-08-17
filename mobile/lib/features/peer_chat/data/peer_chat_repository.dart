@@ -34,6 +34,23 @@ class PeerChatRepository implements MessageThread {
         .eq('id', patientId);
   }
 
+  /// Records that the caller has opened a peer thread.
+  ///
+  /// Through an RPC because the peer tables grant clients no UPDATE at all —
+  /// mark_peer_read re-derives who is asking instead of trusting an id from
+  /// here. Best-effort: an uncleared dot is not worth failing to open a chat.
+  Future<void> markRead(String conversationId) async {
+    try {
+      await db.rpc('mark_peer_read', params: {'conversation': conversationId});
+    } catch (_) {}
+  }
+
+  /// How many peer threads have something the caller has not opened.
+  Future<int> unreadCount() async {
+    final threads = await this.threads();
+    return threads.where((thread) => thread.unread).length;
+  }
+
   /// The caller's threads, newest activity first.
   Future<List<PeerThread>> threads() async {
     final rows = await db.rpc('peer_threads') as List<dynamic>;

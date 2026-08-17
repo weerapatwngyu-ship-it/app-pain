@@ -1481,3 +1481,79 @@ begin;
   delete from public.prescriptions where id = :'rx';
   reset role;
 rollback;
+
+\echo ''
+\echo '=== CONTROL 57: จุดแดง — ข้อความใหม่ทำให้ฝั่งที่ไม่ได้ส่งเห็นว่ายังไม่อ่าน ==='
+begin;
+  select id as pa from public.patients
+   where owner_user_id='11111111-1111-1111-1111-111111111111' \gset
+
+  insert into auth.users (id, email)
+    values ('dddddddd-dddd-dddd-dddd-dddddddddddd','unread-doc@test.com');
+  update public.profiles set role='provider'
+   where id='dddddddd-dddd-dddd-dddd-dddddddddddd';
+  insert into public.doctors (user_id, name, specialty)
+  values ('dddddddd-dddd-dddd-dddd-dddddddddddd','นพ.ทดสอบจุดแดง','ทั่วไป')
+  returning id as doc \gset
+  insert into public.conversations (patient_id, doctor_id) values (:'pa', :'doc')
+  returning id as conv \gset
+
+  set local role authenticated;
+  select public.as_user('dddddddd-dddd-dddd-dddd-dddddddddddd');
+  -- created_at ระบุเอง เพราะ now() ในทรานแซกชันเดียวไม่เดิน เวลาจะเท่ากันเป๊ะ
+  -- แล้วเงื่อนไข > กลายเป็นเท็จทั้งที่ควรเป็นจริง
+  insert into public.messages (conversation_id, sender_id, body, created_at)
+  values (:'conv','dddddddd-dddd-dddd-dddd-dddddddddddd','สวัสดีครับ',
+          now() - interval '10 minutes');
+  reset role;
+
+  \echo '  -- หมอส่ง: ฝั่งหมออ่านแล้ว (t) ฝั่งผู้ป่วยยังไม่อ่าน (t = unread):'
+  select doctor_read_at = last_message_at as doctor_caught_up,
+         patient_read_at is null as patient_unread
+    from public.conversations where id = :'conv';
+
+  set local role authenticated;
+  select public.as_user('11111111-1111-1111-1111-111111111111');
+  \echo '  -- ผู้ป่วยเปิดอ่าน expect UPDATE 1:'
+  update public.conversations set patient_read_at = now() - interval '5 minutes'
+   where id = :'conv';
+  reset role;
+
+  \echo '  -- อ่านแล้วทั้งคู่ expect f (ไม่มีอะไรค้าง):'
+  select last_message_at > patient_read_at as patient_unread
+    from public.conversations where id = :'conv';
+
+  set local role authenticated;
+  select public.as_user('11111111-1111-1111-1111-111111111111');
+  insert into public.messages (conversation_id, sender_id, body, created_at)
+  values (:'conv','11111111-1111-1111-1111-111111111111','ขอบคุณครับ', now());
+  reset role;
+
+  \echo '  -- ผู้ป่วยตอบกลับ: คราวนี้ฝั่งหมอค้าง expect t:'
+  select last_message_at > doctor_read_at as doctor_unread,
+         last_message_at > patient_read_at as patient_unread
+    from public.conversations where id = :'conv';
+rollback;
+
+\echo ''
+\echo '=== EXPLOIT 58: คนนอกไปเคลียร์จุดแดงของห้องที่ไม่เกี่ยวกับตัวเอง (ต้องไม่ได้) ==='
+begin;
+  select id as pa from public.patients
+   where owner_user_id='11111111-1111-1111-1111-111111111111' \gset
+  insert into auth.users (id, email)
+    values ('eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee','other-doc@test.com');
+  update public.profiles set role='provider'
+   where id='eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee';
+  insert into public.doctors (user_id, name, specialty)
+  values ('eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee','นพ.ไม่เกี่ยว','ทั่วไป')
+  returning id as doc \gset
+  insert into public.conversations (patient_id, doctor_id) values (:'pa', :'doc')
+  returning id as conv \gset
+
+  set local role authenticated;
+  -- ผู้ป่วยอีกคน ไม่ได้อยู่ในห้องนี้เลย
+  select public.as_user('22222222-2222-2222-2222-222222222222');
+  \echo '  -- เคลียร์จุดแดงห้องคนอื่นไม่ได้ expect UPDATE 0:'
+  update public.conversations set patient_read_at = now() where id = :'conv';
+  reset role;
+rollback;

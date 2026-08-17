@@ -7,6 +7,7 @@ import '../../../shared/widgets/avatar_picker.dart';
 import '../../profile/data/patient_profile_repository.dart';
 import '../data/medication_list_repository.dart';
 import 'medication_list_screen.dart';
+import '../../../shared/widgets/unread_dot.dart';
 import '../../../shared/widgets/user_avatar.dart';
 import '../../auth/domain/auth_repository.dart';
 import '../../auth/domain/entities/user.dart';
@@ -15,6 +16,7 @@ import '../../doctors/data/doctor_repository.dart';
 import '../../doctors/domain/entities/doctor.dart';
 import '../../doctors/presentation/doctor_detail_screen.dart';
 import '../../chat/data/chat_repository.dart';
+import '../../peer_chat/data/peer_chat_repository.dart';
 import '../../chat/presentation/conversation_list_screen.dart';
 import '../../doctors/presentation/doctor_list_screen.dart';
 import '../../health_topics/data/health_question_repository.dart';
@@ -42,6 +44,7 @@ class TodayScheduleScreen extends StatefulWidget {
     required this.doctorRepository,
     required this.healthQuestionRepository,
     required this.chatRepository,
+    required this.peerChatRepository,
     required this.medicationListRepository,
     required this.patientProfileRepository,
     required this.reminderRepository,
@@ -62,6 +65,12 @@ class TodayScheduleScreen extends StatefulWidget {
   final DoctorRepository doctorRepository;
   final HealthQuestionRepository healthQuestionRepository;
   final ChatRepository chatRepository;
+
+  /// Read only for the unread count: the banner button leads to doctor threads
+  /// and peer threads alike, so a dot that ignored one of them would be wrong
+  /// half the time.
+  final PeerChatRepository peerChatRepository;
+
   final MedicationListRepository medicationListRepository;
   final PatientProfileRepository patientProfileRepository;
 
@@ -95,18 +104,44 @@ class _TodayScheduleScreenState extends State<TodayScheduleScreen> {
 
   bool _uploadingAvatar = false;
 
+  /// Threads with something the patient has not opened, doctor and peer chats
+  /// together — the banner button leads to both.
+  int _unread = 0;
+
   @override
   void initState() {
     super.initState();
     _scheduleFuture = _loadSchedule();
     _categoryCountsFuture = widget.symptomRepository.categoryCounts(widget.patientId);
     _doctorsFuture = widget.doctorRepository.fetchAll();
+    _loadUnread();
+  }
+
+  /// Read separately from the schedule so a chat count that fails to load
+  /// cannot cost the patient their medication list.
+  Future<void> _loadUnread() async {
+    var count = 0;
+    try {
+      count += await widget.chatRepository.unreadForPatient(widget.patientId);
+    } catch (error) {
+      debugPrint('unreadForPatient failed: $error');
+    }
+    try {
+      count += await widget.peerChatRepository.unreadCount();
+    } catch (error) {
+      debugPrint('peer unreadCount failed: $error');
+    }
+    if (!mounted || count == _unread) return;
+    setState(() => _unread = count);
   }
 
   @override
   void didUpdateWidget(TodayScheduleScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.refreshToken != widget.refreshToken) _reloadDoctors();
+    if (oldWidget.refreshToken != widget.refreshToken) {
+      _reloadDoctors();
+      _loadUnread();
+    }
   }
 
   void _reloadDoctors() {
@@ -259,8 +294,8 @@ class _TodayScheduleScreenState extends State<TodayScheduleScreen> {
   /// The patient's own thread list. Reached from the banner as well as from
   /// the profile menu: the same screen either way, so a reply is not hiding
   /// behind a menu the patient has no reason to open.
-  void _openMessages() {
-    Navigator.of(context).push(
+  Future<void> _openMessages() async {
+    await Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => ConversationListScreen(
           repository: widget.chatRepository,
@@ -269,6 +304,8 @@ class _TodayScheduleScreenState extends State<TodayScheduleScreen> {
         ),
       ),
     );
+    // Whatever was opened in there is read now.
+    if (mounted) await _loadUnread();
   }
 
   /// Opens the medication list, then refreshes today's schedule — adding a
@@ -359,6 +396,7 @@ class _TodayScheduleScreenState extends State<TodayScheduleScreen> {
                   nextDose: nextDose,
                   onOpenList: _openMedicationList,
                   onOpenMessages: _openMessages,
+                  unreadMessages: _unread > 0,
                 ),
                 const SizedBox(height: 4),
                 Padding(
@@ -521,6 +559,7 @@ class _HomeBanner extends StatelessWidget {
     required this.nextDose,
     required this.onOpenList,
     required this.onOpenMessages,
+    required this.unreadMessages,
   });
 
   final String greeting;
@@ -537,6 +576,10 @@ class _HomeBanner extends StatelessWidget {
   /// menu because a reply from a doctor is the one thing on this screen the
   /// patient is waiting for, and it was three taps away.
   final VoidCallback onOpenMessages;
+
+  /// Whether to mark the chat button. A dot rather than a number — see
+  /// UnreadDot for why.
+  final bool unreadMessages;
 
   @override
   Widget build(BuildContext context) {
@@ -598,6 +641,7 @@ class _HomeBanner extends StatelessWidget {
                 icon: Icons.chat_bubble_outline,
                 tooltip: t('ข้อความของฉัน', 'My messages'),
                 onTap: onOpenMessages,
+                showDot: unreadMessages,
               ),
             ],
           ),
@@ -628,11 +672,13 @@ class _BannerAction extends StatelessWidget {
     required this.icon,
     required this.tooltip,
     required this.onTap,
+    this.showDot = false,
   });
 
   final IconData icon;
   final String tooltip;
   final VoidCallback onTap;
+  final bool showDot;
 
   @override
   Widget build(BuildContext context) {
@@ -647,7 +693,16 @@ class _BannerAction extends StatelessWidget {
           child: SizedBox(
             width: 44,
             height: 44,
-            child: Icon(icon, color: Colors.white, size: 21),
+            child: Center(
+              child: UnreadBadge(
+                show: showDot,
+                // Ringed in the banner's teal so the red reads as a badge on
+                // the icon rather than as part of it.
+                borderColor: OnboardingColors.teal,
+                dotSize: 11,
+                child: Icon(icon, color: Colors.white, size: 21),
+              ),
+            ),
           ),
         ),
       ),

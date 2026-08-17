@@ -271,6 +271,21 @@ create table if not exists public.conversations (
   -- One thread per pair: reopening a chat should continue it, not fork it.
   unique (patient_id, doctor_id)
 );
+-- When each side last opened the thread, so the app can show that something
+-- arrived without asking the reader to remember.
+--
+-- Two columns on the thread rather than a row per message read: the question
+-- being answered is "is there anything new here", and one timestamp per side
+-- answers it. Null means never opened, which is unread by definition.
+--
+-- A side's own message must not light up their own badge, so sending stamps
+-- the sender's column along with last_message_at. Unread is then simply
+-- last_message_at > my read mark, with no need to look at who sent what.
+alter table public.conversations
+  add column if not exists patient_read_at timestamptz;
+alter table public.conversations
+  add column if not exists doctor_read_at timestamptz;
+
 create index if not exists conversations_patient_idx
   on public.conversations (patient_id, last_message_at desc);
 create index if not exists conversations_doctor_idx
@@ -351,6 +366,46 @@ select distinct c.patient_id, d.user_id, 'provider', 'active'
 on conflict (patient_id, user_id) do update
   set role = 'provider', status = 'active';
 
+-- Bumps the thread's activity and marks it read for whoever just wrote.
+--
+-- In the database rather than in the client. The app used to update
+-- last_message_at itself after inserting, best-effort — a thread whose bump
+-- failed sorted wrongly and, now that unread depends on the same column, would
+-- also fail to light up for the other side. Stamping the sender's own read
+-- mark here is what stops a badge appearing on the message you just sent.
+create or replace function public.touch_conversation()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  sender_is_doctor boolean;
+  sender_is_patient boolean;
+begin
+  select exists (
+           select 1 from public.doctors d
+            join public.conversations c on c.doctor_id = d.id
+           where c.id = new.conversation_id and d.user_id = new.sender_id
+         ),
+         exists (
+           select 1 from public.patients p
+            join public.conversations c on c.patient_id = p.id
+           where c.id = new.conversation_id and p.owner_user_id = new.sender_id
+         )
+    into sender_is_doctor, sender_is_patient;
+
+  update public.conversations
+     set last_message_at = new.created_at,
+         doctor_read_at = case when sender_is_doctor
+                               then new.created_at else doctor_read_at end,
+         patient_read_at = case when sender_is_patient
+                                then new.created_at else patient_read_at end
+   where id = new.conversation_id;
+  return new;
+end;
+$$;
+
 create table if not exists public.messages (
   id uuid primary key default gen_random_uuid(),
   conversation_id uuid not null references public.conversations (id) on delete cascade,
@@ -358,6 +413,11 @@ create table if not exists public.messages (
   body text not null check (length(trim(body)) > 0),
   created_at timestamptz not null default now()
 );
+drop trigger if exists messages_touch on public.messages;
+create trigger messages_touch
+  after insert on public.messages
+  for each row execute function public.touch_conversation();
+
 create index if not exists messages_conversation_idx
   on public.messages (conversation_id, created_at);
 
@@ -1107,6 +1167,12 @@ create table if not exists public.peer_conversations (
   constraint peer_conversations_ordered check (patient_low < patient_high),
   unique (patient_low, patient_high)
 );
+-- Same idea as on conversations, named for the two sides this table has.
+alter table public.peer_conversations
+  add column if not exists low_read_at timestamptz;
+alter table public.peer_conversations
+  add column if not exists high_read_at timestamptz;
+
 create index if not exists peer_conversations_low_idx
   on public.peer_conversations (patient_low, last_message_at desc);
 create index if not exists peer_conversations_high_idx
@@ -1208,9 +1274,18 @@ language plpgsql
 security definer
 set search_path = ''
 as $$
+declare
+  sender_patient uuid;
 begin
+  select id into sender_patient
+    from public.patients where owner_user_id = new.sender_id;
+
   update public.peer_conversations
-     set last_message_at = new.created_at
+     set last_message_at = new.created_at,
+         low_read_at = case when patient_low = sender_patient
+                            then new.created_at else low_read_at end,
+         high_read_at = case when patient_high = sender_patient
+                             then new.created_at else high_read_at end
    where id = new.conversation_id;
   return new;
 end;
@@ -1220,6 +1295,35 @@ drop trigger if exists peer_messages_touch on public.peer_messages;
 create trigger peer_messages_touch
   after insert on public.peer_messages
   for each row execute function public.peer_touch_conversation();
+
+-- Records that the caller has just read a peer thread.
+--
+-- Definer for the same reason peer_touch_conversation is: the peer tables
+-- grant clients no UPDATE at all, deliberately, so every write to them goes
+-- through a function that re-derives who the caller is instead of trusting an
+-- id sent from the app.
+create or replace function public.mark_peer_read(conversation uuid)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  me uuid;
+begin
+  me := public.current_patient_id();
+  if me is null then return; end if;
+
+  update public.peer_conversations
+     set low_read_at = case when patient_low = me then now() else low_read_at end,
+         high_read_at = case when patient_high = me then now() else high_read_at end
+   where id = conversation
+     and me in (patient_low, patient_high);
+end;
+$$;
+
+revoke all on function public.mark_peer_read(uuid) from public;
+grant execute on function public.mark_peer_read(uuid) to authenticated;
 
 -- Directory of people who may be messaged. Both sides must have opted in:
 -- turning peer chat on is what makes you visible AND what lets you look, so a
@@ -1253,7 +1357,8 @@ returns table (
   conversation_id uuid,
   other_patient_id uuid,
   other_name text,
-  last_message_at timestamptz
+  last_message_at timestamptz,
+  unread boolean
 )
 language sql
 stable
@@ -1264,7 +1369,15 @@ as $$
   select c.id,
          other.id,
          other.name,
-         c.last_message_at
+         c.last_message_at,
+         -- Worked out here rather than in the client: the caller's side of the
+         -- pair is decided by current_patient_id(), which the client cannot be
+         -- trusted to tell us, and comparing two columns is not something a
+         -- PostgREST filter can express anyway.
+         c.last_message_at > coalesce(
+           case when c.patient_low = me.pid then c.low_read_at
+                else c.high_read_at end,
+           'epoch'::timestamptz)
   from public.peer_conversations c
   cross join me
   join public.patients other

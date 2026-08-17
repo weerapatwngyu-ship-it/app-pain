@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../shared/widgets/unread_dot.dart';
 import '../../../shared/widgets/user_avatar.dart';
 import '../../auth/presentation/onboarding/onboarding_theme.dart';
 import '../../chat/presentation/chat_screen.dart';
@@ -129,6 +130,10 @@ class _PeerChatScreenState extends State<PeerChatScreen> {
   }
 
   Future<void> _openThread(PeerThread thread) async {
+    // Read on the way in, like the doctor threads: the messages are on screen
+    // now, so a dot that outlived opening them would be telling a lie.
+    await widget.repository.markRead(thread.conversationId);
+    if (!mounted) return;
     await Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => ChatScreen(
@@ -251,12 +256,33 @@ class _PeerChatScreenState extends State<PeerChatScreen> {
           final thread = _threads[index];
           return ListTile(
             leading: UserAvatar(name: thread.otherName, radius: 20),
-            title: Text(thread.otherName),
+            title: Text(
+              thread.otherName,
+              style: TextStyle(
+                fontWeight:
+                    thread.unread ? FontWeight.w800 : FontWeight.normal,
+              ),
+            ),
             subtitle: Text(
               _formatWhen(thread.lastMessageAt),
-              style: const TextStyle(fontSize: 12, color: OnboardingColors.textMuted),
+              style: TextStyle(
+                fontSize: 12,
+                color: thread.unread
+                    ? OnboardingColors.teal
+                    : OnboardingColors.textMuted,
+                fontWeight: thread.unread ? FontWeight.w600 : FontWeight.w400,
+              ),
             ),
-            trailing: const Icon(Icons.chevron_right),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (thread.unread) ...[
+                  const UnreadDot(),
+                  const SizedBox(width: 8),
+                ],
+                const Icon(Icons.chevron_right),
+              ],
+            ),
             onTap: () => _openThread(thread),
           );
         },

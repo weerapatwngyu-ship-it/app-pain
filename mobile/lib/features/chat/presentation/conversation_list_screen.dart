@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../shared/widgets/unread_dot.dart';
 import '../../auth/presentation/onboarding/onboarding_theme.dart';
 import '../data/chat_repository.dart';
 import '../domain/entities/conversation.dart';
@@ -15,6 +16,7 @@ class ConversationListScreen extends StatefulWidget {
     required this.ownerId,
     required this.isDoctorView,
     this.showBackButton = true,
+    this.onThreadsRead,
   });
 
   final ChatRepository repository;
@@ -23,6 +25,10 @@ class ConversationListScreen extends StatefulWidget {
   final String ownerId;
   final bool isDoctorView;
   final bool showBackButton;
+
+  /// Called after a thread has been opened, so a shell showing a badge for
+  /// this inbox can re-count. Null when nothing is watching.
+  final VoidCallback? onThreadsRead;
 
   @override
   State<ConversationListScreen> createState() => _ConversationListScreenState();
@@ -47,6 +53,13 @@ class _ConversationListScreenState extends State<ConversationListScreen> {
   }
 
   Future<void> _open(Conversation conversation) async {
+    // Marked read on the way in rather than on the way out: the reader is
+    // looking at the messages now, and a dot that survives until they back out
+    // reads as though opening it did not count.
+    await widget.repository
+        .markRead(conversation.id, asDoctor: widget.isDoctorView);
+    if (!mounted) return;
+
     final title = widget.isDoctorView
         ? (conversation.patientName ?? t('ผู้ป่วย', 'Patient'))
         : (conversation.doctorName ?? t('แพทย์', 'Doctor'));
@@ -62,6 +75,7 @@ class _ConversationListScreenState extends State<ConversationListScreen> {
     );
     // Coming back from a thread, its position in the list may have changed.
     await _reload();
+    widget.onThreadsRead?.call();
   }
 
   @override
@@ -151,19 +165,43 @@ class _ConversationListScreenState extends State<ConversationListScreen> {
                           )
                         : null,
                   ),
-                  title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
+                  title: Text(
+                    title,
+                    style: TextStyle(
+                      // Unread rows read heavier, the way every mail app does
+                      // it. The dot alone is easy to miss in a long list.
+                      fontWeight: conversation.unread
+                          ? FontWeight.w800
+                          : FontWeight.w600,
+                    ),
+                  ),
                   subtitle: Text(
                     widget.isDoctorView
                         ? _formatWhen(conversation.lastMessageAt)
                         : (conversation.doctorSpecialty ?? ''),
                     style: const TextStyle(fontSize: 13),
                   ),
-                  trailing: Text(
-                    _formatWhen(conversation.lastMessageAt),
-                    style: const TextStyle(
-                      fontSize: 11,
-                      color: OnboardingColors.textMuted,
-                    ),
+                  trailing: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        _formatWhen(conversation.lastMessageAt),
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: conversation.unread
+                              ? OnboardingColors.teal
+                              : OnboardingColors.textMuted,
+                          fontWeight: conversation.unread
+                              ? FontWeight.w700
+                              : FontWeight.w400,
+                        ),
+                      ),
+                      if (conversation.unread) ...[
+                        const SizedBox(height: 6),
+                        const UnreadDot(),
+                      ],
+                    ],
                   ),
                 );
               },

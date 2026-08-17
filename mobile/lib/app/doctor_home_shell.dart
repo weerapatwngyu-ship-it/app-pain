@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../core/i18n/app_locale.dart';
+import '../shared/widgets/unread_dot.dart';
+
 import '../features/auth/domain/entities/user.dart';
 import '../features/auth/presentation/onboarding/onboarding_theme.dart';
 import '../features/admin/data/caseload_repository.dart';
@@ -49,6 +52,28 @@ class DoctorHomeShell extends StatefulWidget {
 class _DoctorHomeShellState extends State<DoctorHomeShell> {
   int _index = 0;
 
+  /// Patients waiting on a reply. Read on arrival and again whenever the
+  /// doctor leaves the inbox, which is when it can have changed.
+  int _unread = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUnread();
+  }
+
+  Future<void> _loadUnread() async {
+    try {
+      final count =
+          await widget.chatRepository.unreadForDoctor(widget.doctor.id);
+      if (!mounted || count == _unread) return;
+      setState(() => _unread = count);
+    } catch (error) {
+      // A badge that cannot be counted is not worth an error on screen.
+      debugPrint('unreadForDoctor failed: $error');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final doctor = widget.doctor;
@@ -58,6 +83,7 @@ class _DoctorHomeShellState extends State<DoctorHomeShell> {
         ownerId: doctor.id,
         isDoctorView: true,
         showBackButton: false,
+        onThreadsRead: _loadUnread,
       ),
       CaseloadScreen(
         repository: widget.caseloadRepository,
@@ -93,29 +119,37 @@ class _DoctorHomeShellState extends State<DoctorHomeShell> {
           IconButton(
             onPressed: widget.onLogout,
             icon: const Icon(Icons.logout),
-            tooltip: 'ออกจากระบบ',
+            tooltip: t('ออกจากระบบ', 'Sign out'),
           ),
         ],
       ),
       body: IndexedStack(index: _index, children: tabs),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _index,
-        onDestinationSelected: (i) => setState(() => _index = i),
-        destinations: const [
+        onDestinationSelected: (i) {
+          setState(() => _index = i);
+          // Leaving the inbox is the moment its count can have gone down.
+          if (i != 0) _loadUnread();
+        },
+        destinations: [
           NavigationDestination(
-            icon: Icon(Icons.chat_bubble_outline),
-            selectedIcon: Icon(Icons.chat_bubble),
-            label: 'ข้อความ',
+            icon: UnreadBadge(
+              show: _unread > 0,
+              borderColor: Colors.white,
+              child: const Icon(Icons.chat_bubble_outline),
+            ),
+            selectedIcon: const Icon(Icons.chat_bubble),
+            label: t('ข้อความ', 'Messages'),
           ),
           NavigationDestination(
-            icon: Icon(Icons.people_outline),
-            selectedIcon: Icon(Icons.people),
-            label: 'ผู้ป่วย',
+            icon: const Icon(Icons.people_outline),
+            selectedIcon: const Icon(Icons.people),
+            label: t('ผู้ป่วย', 'Patients'),
           ),
           NavigationDestination(
-            icon: Icon(Icons.person_outline),
-            selectedIcon: Icon(Icons.person),
-            label: 'โปรไฟล์',
+            icon: const Icon(Icons.person_outline),
+            selectedIcon: const Icon(Icons.person),
+            label: t('โปรไฟล์', 'Profile'),
           ),
         ],
       ),
@@ -142,7 +176,7 @@ class DoctorPendingScreen extends StatelessWidget {
           IconButton(
             onPressed: onLogout,
             icon: const Icon(Icons.logout),
-            tooltip: 'ออกจากระบบ',
+            tooltip: t('ออกจากระบบ', 'Sign out'),
           ),
         ],
       ),

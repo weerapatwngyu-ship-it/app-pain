@@ -13,6 +13,7 @@ class Conversation {
     this.doctorSpecialty,
     this.doctorPhotoUrl,
     this.patientName,
+    this.unread = false,
   });
 
   final String id;
@@ -25,7 +26,13 @@ class Conversation {
   final String? doctorPhotoUrl;
   final String? patientName;
 
-  factory Conversation.fromRow(Map<String, dynamic> row) {
+  /// Something arrived that this reader has not opened yet.
+  ///
+  /// Worked out when the row is read, because which of the two read marks
+  /// applies depends on which side is asking — see ChatRepository.
+  final bool unread;
+
+  factory Conversation.fromRow(Map<String, dynamic> row, {bool asDoctor = false}) {
     final doctor = row['doctors'] as Map<String, dynamic>?;
     final patient = row['patients'] as Map<String, dynamic>?;
     return Conversation(
@@ -33,11 +40,24 @@ class Conversation {
       patientId: row['patient_id'] as String,
       doctorId: row['doctor_id'] as String,
       lastMessageAt: DateTime.parse(row['last_message_at'] as String).toLocal(),
+      unread: _isUnread(row, asDoctor: asDoctor),
       doctorName: doctor?['name'] as String?,
       doctorSpecialty: doctor?['specialty'] as String?,
       doctorPhotoUrl: doctor?['photo_url'] as String?,
       patientName: patient?['name'] as String?,
     );
+  }
+
+  /// Compared here rather than in the query: PostgREST filters compare a
+  /// column against a value, not against another column.
+  static bool _isUnread(Map<String, dynamic> row, {required bool asDoctor}) {
+    final last = DateTime.tryParse(row['last_message_at'] as String? ?? '');
+    if (last == null) return false;
+    final raw = row[asDoctor ? 'doctor_read_at' : 'patient_read_at'] as String?;
+    // Never opened counts as unread, which is what a brand new thread is.
+    if (raw == null) return true;
+    final read = DateTime.tryParse(raw);
+    return read == null || last.isAfter(read);
   }
 }
 

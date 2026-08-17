@@ -9,6 +9,7 @@ class PeerThread {
     required this.otherPatientId,
     required this.otherName,
     required this.lastMessageAt,
+    this.unread = false,
   });
 
   final String conversationId;
@@ -16,12 +17,16 @@ class PeerThread {
   final String otherName;
   final DateTime lastMessageAt;
 
+  /// Decided by the RPC, which knows which half of the pair the caller is.
+  final bool unread;
+
   factory PeerThread.fromRow(Map<String, dynamic> row) {
     return PeerThread(
       conversationId: row['conversation_id'] as String,
       otherPatientId: row['other_patient_id'] as String,
       otherName: (row['other_name'] as String?) ?? 'ผู้ใช้',
       lastMessageAt: DateTime.parse(row['last_message_at'] as String).toLocal(),
+      unread: row['unread'] as bool? ?? false,
     );
   }
 }
