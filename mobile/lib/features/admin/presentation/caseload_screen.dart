@@ -96,11 +96,14 @@ class _CaseloadScreenState extends State<CaseloadScreen> {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text('โหลดรายชื่อไม่สำเร็จ: ${snapshot.error}',
+                          Text(
+                              t('โหลดรายชื่อไม่สำเร็จ: ${snapshot.error}',
+                                  'Could not load patients: ${snapshot.error}'),
                               textAlign: TextAlign.center),
                           const SizedBox(height: 16),
                           OutlinedButton(
-                              onPressed: _reload, child: const Text('ลองอีกครั้ง')),
+                              onPressed: _reload,
+                              child: Text(t('ลองอีกครั้ง', 'Try again'))),
                         ],
                       ),
                     ),
@@ -490,7 +493,9 @@ class _PatientRecordScreenState extends State<PatientRecordScreen> {
             return Center(
               child: Padding(
                 padding: const EdgeInsets.all(24),
-                child: Text('โหลดข้อมูลไม่สำเร็จ: ${snapshot.error}',
+                child: Text(
+                    t('โหลดข้อมูลไม่สำเร็จ: ${snapshot.error}',
+                        'Could not load: ${snapshot.error}'),
                     textAlign: TextAlign.center),
               ),
             );
@@ -1120,51 +1125,77 @@ class _SymptomTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final score = entry.painScore;
+    final note = entry.note;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(
-            width: 84,
-            child: Text(
-              '${entry.recordedAt.day}/${entry.recordedAt.month} '
-              '${entry.recordedAt.hour.toString().padLeft(2, '0')}:'
-              '${entry.recordedAt.minute.toString().padLeft(2, '0')}',
-              style: const TextStyle(fontSize: 12, color: OnboardingColors.textMuted),
-            ),
-          ),
-          Expanded(
-            child: Text(
-              entry.category == null
-                  ? 'ไม่ระบุหมวด'
-                  : symptomCategoryLabel(entry.category!),
-              style: const TextStyle(fontSize: 14),
-            ),
-          ),
-          if (score != null)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-              decoration: BoxDecoration(
-                color: score >= 7
-                    ? const Color(0xFFFDE7E4)
-                    : score >= 4
-                        ? const Color(0xFFFFF4E5)
-                        : const Color(0xFFE3F3EF),
-                borderRadius: BorderRadius.circular(12),
+          Row(
+            children: [
+              SizedBox(
+                width: 84,
+                child: Text(
+                  '${entry.recordedAt.day}/${entry.recordedAt.month} '
+                  '${entry.recordedAt.hour.toString().padLeft(2, '0')}:'
+                  '${entry.recordedAt.minute.toString().padLeft(2, '0')}',
+                  style: const TextStyle(
+                      fontSize: 12, color: OnboardingColors.textMuted),
+                ),
               ),
+              Expanded(
+                child: Text(
+                  entry.category == null
+                      ? t('ไม่ระบุหมวด', 'No category')
+                      : symptomCategoryLabel(entry.category!),
+                  style: const TextStyle(fontSize: 14),
+                ),
+              ),
+              if (score != null)
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: score >= 7
+                        ? const Color(0xFFFDE7E4)
+                        : score >= 4
+                            ? const Color(0xFFFFF4E5)
+                            : const Color(0xFFE3F3EF),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    t('ปวด $score', 'pain $score'),
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: score >= 7
+                          ? const Color(0xFFC0392B)
+                          : score >= 4
+                              ? const Color(0xFFB26A00)
+                              : OnboardingColors.teal,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          // The patient's own words, indented under the row they belong to.
+          // This is the part of an entry that actually tells a doctor
+          // something — a category and a number say a symptom happened, the
+          // note says what happened.
+          if (note != null) ...[
+            const SizedBox(height: 4),
+            Padding(
+              padding: const EdgeInsets.only(left: 84, right: 4),
               child: Text(
-                'ปวด $score',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: score >= 7
-                      ? const Color(0xFFC0392B)
-                      : score >= 4
-                          ? const Color(0xFFB26A00)
-                          : OnboardingColors.teal,
+                note,
+                style: const TextStyle(
+                  fontSize: 13,
+                  height: 1.45,
+                  color: OnboardingColors.textMuted,
                 ),
               ),
             ),
+          ],
         ],
       ),
     );

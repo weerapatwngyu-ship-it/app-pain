@@ -1557,3 +1557,49 @@ begin;
   update public.conversations set patient_read_at = now() where id = :'conv';
   reset role;
 rollback;
+
+\echo ''
+\echo '=== CONTROL 59: หมอเห็นบันทึกอาการรวมทั้งข้อความที่ผู้ป่วยพิมพ์ ==='
+begin;
+  select id as pa from public.patients
+   where owner_user_id='11111111-1111-1111-1111-111111111111' \gset
+
+  set local role authenticated;
+  select public.as_user('11111111-1111-1111-1111-111111111111');
+  insert into public.symptom_logs
+    (patient_id, pain_score, category, custom_fields)
+  values (:'pa', 3, 'head', '{"note":"ปวดหลังอาหารเที่ยง"}'::jsonb);
+  reset role;
+
+  insert into auth.users (id, email)
+    values ('ffffffff-ffff-ffff-ffff-ffffffffffff','symptom-doc@test.com');
+  update public.profiles set role='provider'
+   where id='ffffffff-ffff-ffff-ffff-ffffffffffff';
+
+  set local role authenticated;
+  select public.as_user('ffffffff-ffff-ffff-ffff-ffffffffffff');
+  \echo '  -- expect หมวด คะแนน และข้อความครบ: บันทึกที่หมออ่านไม่ได้ก็ไม่มีประโยชน์:'
+  select category, pain_score, custom_fields->>'note' as note
+    from public.symptom_logs where patient_id = :'pa';
+  reset role;
+rollback;
+
+\echo ''
+\echo '=== EXPLOIT 60: ผู้ป่วยอีกคนอ่านบันทึกอาการของคนนี้ (ต้องได้ 0 แถว) ==='
+begin;
+  select id as pa from public.patients
+   where owner_user_id='11111111-1111-1111-1111-111111111111' \gset
+  set local role authenticated;
+  select public.as_user('11111111-1111-1111-1111-111111111111');
+  insert into public.symptom_logs
+    (patient_id, pain_score, category, custom_fields)
+  values (:'pa', 8, 'stomach', '{"note":"ความลับ"}'::jsonb);
+  reset role;
+
+  set local role authenticated;
+  select public.as_user('22222222-2222-2222-2222-222222222222');
+  \echo '  -- expect 0 rows:'
+  select category, custom_fields->>'note' as note
+    from public.symptom_logs where patient_id = :'pa';
+  reset role;
+rollback;

@@ -1,4 +1,5 @@
 import '../../../core/supabase/supabase_refs.dart';
+import '../../../core/i18n/app_locale.dart';
 import '../../../shared/format/thai_date.dart';
 
 /// A patient as clinical staff see them in the caseload list.
@@ -42,12 +43,13 @@ class CaseloadPatient {
   bool get birthDateUnconfirmed =>
       birthDate.year == 2000 && birthDate.month == 1 && birthDate.day == 1;
 
-  /// Thai reading of the gender stored in the database, which uses the English
-  /// values the check constraint allows.
+  /// The gender in the reader's language. The column holds the English values
+  /// the check constraint allows, which is not what either a Thai or an
+  /// English clinician should be reading off a chart.
   String? get genderLabel => switch (gender) {
-        'female' => 'หญิง',
-        'male' => 'ชาย',
-        'unspecified' => 'ไม่ระบุ',
+        'female' => t('หญิง', 'Female'),
+        'male' => t('ชาย', 'Male'),
+        'unspecified' => t('ไม่ระบุ', 'Not specified'),
         _ => gender,
       };
 
@@ -218,17 +220,28 @@ class PrescriptionSummary {
 }
 
 class SymptomEntry {
-  const SymptomEntry({required this.recordedAt, this.painScore, this.category});
+  const SymptomEntry({
+    required this.recordedAt,
+    this.painScore,
+    this.category,
+    this.note,
+  });
 
   final DateTime recordedAt;
   final int? painScore;
   final String? category;
 
+  /// What the patient wrote in their own words, if anything.
+  final String? note;
+
   factory SymptomEntry.fromRow(Map<String, dynamic> row) {
+    final custom = row['custom_fields'] as Map<String, dynamic>?;
+    final note = (custom?['note'] as String?)?.trim();
     return SymptomEntry(
       recordedAt: DateTime.parse(row['recorded_at'] as String).toLocal(),
       painScore: row['pain_score'] as int?,
       category: row['category'] as String?,
+      note: (note == null || note.isEmpty) ? null : note,
     );
   }
 }
@@ -280,7 +293,11 @@ class CaseloadRepository {
 
     final symptoms = await db
         .from('symptom_logs')
-        .select('recorded_at, pain_score, category')
+        // custom_fields carries the note the patient typed, which is the most
+        // informative part of an entry — "ปวดหลังอาหารเที่ยง" says more than a
+        // category and a number ever will. It was not being selected, so the
+        // doctor could see that something was logged but not what.
+        .select('recorded_at, pain_score, category, custom_fields')
         .eq('patient_id', patient.id)
         .order('recorded_at', ascending: false)
         .limit(30);
