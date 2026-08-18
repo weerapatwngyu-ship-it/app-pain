@@ -123,12 +123,33 @@ class _HealthTopicDetailScreenState extends State<HealthTopicDetailScreen> {
                 ],
               ),
             ),
+            const SizedBox(height: 20),
+            // The paragraph before the lists. Without it the screen goes
+            // straight from a one-line summary to "common symptoms", which
+            // tells the reader what to watch for but never what they are
+            // looking at.
+            Text(
+              topic.overview,
+              style: const TextStyle(
+                fontSize: 14,
+                height: 1.7,
+                color: OnboardingColors.text,
+              ),
+            ),
             const SizedBox(height: 24),
             _Section(
               icon: Icons.checklist_rtl,
               title: t('อาการที่พบบ่อย', 'Common symptoms'),
               items: topic.commonSigns,
             ),
+            if (topic.riskFactors.isNotEmpty)
+              _Section(
+                icon: Icons.share_outlined,
+                title: topic.riskTitle ??
+                    t('สาเหตุและปัจจัยเสี่ยง', 'Causes and risk factors'),
+                items: topic.riskFactors,
+                accent: const Color(0xFFB26A00),
+              ),
             _Section(
               icon: Icons.warning_amber_rounded,
               title: t('ควรพบแพทย์เมื่อไหร่', 'When to see a doctor'),
@@ -140,6 +161,8 @@ class _HealthTopicDetailScreenState extends State<HealthTopicDetailScreen> {
               title: t('ดูแลตัวเองอย่างไร', 'Looking after yourself'),
               items: topic.selfCare,
             ),
+            if (topic.keyFacts.isNotEmpty) _FactsSection(facts: topic.keyFacts),
+            if (topic.myths.isNotEmpty) _MythsSection(myths: topic.myths),
             const SizedBox(height: 8),
             Container(
               padding: const EdgeInsets.all(12),
@@ -350,6 +373,172 @@ class _Section extends StatelessWidget {
                       text,
                       style: const TextStyle(fontSize: 14, height: 1.5),
                     ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// The numbers, thresholds and hotlines, set apart from the prose.
+///
+/// A reader scanning for "what counts as high blood pressure?" should land on
+/// the figure without reading a paragraph, so the label is given its own
+/// column rather than being buried mid-sentence in a bullet.
+class _FactsSection extends StatelessWidget {
+  const _FactsSection({required this.facts});
+
+  final List<TopicFact> facts;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.straighten, size: 20, color: OnboardingColors.teal),
+              const SizedBox(width: 8),
+              Text(
+                t('ตัวเลขที่ควรรู้', 'Numbers worth knowing'),
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: OnboardingColors.teal,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF4F8F7),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Column(
+              children: [
+                for (var i = 0; i < facts.length; i++) ...[
+                  if (i > 0)
+                    const Divider(height: 1, color: Color(0xFFE2ECEA)),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        SizedBox(
+                          width: 104,
+                          child: Text(
+                            facts[i].label,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              height: 1.4,
+                              fontWeight: FontWeight.w700,
+                              color: OnboardingColors.teal,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            facts[i].value,
+                            style: const TextStyle(fontSize: 13, height: 1.5),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Common beliefs that are wrong, each paired with what is actually the case.
+///
+/// The claim is shown struck through so the eye cannot mistake it for the
+/// advice — several of these describe things that hurt people, and a reader
+/// skimming must not come away with the wrong half.
+class _MythsSection extends StatelessWidget {
+  const _MythsSection({required this.myths});
+
+  final List<TopicMyth> myths;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.psychology_outlined,
+                  size: 20, color: Color(0xFF5B6ABF)),
+              const SizedBox(width: 8),
+              Text(
+                t('ความเชื่อที่เข้าใจผิดบ่อย', 'Commonly believed, but wrong'),
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF5B6ABF),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          ...myths.map(
+            (myth) => Container(
+              margin: const EdgeInsets.only(bottom: 10),
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF5F6FC),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(Icons.close, size: 16, color: Color(0xFFC0392B)),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          myth.claim,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            height: 1.5,
+                            color: OnboardingColors.textMuted,
+                            decoration: TextDecoration.lineThrough,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(Icons.check, size: 16, color: OnboardingColors.teal),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          myth.fact,
+                          style: const TextStyle(fontSize: 13, height: 1.6),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
