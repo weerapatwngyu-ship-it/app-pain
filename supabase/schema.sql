@@ -1352,6 +1352,14 @@ $$;
 -- The caller's threads with the counterpart's name resolved. Goes through a
 -- definer so the list can name the other participant without opening
 -- patients_select up to every patient row.
+--
+-- Dropped first, not just replaced: this function gained the `unread` column,
+-- and `create or replace` cannot change a return type — on a database still
+-- holding the older four-column version it fails with 42P13 rather than
+-- upgrading. Nothing in the database depends on this function (it is only
+-- called as an RPC from the app) and it carries no explicit grants of its
+-- own, so dropping it loses nothing.
+drop function if exists public.peer_threads();
 create or replace function public.peer_threads()
 returns table (
   conversation_id uuid,
