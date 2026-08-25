@@ -114,6 +114,7 @@ class PatientRecord {
     required this.openAlerts,
     required this.adherence,
     required this.doseLogs,
+    required this.missedDoses,
   });
 
   final CaseloadPatient patient;
@@ -126,6 +127,10 @@ class PatientRecord {
 
   /// The most recent doses, newest first.
   final List<DoseLogEntry> doseLogs;
+
+  /// Doses that came due in the same window and were never answered, newest
+  /// first. Derived, not stored — see [MissedDose].
+  final List<MissedDose> missedDoses;
 }
 
 /// A week of doses, counted rather than estimated.
@@ -159,6 +164,22 @@ class DoseAdherence {
   bool get hasSchedule => expected > 0;
 }
 
+/// A dose that came due and was never answered — neither taken nor skipped.
+///
+/// Derived at read time from the schedule rather than stored as a row. Writing
+/// "missed" rows would need something to run when a dose lapses, and the case
+/// that matters most is precisely the one where the patient stopped opening
+/// the app at all — so nothing would be there to write them. Deriving it means
+/// the gap shows up whether or not anyone has touched the phone.
+class MissedDose {
+  const MissedDose({required this.medicationName, required this.scheduledAt});
+
+  final String medicationName;
+
+  /// The local date and time the dose was due.
+  final DateTime scheduledAt;
+}
+
 class DoseLogEntry {
   const DoseLogEntry({
     required this.medicationName,
@@ -183,6 +204,7 @@ class PrescriptionSummary {
     required this.frequency,
     required this.startDate,
     this.endDate,
+    this.stopReason,
   });
 
   /// Needed so the doctor's screen can stop or remove this exact row.
@@ -193,6 +215,15 @@ class PrescriptionSummary {
   final String frequency;
   final DateTime startDate;
   final DateTime? endDate;
+
+  /// 'recovered' | 'other', or null for a medication still running — or one
+  /// stopped before the column existed, which is why null is not read as
+  /// "no reason applied".
+  final String? stopReason;
+
+  /// Stopped because the patient got better, rather than because the drug was
+  /// changed or abandoned. The chart shows this as "หายแล้ว".
+  bool get stoppedRecovered => !isActive && stopReason == 'recovered';
 
   /// end_date is a date, so "ends today" has to count as still running —
   /// comparing a midnight DateTime against now would call today's last day
@@ -215,6 +246,7 @@ class PrescriptionSummary {
       endDate: row['end_date'] == null
           ? null
           : DateTime.parse(row['end_date'] as String),
+      stopReason: row['stop_reason'] as String?,
     );
   }
 }
@@ -287,7 +319,8 @@ class CaseloadRepository {
 
     final prescriptions = await db
         .from('prescriptions')
-        .select('id, medication_name, dosage, frequency, start_date, end_date, source')
+        .select('id, medication_name, dosage, frequency, start_date, end_date, '
+            'source, stop_reason')
         .eq('patient_id', patient.id)
         .order('start_date', ascending: false);
 
@@ -308,7 +341,7 @@ class CaseloadRepository {
         .eq('patient_id', patient.id)
         .eq('status', 'open');
 
-    final (adherence, doseLogs) = await _doses(patient.id);
+    final (adherence, doseLogs, missedDoses) = await _doses(patient.id);
 
     return PatientRecord(
       patient: current,
@@ -317,6 +350,7 @@ class CaseloadRepository {
       symptomLogs: symptoms.map<SymptomEntry>(SymptomEntry.fromRow).toList(),
       openAlerts: alerts.length,
       adherence: adherence,
+      missedDoses: missedDoses,
       doseLogs: doseLogs,
     );
   }
@@ -330,7 +364,8 @@ class CaseloadRepository {
   /// in full anyway — working out what was due means walking every day of the
   /// window against each schedule's own start and end dates — and once it is
   /// in hand, the logs only have to be fetched by id.
-  Future<(DoseAdherence, List<DoseLogEntry>)> _doses(String patientId) async {
+  Future<(DoseAdherence, List<DoseLogEntry>, List<MissedDose>)> _doses(
+      String patientId) async {
     final scheduleRows = await db
         .from('dose_schedules')
         .select('id, scheduled_time, is_prn, '
@@ -341,6 +376,7 @@ class CaseloadRepository {
       return (
         const DoseAdherence(expected: 0, taken: 0, skipped: 0),
         const <DoseLogEntry>[],
+        const <MissedDose>[],
       );
     }
 
@@ -361,6 +397,8 @@ class CaseloadRepository {
       if (time == null || start == null) continue;
       final end = DateTime.tryParse(prescription['end_date'] as String? ?? '');
       schedules.add(_ScheduleWindow(
+        scheduleId: id,
+        medicationName: names[id] ?? '',
         minuteOfDay: time,
         start: DateTime(start.year, start.month, start.day),
         end: end == null ? null : DateTime(end.year, end.month, end.day),
@@ -371,7 +409,44 @@ class CaseloadRepository {
     final today = DateTime(now.year, now.month, now.day);
     final windowStart = today.subtract(const Duration(days: _adherenceDays - 1));
 
+    // Read before the day walk below, which needs to know what was answered
+    // in order to name what was not.
+    final logRows = await db
+        .from('dose_logs')
+        .select('schedule_id, scheduled_at, actioned_at, status')
+        .inFilter('schedule_id', names.keys.toList())
+        // toUtc, or a local midnight is read as UTC midnight and the window
+        // silently starts seven hours late.
+        .gte('scheduled_at', windowStart.toUtc().toIso8601String())
+        .order('scheduled_at', ascending: false);
+
+    var taken = 0;
+    var skipped = 0;
+    final entries = <DoseLogEntry>[];
+    // "schedule|yyyy-mm-dd" for every slot the patient answered either way.
+    // Keyed by day rather than by exact minute: one schedule is one dose a
+    // day, and a patient who takes an 08:00 tablet at 11:00 has answered it,
+    // not missed it and taken a phantom extra.
+    final answered = <String>{};
+    for (final row in logRows) {
+      final status = row['status'] as String? ?? '';
+      if (status == 'taken') taken++;
+      if (status == 'skipped') skipped++;
+      final scheduledAt =
+          DateTime.parse(row['scheduled_at'] as String).toLocal();
+      answered.add('${row['schedule_id']}|${_dayKey(scheduledAt)}');
+      entries.add(DoseLogEntry(
+        medicationName: names[row['schedule_id']] ?? '',
+        scheduledAt: scheduledAt,
+        actionedAt: row['actioned_at'] == null
+            ? null
+            : DateTime.parse(row['actioned_at'] as String).toLocal(),
+        status: status,
+      ));
+    }
+
     var expected = 0;
+    final missed = <MissedDose>[];
     for (var day = windowStart;
         !day.isAfter(today);
         day = day.add(const Duration(days: 1))) {
@@ -385,40 +460,30 @@ class CaseloadRepository {
           continue;
         }
         expected++;
+        if (answered.contains('${schedule.scheduleId}|${_dayKey(day)}')) {
+          continue;
+        }
+        // Due, and nothing was ever recorded against it. This is the whole
+        // point: a doctor cannot act on "adherence 71%", but can act on
+        // "missed the 20:00 dose four evenings running".
+        missed.add(MissedDose(
+          medicationName: schedule.medicationName,
+          scheduledAt: DateTime(day.year, day.month, day.day,
+              schedule.minuteOfDay ~/ 60, schedule.minuteOfDay % 60),
+        ));
       }
     }
-
-    final logRows = await db
-        .from('dose_logs')
-        .select('schedule_id, scheduled_at, actioned_at, status')
-        .inFilter('schedule_id', names.keys.toList())
-        // toUtc, or a local midnight is read as UTC midnight and the window
-        // silently starts seven hours late.
-        .gte('scheduled_at', windowStart.toUtc().toIso8601String())
-        .order('scheduled_at', ascending: false);
-
-    var taken = 0;
-    var skipped = 0;
-    final entries = <DoseLogEntry>[];
-    for (final row in logRows) {
-      final status = row['status'] as String? ?? '';
-      if (status == 'taken') taken++;
-      if (status == 'skipped') skipped++;
-      entries.add(DoseLogEntry(
-        medicationName: names[row['schedule_id']] ?? '',
-        scheduledAt: DateTime.parse(row['scheduled_at'] as String).toLocal(),
-        actionedAt: row['actioned_at'] == null
-            ? null
-            : DateTime.parse(row['actioned_at'] as String).toLocal(),
-        status: status,
-      ));
-    }
+    missed.sort((a, b) => b.scheduledAt.compareTo(a.scheduledAt));
 
     return (
       DoseAdherence(expected: expected, taken: taken, skipped: skipped),
       entries,
+      missed,
     );
   }
+
+  static String _dayKey(DateTime value) =>
+      '${value.year}-${value.month}-${value.day}';
 
   /// 'HH:mm' or 'HH:mm:ss' as minutes past midnight.
   static int? _parseTime(String raw) {
@@ -434,11 +499,15 @@ class CaseloadRepository {
 /// One scheduled time, with the days its prescription was actually running.
 class _ScheduleWindow {
   const _ScheduleWindow({
+    required this.scheduleId,
+    required this.medicationName,
     required this.minuteOfDay,
     required this.start,
     required this.end,
   });
 
+  final String scheduleId;
+  final String medicationName;
   final int minuteOfDay;
   final DateTime start;
   final DateTime? end;

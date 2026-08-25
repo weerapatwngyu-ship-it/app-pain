@@ -9,6 +9,7 @@ class Medication {
     required this.times,
     this.endDate,
     this.enteredBySelf = true,
+    this.stopReason,
   });
 
   final String id;
@@ -29,6 +30,14 @@ class Medication {
   /// False when a clinician entered it. Those are read-only to the patient —
   /// the backend refuses the write, so the UI should not offer it.
   final bool enteredBySelf;
+
+  /// 'recovered' | 'other', or null while it is still running. Set when the
+  /// medication was stopped, so the list can say why rather than only that it
+  /// ended.
+  final String? stopReason;
+
+  /// Stopped because the patient got better. Shown as "หายแล้ว".
+  bool get stoppedRecovered => !isActive && stopReason == 'recovered';
 
   bool get isActive {
     final end = endDate;
@@ -58,6 +67,7 @@ class Medication {
           : DateTime.parse(row['end_date'] as String),
       times: times,
       enteredBySelf: (row['source'] as String? ?? 'clinician') == 'self',
+      stopReason: row['stop_reason'] as String?,
     );
   }
 }

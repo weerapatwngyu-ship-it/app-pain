@@ -240,6 +240,58 @@ class _PatientRecordScreenState extends State<PatientRecordScreen> {
   /// course today" are different instructions, and only the doctor knows which
   /// one they mean. Stopping as of yesterday takes today's remaining doses off
   /// the patient's schedule immediately; stopping today leaves them standing.
+  /// Ends a course of treatment because the patient got better.
+  ///
+  /// Separate from [_stop] rather than a reason picker inside it: this is the
+  /// ending most courses are supposed to have, and burying it one level down
+  /// in a dialog about end dates would make the common case the awkward one.
+  /// It stops from today — a recovered patient has no reason to take the rest
+  /// of today's doses.
+  Future<void> _recovered(PrescriptionSummary prescription) async {
+    final medicationRepository = widget.medicationRepository;
+    if (medicationRepository == null) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(t('หายแล้ว — หยุด ${prescription.medicationName}',
+            'Recovered — stop ${prescription.medicationName}')),
+        content: Text(t(
+          'ยานี้จะหายจากตารางของผู้ป่วยทันที รวมมื้อที่เหลือของวันนี้ '
+              'และถูกบันทึกไว้ว่า "หายแล้ว"\n\n'
+              'ประวัติการกินยาที่บันทึกไว้จะยังอยู่ครบ',
+          'It leaves the patient schedule immediately, including the doses '
+              'left today, and is recorded as "Recovered".\n\n'
+              'The dose history already recorded is kept in full.',
+        )),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(t('ยกเลิก', 'Cancel')),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(t('ยืนยันว่าหายแล้ว', 'Confirm recovered'),
+                style: const TextStyle(color: OnboardingColors.teal)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    await _writeMedication(
+      () => medicationRepository.stop(
+        prescription.id,
+        // Yesterday, so today counts as already finished and the remaining
+        // doses drop off the schedule now rather than tonight.
+        endDate: DateTime.now().subtract(const Duration(days: 1)),
+        recovered: true,
+      ),
+      t('บันทึกว่า ${prescription.medicationName} หายแล้ว',
+          '${prescription.medicationName} marked as recovered'),
+    );
+  }
+
   Future<void> _stop(PrescriptionSummary prescription) async {
     final medicationRepository = widget.medicationRepository;
     if (medicationRepository == null) return;
@@ -520,6 +572,7 @@ class _PatientRecordScreenState extends State<PatientRecordScreen> {
                       prescription: p,
                       // Null when this viewer may read but not prescribe, so
                       // the actions are absent rather than shown and refused.
+                      onRecovered: _canPrescribe ? () => _recovered(p) : null,
                       onStop: _canPrescribe ? () => _stop(p) : null,
                       onDelete: _canPrescribe ? () => _delete(p) : null,
                     )),
@@ -538,6 +591,10 @@ class _PatientRecordScreenState extends State<PatientRecordScreen> {
                 adherence: record.adherence,
                 logs: record.doseLogs,
               ),
+              if (record.missedDoses.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                _MissedDosesCard(missed: record.missedDoses),
+              ],
               const SizedBox(height: 24),
               _SectionTitle(t('บันทึกอาการล่าสุด', 'Recent symptom entries')),
               if (record.symptomLogs.isEmpty)
@@ -1036,6 +1093,7 @@ class _PrescriptionTile extends StatelessWidget {
   const _PrescriptionTile({
     required this.prescription,
     this.faded = false,
+    this.onRecovered,
     this.onStop,
     this.onDelete,
   });
@@ -1043,7 +1101,8 @@ class _PrescriptionTile extends StatelessWidget {
   final PrescriptionSummary prescription;
   final bool faded;
 
-  /// Both null for a viewer who may read the record but not change it.
+  /// All null for a viewer who may read the record but not change it.
+  final VoidCallback? onRecovered;
   final VoidCallback? onStop;
   final VoidCallback? onDelete;
 
@@ -1066,8 +1125,23 @@ class _PrescriptionTile extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(prescription.medicationName,
-                      style: const TextStyle(fontWeight: FontWeight.w600)),
+                  Row(
+                    children: [
+                      Flexible(
+                        child: Text(prescription.medicationName,
+                            style:
+                                const TextStyle(fontWeight: FontWeight.w600)),
+                      ),
+                      // The good ending, called out. Every stopped medication
+                      // greys out the same way, so without this the chart
+                      // cannot tell "the treatment worked" apart from "this
+                      // was abandoned".
+                      if (prescription.stoppedRecovered) ...[
+                        const SizedBox(width: 8),
+                        const _RecoveredChip(),
+                      ],
+                    ],
+                  ),
                   Text(
                     [
                       prescription.dosage,
@@ -1091,14 +1165,25 @@ class _PrescriptionTile extends StatelessWidget {
                     size: 20, color: OnboardingColors.textMuted),
                 tooltip: t('จัดการยานี้', 'Manage this medication'),
                 onSelected: (value) {
+                  if (value == 'recovered') onRecovered?.call();
                   if (value == 'stop') onStop?.call();
                   if (value == 'delete') onDelete?.call();
                 },
                 itemBuilder: (context) => [
+                  // First, because it is the ending a course of treatment is
+                  // meant to have — and the one a doctor reaches for most.
+                  if (onRecovered != null)
+                    PopupMenuItem(
+                      value: 'recovered',
+                      child: Text(
+                        t('หายแล้ว — หยุดยานี้', 'Recovered — stop this'),
+                        style: const TextStyle(color: OnboardingColors.teal),
+                      ),
+                    ),
                   if (onStop != null)
                     PopupMenuItem(
                       value: 'stop',
-                      child: Text(t('หยุดยา', 'Stop')),
+                      child: Text(t('หยุดยา (เหตุผลอื่น)', 'Stop (other reason)')),
                     ),
                   if (onDelete != null)
                     PopupMenuItem(
@@ -1112,6 +1197,160 @@ class _PrescriptionTile extends StatelessWidget {
               ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// The doses that came due and were never answered, grouped by day.
+///
+/// The adherence card above gives a percentage, which tells a doctor something
+/// is wrong but not what to say about it. "20:00 ยาความดัน" missed four
+/// evenings running is a conversation; "71%" is not.
+class _MissedDosesCard extends StatelessWidget {
+  const _MissedDosesCard({required this.missed});
+
+  final List<MissedDose> missed;
+
+  /// At most this many days on the chart. The rest stay in the count above —
+  /// a patient who has taken nothing for a week would otherwise push the
+  /// symptom notes off the bottom of the screen.
+  static const _maxDays = 4;
+
+  @override
+  Widget build(BuildContext context) {
+    // Already newest first from the repository, so insertion order into a
+    // LinkedHashMap is the order the days should read in.
+    final byDay = <String, List<MissedDose>>{};
+    for (final dose in missed) {
+      final key = thaiOrEnglishDate(dose.scheduledAt);
+      byDay.putIfAbsent(key, () => []).add(dose);
+    }
+    final days = byDay.keys.take(_maxDays).toList();
+    final hiddenDays = byDay.length - days.length;
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFDF3F1),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFF3DAD5)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.error_outline, size: 18, color: Color(0xFFC0392B)),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  t('ไม่ได้กินยา ${missed.length} มื้อ',
+                      '${missed.length} doses not taken'),
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFFC0392B),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            t('มื้อที่ถึงเวลาแล้วแต่ไม่มีการบันทึกว่ากินหรือข้าม',
+                'Doses that came due with nothing recorded either way'),
+            style: const TextStyle(fontSize: 12, color: OnboardingColors.textMuted),
+          ),
+          const SizedBox(height: 10),
+          for (final day in days) ...[
+            Padding(
+              padding: const EdgeInsets.only(top: 6, bottom: 2),
+              child: Text(
+                day,
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: OnboardingColors.text,
+                ),
+              ),
+            ),
+            for (final dose in byDay[day]!)
+              Padding(
+                padding: const EdgeInsets.only(left: 4, top: 3),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(
+                      width: 48,
+                      child: Text(
+                        _clock(dose.scheduledAt),
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFFC0392B),
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      child: Text(
+                        dose.medicationName,
+                        style: const TextStyle(fontSize: 13, height: 1.4),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+          ],
+          if (hiddenDays > 0) ...[
+            const SizedBox(height: 8),
+            Text(
+              t('และอีก $hiddenDays วันก่อนหน้า', 'and $hiddenDays earlier days'),
+              style: const TextStyle(
+                  fontSize: 12, color: OnboardingColors.textMuted),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  static String _clock(DateTime value) =>
+      '${value.hour.toString().padLeft(2, '0')}:'
+      '${value.minute.toString().padLeft(2, '0')}';
+}
+
+/// "หายแล้ว" beside a medication the patient recovered from.
+///
+/// Green rather than grey, against the faded row it sits on: every stopped
+/// medication looks alike otherwise, and this is the one ending that is good
+/// news.
+class _RecoveredChip extends StatelessWidget {
+  const _RecoveredChip();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: const Color(0xFFE3F3EF),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.check_circle,
+              size: 12, color: OnboardingColors.teal),
+          const SizedBox(width: 4),
+          Text(
+            t('หายแล้ว', 'Recovered'),
+            style: const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              color: OnboardingColors.teal,
+            ),
+          ),
+        ],
       ),
     );
   }

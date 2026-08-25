@@ -1603,3 +1603,53 @@ begin;
     from public.symptom_logs where patient_id = :'pa';
   reset role;
 rollback;
+
+\echo ''
+\echo '=== CONTROL 61: หมอหยุดยาพร้อมระบุว่าหายแล้ว ==='
+begin;
+  select id as pa from public.patients
+   where owner_user_id='11111111-1111-1111-1111-111111111111' \gset
+
+  insert into auth.users (id, email)
+    values ('eeeeeeee-1111-2222-3333-eeeeeeeeeeee','stopdoc@test.com');
+  update public.profiles set role='provider'
+   where id='eeeeeeee-1111-2222-3333-eeeeeeeeeeee';
+  insert into public.doctors (user_id, name, specialty)
+    values ('eeeeeeee-1111-2222-3333-eeeeeeeeeeee','หมอหยุดยา','อายุรกรรม');
+
+  -- The doctor gains care of this patient by opening a conversation, which is
+  -- what link_doctor_on_conversation() is for.
+  insert into public.conversations (patient_id, doctor_id)
+    select :'pa', id from public.doctors
+     where user_id='eeeeeeee-1111-2222-3333-eeeeeeeeeeee';
+
+  set local role authenticated;
+  select public.as_user('eeeeeeee-1111-2222-3333-eeeeeeeeeeee');
+  insert into public.prescriptions
+    (patient_id, medication_name, dosage, frequency, start_date, source)
+  values (:'pa','ยาแก้อักเสบ','1 เม็ด','วันละ 3 ครั้ง', current_date, 'clinician')
+  returning id as rx \gset
+
+  update public.prescriptions
+     set end_date = current_date - 1, stop_reason = 'recovered'
+   where id = :'rx';
+  \echo '  -- expect stop_reason = recovered:'
+  select medication_name, stop_reason, end_date < current_date as ended
+    from public.prescriptions where id = :'rx';
+  reset role;
+rollback;
+
+\echo ''
+\echo '=== EXPLOIT 62: ค่า stop_reason นอกเหนือจากที่กำหนด (ต้อง error) ==='
+begin;
+  select id as pa from public.patients
+   where owner_user_id='11111111-1111-1111-1111-111111111111' \gset
+  set local role authenticated;
+  select public.as_user('11111111-1111-1111-1111-111111111111');
+  insert into public.prescriptions
+    (patient_id, medication_name, dosage, frequency, start_date, source,
+     stop_reason)
+  values (:'pa','ยาทดสอบ','1 เม็ด','วันละ 1 ครั้ง', current_date, 'self',
+          'cured-by-magic');
+  reset role;
+rollback;

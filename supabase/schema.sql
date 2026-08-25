@@ -151,6 +151,19 @@ alter table public.prescriptions add constraint prescriptions_source_check
 alter table public.prescriptions
   add column if not exists created_by uuid references auth.users (id);
 
+-- Why a medication was stopped.
+--
+-- end_date alone says a drug ended but not whether that was the good ending.
+-- "หายแล้ว" and "stopped because it was making them worse" are the same row
+-- otherwise, and the difference is the first thing the next clinician reading
+-- this chart needs. Null means it is still running, or was stopped before
+-- this column existed — not that no reason applied.
+alter table public.prescriptions
+  add column if not exists stop_reason text;
+alter table public.prescriptions drop constraint if exists prescriptions_stop_reason_check;
+alter table public.prescriptions add constraint prescriptions_stop_reason_check
+  check (stop_reason is null or stop_reason in ('recovered', 'other'));
+
 create table if not exists public.dose_schedules (
   id uuid primary key default gen_random_uuid(),
   prescription_id uuid not null references public.prescriptions (id) on delete cascade,

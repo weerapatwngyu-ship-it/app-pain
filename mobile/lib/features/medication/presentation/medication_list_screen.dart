@@ -206,7 +206,36 @@ class _MedicationCard extends StatelessWidget {
                           fontSize: 16, fontWeight: FontWeight.w700),
                     ),
                   ),
-                  if (!medication.enteredBySelf)
+                  // Why it ended, when a doctor said so. Every stopped
+                  // medication greys out the same way, and "the treatment
+                  // worked" is worth telling the patient apart from "this was
+                  // swapped for something else".
+                  if (medication.stoppedRecovered)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFE3F3EF),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.check_circle,
+                              size: 12, color: OnboardingColors.teal),
+                          const SizedBox(width: 4),
+                          Text(
+                            t('หายแล้ว', 'Recovered'),
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              color: OnboardingColors.teal,
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  else if (!medication.enteredBySelf)
                     Container(
                       padding: const EdgeInsets.symmetric(
                           horizontal: 8, vertical: 3),

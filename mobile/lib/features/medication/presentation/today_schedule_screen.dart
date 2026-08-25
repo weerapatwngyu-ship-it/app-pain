@@ -276,10 +276,15 @@ class _TodayScheduleScreenState extends State<TodayScheduleScreen> {
   }
 
   Future<void> _logDose(DoseScheduleItem item, DoseLogStatus status) async {
+    final now = DateTime.now();
     await widget.logDoseUseCase(DoseLog(
       scheduleId: item.scheduleId,
-      scheduledAt: DateTime.now(),
-      actionedAt: DateTime.now(),
+      // The slot this answers, not the moment the button was pressed. Storing
+      // "now" made a dose taken four hours late look identical to one taken on
+      // time, and left no way to say which scheduled dose went unanswered.
+      // A PRN dose has no due time, so for those the two are the same thing.
+      scheduledAt: item.dueAt(now) ?? now,
+      actionedAt: now,
       status: status,
     ));
     if (!mounted) return;
@@ -1190,6 +1195,13 @@ class _DoseTile extends StatelessWidget {
   final bool actioned;
   final ValueChanged<DoseLogStatus> onLog;
 
+  /// Past its time, with nothing recorded against it.
+  ///
+  /// The buttons stay: a dose taken late is still worth recording, and a
+  /// patient who cannot log it is a patient the doctor's chart will show as
+  /// having skipped it. This only changes how the row reads.
+  bool get _overdue => !actioned && item.isOverdue(DateTime.now());
+
   /// Roughly which part of the day a dose falls in. Printed under the clock
   /// time because "08:00" is precise but "เช้า" is what someone is actually
   /// looking for when they glance at the list.
@@ -1210,10 +1222,18 @@ class _DoseTile extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         border: Border.all(
-          color: actioned ? const Color(0xFFD8ECE8) : OnboardingColors.border,
+          color: actioned
+              ? const Color(0xFFD8ECE8)
+              : _overdue
+                  ? const Color(0xFFF3D3CD)
+                  : OnboardingColors.border,
         ),
         borderRadius: BorderRadius.circular(16),
-        color: actioned ? const Color(0xFFF3FAF8) : Colors.white,
+        color: actioned
+            ? const Color(0xFFF3FAF8)
+            : _overdue
+                ? const Color(0xFFFDF6F5)
+                : Colors.white,
       ),
       child: Padding(
         padding: const EdgeInsets.all(14),
@@ -1230,17 +1250,21 @@ class _DoseTile extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: actioned
                         ? Colors.white
-                        : OnboardingColors.teal.withValues(alpha: 0.10),
+                        : _overdue
+                            ? const Color(0xFFC0392B).withValues(alpha: 0.08)
+                            : OnboardingColors.teal.withValues(alpha: 0.10),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Column(
                     children: [
                       Text(
                         item.scheduledTime,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w700,
-                          color: OnboardingColors.teal,
+                          color: _overdue
+                              ? const Color(0xFFC0392B)
+                              : OnboardingColors.teal,
                         ),
                       ),
                       Text(
@@ -1265,6 +1289,20 @@ class _DoseTile extends StatelessWidget {
                           fontSize: 16,
                         ),
                       ),
+                      // Says plainly that this one went by, rather than
+                      // leaving the patient to work it out from the clock.
+                      if (_overdue) ...[
+                        const SizedBox(height: 3),
+                        Text(
+                          t('เลยเวลาแล้ว — ยังไม่ได้บันทึกว่ากินหรือข้าม',
+                              'Past its time — not yet recorded'),
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFFC0392B),
+                          ),
+                        ),
+                      ],
                       if (item.dosage.trim().isNotEmpty) ...[
                         const SizedBox(height: 3),
                         Text(

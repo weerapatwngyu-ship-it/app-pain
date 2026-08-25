@@ -14,7 +14,7 @@ class MedicationListRepository {
     final rows = await db
         .from('prescriptions')
         .select('id, medication_name, dosage, frequency, start_date, '
-            'end_date, source, dose_schedules(scheduled_time)')
+            'end_date, source, stop_reason, dose_schedules(scheduled_time)')
         .eq('patient_id', patientId)
         .order('start_date', ascending: false);
     return rows.map<Medication>(Medication.fromRow).toList();
@@ -68,10 +68,22 @@ class MedicationListRepository {
   /// by default. A doctor stopping treatment because the patient has recovered
   /// may want it to stop before today's remaining doses instead — only they
   /// know which, so the caller decides rather than this method.
-  Future<void> stop(String medicationId, {DateTime? endDate}) async {
+  ///
+  /// [recovered] records *why* it ended. An end date says a drug stopped; it
+  /// does not say whether that was the treatment working or the treatment
+  /// being abandoned, and that is the difference the next clinician reading
+  /// this chart cares about.
+  Future<void> stop(
+    String medicationId, {
+    DateTime? endDate,
+    bool recovered = false,
+  }) async {
     final updated = await db
         .from('prescriptions')
-        .update({'end_date': _isoDate(endDate ?? DateTime.now())})
+        .update({
+          'end_date': _isoDate(endDate ?? DateTime.now()),
+          'stop_reason': recovered ? 'recovered' : 'other',
+        })
         .eq('id', medicationId)
         .select();
     if (updated.isEmpty) {
