@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'forgot_password_screen.dart';
 import 'onboarding/onboarding_theme.dart';
 import '../../../core/errors/friendly_error.dart';
 import '../../../core/i18n/app_locale.dart';
@@ -91,6 +92,20 @@ class _SignInScreenState extends State<SignInScreen> {
       _isSignUp = false;
       _info = t('ส่งอีเมลยืนยันไปที่ $email แล้ว — เปิดอีเมลแล้วกดลิงก์ยืนยันก่อน จึงจะเข้าสู่ระบบได้', 'A confirmation email was sent to $email — follow the link in it before signing in');
     });
+  }
+
+  /// Hands the address already typed here across, so someone who got as far
+  /// as the password before realising they had forgotten it does not start
+  /// over. The reset screen signs them in when it succeeds, so there is
+  /// nothing to do on the way back.
+  Future<void> _openForgotPassword() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) =>
+            ForgotPasswordScreen(initialEmail: _emailController.text.trim()),
+      ),
+    );
+    if (mounted) setState(() => _error = null);
   }
 
   Future<void> _signInWithGoogle() async {
@@ -184,6 +199,19 @@ class _SignInScreenState extends State<SignInScreen> {
                   validator: (v) =>
                       (v == null || v.length < 6) ? t('รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร', 'Password must be at least 6 characters') : null,
                 ),
+                // Sign-in only: on the sign-up form there is no password to
+                // have forgotten yet, and the link would just be noise.
+                if (!_isSignUp)
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
+                      onPressed: _loading ? null : _openForgotPassword,
+                      child: Text(
+                        t('ลืมรหัสผ่าน?', 'Forgot password?'),
+                        style: const TextStyle(fontSize: 13),
+                      ),
+                    ),
+                  ),
                 if (_error != null) ...[
                   const SizedBox(height: 16),
                   Text(

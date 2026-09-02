@@ -39,7 +39,39 @@ String friendlyError(Object error, {String? whileDoing, String? deniedMessage}) 
       case 'Invalid API key':
         return t('แอปเชื่อมต่อระบบไม่ได้ — กรุณาแจ้งผู้ดูแลระบบ', 'The app cannot reach the server — please tell an administrator');
     }
-    return withPrefix(t('เข้าสู่ระบบไม่สำเร็จ', 'Could not sign in'));
+
+    // The password-reset flow. Matched on substrings because these arrive
+    // with wording that varies by Supabase version, unlike the exact strings
+    // above.
+    final message = error.message.toLowerCase();
+    if (message.contains('token has expired') ||
+        message.contains('invalid token') ||
+        message.contains('otp')) {
+      return t('รหัสยืนยันไม่ถูกต้องหรือหมดอายุแล้ว — กด "ส่งอีกครั้ง" เพื่อขอรหัสใหม่',
+          'That code is wrong or has expired — use "Send it again" to get a new one');
+    }
+    if (message.contains('should be different from the old password')) {
+      return t('รหัสผ่านใหม่ต้องไม่ซ้ำกับรหัสผ่านเดิม',
+          'The new password has to be different from the old one');
+    }
+    // Matched on the message rather than on statusCode: gotrue types that
+    // field differently across versions, and a comparison against the wrong
+    // type compiles fine and is silently never true. Supabase's rate-limit
+    // reply reads "For security purposes, you can only request this after N
+    // seconds".
+    if (message.contains('for security purposes') ||
+        message.contains('rate limit') ||
+        message.contains('too many requests')) {
+      return t('ขอรหัสถี่เกินไป — รอสักครู่แล้วลองใหม่',
+          'Too many requests — wait a moment and try again');
+    }
+
+    // No prefix appended: whileDoing already names the action, and following
+    // it with a hardcoded "could not sign in" produced lines like
+    // "ตั้งรหัสผ่านใหม่ไม่สำเร็จ — เข้าสู่ระบบไม่สำเร็จ".
+    return prefix.isEmpty
+        ? t('ดำเนินการไม่สำเร็จ ลองใหม่อีกครั้ง', 'That did not work. Try again.')
+        : prefix;
   }
 
   if (error is PostgrestException) {
