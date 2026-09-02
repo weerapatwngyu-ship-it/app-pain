@@ -12,7 +12,7 @@ import '../../../core/i18n/app_locale.dart';
 ///
 /// Supabase's own reset flow emails a link, and a link is useless here: this
 /// build registers no deep link, so tapping it opens a browser that cannot
-/// hand a session back to the app. What it can do instead is email a six-digit
+/// hand a session back to the app. What it can do instead is email a numeric
 /// code — the same recovery token, in a form a person can type — which
 /// `verifyOTP` exchanges for a session, and that session is what allows the
 /// password to be changed.
@@ -36,6 +36,17 @@ class ForgotPasswordScreen extends StatefulWidget {
 enum _Stage { enterEmail, enterCode }
 
 class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
+  /// How long the emailed code may be.
+  ///
+  /// Not a fixed 6: the length is a project setting in Supabase (Authentication
+  /// → Sign In / Providers → Email → Email OTP Length), which allows 6 to 10,
+  /// and this project sends 8. Hardcoding 6 silently truncated the code as it
+  /// was typed and then rejected it as the wrong length — a dead end with no
+  /// hint of the cause. Accepting the whole allowed range means the screen
+  /// keeps working if that setting is ever changed.
+  static const _minCodeLength = 6;
+  static const _maxCodeLength = 10;
+
   final _emailFormKey = GlobalKey<FormState>();
   final _codeFormKey = GlobalKey<FormState>();
 
@@ -112,8 +123,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       setState(() {
         _stage = _Stage.enterCode;
         _info = t(
-          'ถ้ามีบัญชีที่ใช้ $email อยู่ ระบบได้ส่งรหัส 6 หลักไปให้แล้ว — เปิดอีเมลแล้วนำรหัสมากรอก',
-          'If an account uses $email, a 6-digit code is on its way — open the email and enter the code',
+          'ถ้ามีบัญชีที่ใช้ $email อยู่ ระบบได้ส่งรหัสไปให้แล้ว — เปิดอีเมลแล้วนำรหัสมากรอก',
+          'If an account uses $email, a code is on its way — open the email and enter it',
         );
       });
       _startResendCountdown();
@@ -195,8 +206,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               const SizedBox(height: 24),
               Text(
                 _stage == _Stage.enterEmail
-                    ? t('กรอกอีเมลที่ใช้สมัคร ระบบจะส่งรหัส 6 หลักไปให้',
-                        'Enter the email you signed up with and we will send a 6-digit code')
+                    ? t('กรอกอีเมลที่ใช้สมัคร ระบบจะส่งรหัสยืนยันไปให้',
+                        'Enter the email you signed up with and we will send a code')
                     : t('กรอกรหัสจากอีเมล แล้วตั้งรหัสผ่านใหม่',
                         'Enter the code from the email, then choose a new password'),
                 style: const TextStyle(
@@ -265,15 +276,20 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             // rescue whatever the keyboard produced.
             inputFormatters: [
               FilteringTextInputFormatter.digitsOnly,
-              LengthLimitingTextInputFormatter(6),
+              LengthLimitingTextInputFormatter(_maxCodeLength),
             ],
             enabled: !_codeAccepted,
-            style: const TextStyle(fontSize: 22, letterSpacing: 8),
+            style: const TextStyle(fontSize: 22, letterSpacing: 5),
             textAlign: TextAlign.center,
-            decoration: _decoration(t('รหัส 6 หลัก', '6-digit code')),
-            validator: (v) => (v == null || v.trim().length != 6)
-                ? t('กรอกรหัส 6 หลักจากอีเมล', 'Enter the 6-digit code from the email')
-                : null,
+            decoration: _decoration(t('รหัสจากอีเมล', 'Code from the email')),
+            validator: (v) {
+              final code = v?.trim() ?? '';
+              if (code.length < _minCodeLength || code.length > _maxCodeLength) {
+                return t('กรอกรหัสจากอีเมลให้ครบทุกหลัก',
+                    'Enter the whole code from the email');
+              }
+              return null;
+            },
           ),
           const SizedBox(height: 16),
           TextFormField(
