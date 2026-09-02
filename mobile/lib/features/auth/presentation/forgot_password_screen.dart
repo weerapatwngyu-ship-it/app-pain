@@ -32,8 +32,12 @@ class ForgotPasswordScreen extends StatefulWidget {
   State<ForgotPasswordScreen> createState() => _ForgotPasswordScreenState();
 }
 
-/// Which half of the reset the screen is showing.
-enum _Stage { enterEmail, enterCode }
+/// Which step of the reset the screen is showing.
+///
+/// The code is verified on its own, before any password is typed. Doing both
+/// in one submit meant a stale code was only reported after the user had
+/// filled in a password twice, and the error named neither field.
+enum _Stage { enterEmail, enterCode, enterPassword }
 
 class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   /// How long the emailed code may be.
@@ -49,6 +53,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
   final _emailFormKey = GlobalKey<FormState>();
   final _codeFormKey = GlobalKey<FormState>();
+  final _passwordFormKey = GlobalKey<FormState>();
 
   final _emailController = TextEditingController();
   final _codeController = TextEditingController();
@@ -59,12 +64,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   bool _busy = false;
   String? _error;
   String? _info;
-
-  /// True once the emailed code has been exchanged for a session. Kept so a
-  /// failure while setting the password does not send the user back to
-  /// re-enter a code that has already been spent — the session is live, and
-  /// the next attempt only has to retry the password change.
-  bool _codeAccepted = false;
 
   /// Seconds left before "send it again" is offered. Supabase rate-limits
   /// recovery emails, so offering the button immediately invites a refusal
@@ -137,9 +136,45 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     }
   }
 
-  /// Exchanges the code for a session, then changes the password.
-  Future<void> _setNewPassword() async {
+  /// Exchanges the emailed code for a session, and nothing else.
+  ///
+  /// Kept apart from setting the password so a rejected code is reported
+  /// against the code field, at the moment it is entered.
+  Future<void> _verifyCode() async {
     if (!_codeFormKey.currentState!.validate()) return;
+
+    setState(() {
+      _busy = true;
+      _error = null;
+      _info = null;
+    });
+
+    try {
+      await Supabase.instance.client.auth.verifyOTP(
+        type: OtpType.recovery,
+        email: _emailController.text.trim(),
+        token: _codeController.text.trim(),
+      );
+      if (!mounted) return;
+      _resendTimer?.cancel();
+      // Reaching enterPassword is itself the record that the code was
+      // accepted — a separate flag for it would be state that can disagree.
+      setState(() {
+        _stage = _Stage.enterPassword;
+        _resendIn = 0;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _error = friendlyError(e,
+          whileDoing: t('ยืนยันรหัสไม่สำเร็จ', 'Could not verify the code')));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  /// Changes the password, using the session [_verifyCode] established.
+  Future<void> _setNewPassword() async {
+    if (!_passwordFormKey.currentState!.validate()) return;
 
     setState(() {
       _busy = true;
@@ -154,15 +189,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     final navigator = Navigator.of(context);
     final messenger = ScaffoldMessenger.of(context);
     try {
-      if (!_codeAccepted) {
-        await auth.verifyOTP(
-          type: OtpType.recovery,
-          email: _emailController.text.trim(),
-          token: _codeController.text.trim(),
-        );
-        _codeAccepted = true;
-      }
-
       await auth.updateUser(
         UserAttributes(password: _passwordController.text),
       );
@@ -205,11 +231,17 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               ),
               const SizedBox(height: 24),
               Text(
-                _stage == _Stage.enterEmail
-                    ? t('กรอกอีเมลที่ใช้สมัคร ระบบจะส่งรหัสยืนยันไปให้',
-                        'Enter the email you signed up with and we will send a code')
-                    : t('กรอกรหัสจากอีเมล แล้วตั้งรหัสผ่านใหม่',
-                        'Enter the code from the email, then choose a new password'),
+                switch (_stage) {
+                  _Stage.enterEmail => t(
+                      'ขั้นที่ 1 จาก 3 — กรอกอีเมลที่ใช้สมัคร ระบบจะส่งรหัสยืนยันไปให้',
+                      'Step 1 of 3 — enter the email you signed up with and we will send a code'),
+                  _Stage.enterCode => t(
+                      'ขั้นที่ 2 จาก 3 — กรอกรหัสจากอีเมลฉบับล่าสุด',
+                      'Step 2 of 3 — enter the code from the most recent email'),
+                  _Stage.enterPassword => t(
+                      'ขั้นที่ 3 จาก 3 — ตั้งรหัสผ่านใหม่',
+                      'Step 3 of 3 — choose a new password'),
+                },
                 style: const TextStyle(
                     fontSize: 14, height: 1.6, color: OnboardingColors.textMuted),
               ),
@@ -227,7 +259,11 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                   background: const Color(0xFFFDECEA),
                 ),
               const SizedBox(height: 8),
-              if (_stage == _Stage.enterEmail) _buildEmailStep() else _buildCodeStep(),
+              switch (_stage) {
+                _Stage.enterEmail => _buildEmailStep(),
+                _Stage.enterCode => _buildCodeStep(),
+                _Stage.enterPassword => _buildPasswordStep(),
+              },
             ],
           ),
         ),
@@ -271,6 +307,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           TextFormField(
             controller: _codeController,
             keyboardType: TextInputType.number,
+            autofocus: true,
             // The code is what stands between a stranger and this account, so
             // the field takes digits only rather than trusting a trim to
             // rescue whatever the keyboard produced.
@@ -278,7 +315,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               FilteringTextInputFormatter.digitsOnly,
               LengthLimitingTextInputFormatter(_maxCodeLength),
             ],
-            enabled: !_codeAccepted,
             style: const TextStyle(fontSize: 22, letterSpacing: 5),
             textAlign: TextAlign.center,
             decoration: _decoration(t('รหัสจากอีเมล', 'Code from the email')),
@@ -291,10 +327,89 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               return null;
             },
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 10),
+          // Asking for a new code cancels every earlier one, and the email
+          // holding the dead code is still sitting in the inbox above the live
+          // one. Reaching for the wrong email is the likeliest way this step
+          // fails, so the screen says so before it happens rather than
+          // reporting "wrong or expired" afterwards.
+          Text(
+            t('ถ้าขอรหัสหลายครั้ง ใช้ได้เฉพาะรหัสจากอีเมลฉบับล่าสุดเท่านั้น รหัสเก่าจะถูกยกเลิกทันที',
+                'If you asked more than once, only the code in the newest email works — asking again cancels the earlier ones'),
+            style: const TextStyle(
+                fontSize: 12, height: 1.5, color: OnboardingColors.textMuted),
+          ),
+          const SizedBox(height: 20),
+          _PrimaryButton(
+            label: t('ยืนยันรหัส', 'Verify the code'),
+            busy: _busy,
+            onPressed: _busy ? null : _verifyCode,
+          ),
+          const SizedBox(height: 8),
+          TextButton(
+            onPressed: (_busy || _resendIn > 0)
+                ? null
+                : () => _sendCode(resending: true),
+            child: Text(
+              _resendIn > 0
+                  ? t('ขอรหัสใหม่ได้ในอีก $_resendIn วินาที',
+                      'You can ask for another code in $_resendIn seconds')
+                  : t('ไม่ได้รับรหัส? ส่งอีกครั้ง',
+                      "Didn't get the code? Send it again"),
+            ),
+          ),
+          TextButton(
+            onPressed: _busy
+                ? null
+                : () => setState(() {
+                      _stage = _Stage.enterEmail;
+                      _codeController.clear();
+                      _error = null;
+                      _info = null;
+                    }),
+            child: Text(t('ใช้อีเมลอื่น', 'Use a different email')),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPasswordStep() {
+    return Form(
+      key: _passwordFormKey,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // No way back to the code step: the code has been spent, and the
+          // session it produced is what authorises the change now.
+          Container(
+            padding: const EdgeInsets.all(14),
+            margin: const EdgeInsets.only(bottom: 20),
+            decoration: BoxDecoration(
+              color: const Color(0xFFE8F5F3),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.check_circle,
+                    size: 18, color: OnboardingColors.teal),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    t('ยืนยันรหัสเรียบร้อยแล้ว', 'Code verified'),
+                    style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: OnboardingColors.teal),
+                  ),
+                ),
+              ],
+            ),
+          ),
           TextFormField(
             controller: _passwordController,
             obscureText: true,
+            autofocus: true,
             autofillHints: const [AutofillHints.newPassword],
             decoration: _decoration(
                 t('รหัสผ่านใหม่ (อย่างน้อย 6 ตัวอักษร)',
@@ -319,31 +434,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             label: t('ตั้งรหัสผ่านใหม่', 'Set the new password'),
             busy: _busy,
             onPressed: _busy ? null : _setNewPassword,
-          ),
-          const SizedBox(height: 8),
-          TextButton(
-            onPressed: (_busy || _resendIn > 0 || _codeAccepted)
-                ? null
-                : () => _sendCode(resending: true),
-            child: Text(
-              _resendIn > 0
-                  ? t('ขอรหัสใหม่ได้ในอีก $_resendIn วินาที',
-                      'You can ask for another code in $_resendIn seconds')
-                  : t('ไม่ได้รับรหัส? ส่งอีกครั้ง',
-                      "Didn't get the code? Send it again"),
-            ),
-          ),
-          TextButton(
-            onPressed: _busy
-                ? null
-                : () => setState(() {
-                      _stage = _Stage.enterEmail;
-                      _codeAccepted = false;
-                      _codeController.clear();
-                      _error = null;
-                      _info = null;
-                    }),
-            child: Text(t('ใช้อีเมลอื่น', 'Use a different email')),
           ),
         ],
       ),
