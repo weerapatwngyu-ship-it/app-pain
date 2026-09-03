@@ -459,7 +459,10 @@ class _TodayScheduleScreenState extends State<TodayScheduleScreen> {
                       );
                     }
                     return AutoScrollStrip(
-                      height: 148,
+                      // Sized to the taller card: 12+72+9+18+2+15+12 with a
+                      // little slack, since Thai glyphs run taller than the
+                      // font size alone suggests.
+                      height: 168,
                       itemCount: doctors.length,
                       itemBuilder: (context, index) {
                         final doctor = doctors[index];
@@ -728,8 +731,8 @@ class _DoctorTile extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(16),
       child: Container(
-        width: 104,
-        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
+        width: 118,
+        padding: const EdgeInsets.fromLTRB(10, 12, 10, 12),
         decoration: BoxDecoration(
           color: Colors.white,
           border: Border.all(color: OnboardingColors.border),
@@ -745,36 +748,66 @@ class _DoctorTile extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            CircleAvatar(
-              radius: 27,
-              backgroundColor: OnboardingColors.teal,
-              backgroundImage: photoUrl != null ? NetworkImage(photoUrl) : null,
-              child: photoUrl == null
-                  ? const Icon(Icons.medical_services_outlined,
-                      color: Colors.white, size: 22)
-                  : null,
+            // A rounded square rather than a circle, and large enough to
+            // recognise a face in: this row exists so a patient picks the
+            // person they want to talk to, and at 54px across the photo was
+            // decoration next to the name rather than the thing being chosen.
+            ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: SizedBox(
+                width: 72,
+                height: 72,
+                child: photoUrl == null
+                    ? const _DoctorPhotoFallback()
+                    : Image.network(
+                        photoUrl,
+                        fit: BoxFit.cover,
+                        // A broken or slow URL falls back to the same tile the
+                        // photoless doctors get, instead of a grey box or a
+                        // gap that changes the row's height as it loads.
+                        errorBuilder: (_, __, ___) => const _DoctorPhotoFallback(),
+                        loadingBuilder: (context, child, progress) =>
+                            progress == null ? child : const _DoctorPhotoFallback(),
+                      ),
+              ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 9),
             Text(
               doctor.name,
               textAlign: TextAlign.center,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700),
+              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
             ),
-            const SizedBox(height: 1),
+            const SizedBox(height: 2),
             Text(
               doctor.specialty,
               textAlign: TextAlign.center,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 10, color: OnboardingColors.textMuted),
+              style: const TextStyle(
+                  fontSize: 10.5, color: OnboardingColors.textMuted),
             ),
           ],
         ),
       ),
     );
   }
+}
+
+/// Shown in place of a doctor's photo when there is none, when the URL is
+/// broken, and while it loads — one widget for all three so the row does not
+/// change shape as images arrive.
+class _DoctorPhotoFallback extends StatelessWidget {
+  const _DoctorPhotoFallback();
+
+  @override
+  Widget build(BuildContext context) => Container(
+        color: OnboardingColors.teal,
+        alignment: Alignment.center,
+        child: const Icon(Icons.medical_services_outlined,
+            color: Colors.white, size: 28),
+      );
 }
 
 /// Circular, badge-free counterpart to [_CategoryTile]: a health topic is a
