@@ -1653,3 +1653,128 @@ begin;
           'cured-by-magic');
   reset role;
 rollback;
+
+\echo ''
+\echo '=== CONTROL 63: ผู้ป่วยได้รหัสครอบครัวของตัวเอง ==='
+begin;
+  set local role authenticated;
+  select public.as_user('11111111-1111-1111-1111-111111111111');
+  \echo '  -- expect รหัส 8 หลัก และเรียกซ้ำได้รหัสเดิม:'
+  select length(public.my_family_code()) as len,
+         public.my_family_code() = public.my_family_code() as stable_code;
+  reset role;
+rollback;
+
+\echo ''
+\echo '=== EXPLOIT 64: เข้าร่วมด้วยรหัสแล้วอ่านข้อมูลทันที (ต้องได้ 0 แถว ก่อนอนุมัติ) ==='
+begin;
+  set local role authenticated;
+  select public.as_user('11111111-1111-1111-1111-111111111111');
+  select public.my_family_code() as fcode \gset
+  select id as pa from public.patients
+   where owner_user_id='11111111-1111-1111-1111-111111111111' \gset
+  insert into public.symptom_logs (patient_id, pain_score, category)
+    values (:'pa', 7, 'head');
+  reset role;
+
+  -- คนนอกกรอกรหัส: ได้แค่ pending ยังไม่ควรเห็นอะไร
+  set local role authenticated;
+  select public.as_user('22222222-2222-2222-2222-222222222222');
+  \echo '  -- expect pending:'
+  select public.request_family_access(:'fcode') as result;
+  \echo '  -- expect 0 rows (ยังไม่อนุมัติ):'
+  select category, pain_score from public.symptom_logs where patient_id = :'pa';
+  reset role;
+rollback;
+
+\echo ''
+\echo '=== CONTROL 65: อนุมัติแล้วครอบครัวเห็นข้อมูลได้ ==='
+begin;
+  set local role authenticated;
+  select public.as_user('11111111-1111-1111-1111-111111111111');
+  select public.my_family_code() as fcode \gset
+  select id as pa from public.patients
+   where owner_user_id='11111111-1111-1111-1111-111111111111' \gset
+  insert into public.symptom_logs (patient_id, pain_score, category)
+    values (:'pa', 7, 'head');
+  reset role;
+
+  set local role authenticated;
+  select public.as_user('22222222-2222-2222-2222-222222222222');
+  select public.request_family_access(:'fcode');
+  reset role;
+
+  -- เจ้าของกดอนุมัติ
+  set local role authenticated;
+  select public.as_user('11111111-1111-1111-1111-111111111111');
+  \echo '  -- expect t (อนุมัติสำเร็จ):'
+  select public.set_family_member_status(
+    '22222222-2222-2222-2222-222222222222', 'active') as approved;
+  reset role;
+
+  set local role authenticated;
+  select public.as_user('22222222-2222-2222-2222-222222222222');
+  \echo '  -- expect เห็นอาการ และเห็นชื่อผู้ป่วยในรายการที่ดูแล:'
+  select category, pain_score from public.symptom_logs where patient_id = :'pa';
+  select count(*) as caring_for from public.my_family_patients();
+  reset role;
+rollback;
+
+\echo ''
+\echo '=== EXPLOIT 66: คนนอกกดอนุมัติตัวเองเข้าครอบครัวคนอื่น (ต้องได้ f) ==='
+begin;
+  set local role authenticated;
+  select public.as_user('11111111-1111-1111-1111-111111111111');
+  select public.my_family_code() as fcode \gset
+  reset role;
+
+  set local role authenticated;
+  select public.as_user('22222222-2222-2222-2222-222222222222');
+  select public.request_family_access(:'fcode');
+  \echo '  -- expect f: อนุมัติตัวเองไม่ได้ ต้องเป็นเจ้าของข้อมูลเท่านั้น';
+  select public.set_family_member_status(
+    '22222222-2222-2222-2222-222222222222', 'active') as self_approved;
+  reset role;
+rollback;
+
+\echo ''
+\echo '=== EXPLOIT 67: ถอนสิทธิ์แล้วยังอ่านได้อยู่ไหม (ต้องได้ 0 แถว) ==='
+begin;
+  set local role authenticated;
+  select public.as_user('11111111-1111-1111-1111-111111111111');
+  select public.my_family_code() as fcode \gset
+  select id as pa from public.patients
+   where owner_user_id='11111111-1111-1111-1111-111111111111' \gset
+  insert into public.symptom_logs (patient_id, pain_score, category)
+    values (:'pa', 5, 'stomach');
+  reset role;
+
+  set local role authenticated;
+  select public.as_user('22222222-2222-2222-2222-222222222222');
+  select public.request_family_access(:'fcode');
+  reset role;
+
+  set local role authenticated;
+  select public.as_user('11111111-1111-1111-1111-111111111111');
+  select public.set_family_member_status(
+    '22222222-2222-2222-2222-222222222222', 'active');
+  select public.set_family_member_status(
+    '22222222-2222-2222-2222-222222222222', 'revoked');
+  reset role;
+
+  set local role authenticated;
+  select public.as_user('22222222-2222-2222-2222-222222222222');
+  \echo '  -- expect 0 rows:'
+  select category from public.symptom_logs where patient_id = :'pa';
+  reset role;
+rollback;
+
+\echo ''
+\echo '=== EXPLOIT 68: กรอกรหัสมั่วเพื่อหาบัญชีคนอื่น (ต้องได้ not_found) ==='
+begin;
+  set local role authenticated;
+  select public.as_user('22222222-2222-2222-2222-222222222222');
+  \echo '  -- expect not_found:'
+  select public.request_family_access('ZZZZZZZZ') as result;
+  reset role;
+rollback;

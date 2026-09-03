@@ -1478,3 +1478,249 @@ begin
     end if;
   end loop;
 end $$;
+
+-- ---------------------------------------------------------------------------
+-- ครอบครัว — Family access
+--
+-- A patient hands out one code. Whoever enters it asks to join, and the
+-- patient approves. Approval is what flips patient_links.status to 'active',
+-- and can_access_patient() already treats an active link as access — so this
+-- section adds no new read paths, it only gives the existing caregiver link a
+-- way to be created without the patient typing anyone's account id.
+--
+-- Approval is deliberate rather than "the code is enough". This grants sight
+-- of drug allergies, conditions and every symptom note the patient has
+-- written; a code read over someone's shoulder should not be the whole of the
+-- authorisation for that.
+-- ---------------------------------------------------------------------------
+
+alter table public.patients
+  add column if not exists family_code text unique;
+
+create index if not exists patients_family_code_idx
+  on public.patients (family_code) where family_code is not null;
+
+-- 8 characters from an alphabet with no 0/O/1/I/L, because this code gets read
+-- aloud and typed by hand.
+create or replace function public.new_family_code()
+returns text
+language plpgsql
+volatile
+set search_path = ''
+as $$
+declare
+  alphabet constant text := '23456789ABCDEFGHJKMNPQRSTUVWXYZ';
+  candidate text;
+  i int;
+begin
+  loop
+    candidate := '';
+    for i in 1..8 loop
+      candidate := candidate ||
+        substr(alphabet, 1 + floor(random() * length(alphabet))::int, 1);
+    end loop;
+    exit when not exists (
+      select 1 from public.patients where family_code = candidate
+    );
+  end loop;
+  return candidate;
+end;
+$$;
+
+-- The caller's own code, minted on first use.
+--
+-- Not generated for every patient up front: a code that exists is a code that
+-- can be guessed at, and most patients never open this screen.
+create or replace function public.my_family_code()
+returns text
+language plpgsql
+volatile
+security definer
+set search_path = ''
+as $$
+declare
+  target uuid;
+  code text;
+begin
+  select id, family_code into target, code
+    from public.patients where owner_user_id = auth.uid() limit 1;
+  if target is null then
+    raise exception 'ยังไม่มีข้อมูลผู้ป่วยสำหรับบัญชีนี้';
+  end if;
+  if code is null then
+    code := public.new_family_code();
+    update public.patients set family_code = code where id = target;
+  end if;
+  return code;
+end;
+$$;
+
+revoke all on function public.my_family_code() from public;
+grant execute on function public.my_family_code() to authenticated;
+
+-- Asks to join someone's family. Definer because patient_links accepts writes
+-- only from the record's owner, and the person asking is by definition not
+-- them. The row lands as 'pending' and grants nothing until approved.
+create or replace function public.request_family_access(code text)
+returns text
+language plpgsql
+volatile
+security definer
+set search_path = ''
+as $$
+declare
+  target uuid;
+  target_owner uuid;
+  existing text;
+begin
+  select id, owner_user_id into target, target_owner
+    from public.patients
+    where family_code = upper(btrim(code)) limit 1;
+
+  if target is null then
+    return 'not_found';
+  end if;
+  if target_owner = auth.uid() then
+    return 'own_code';
+  end if;
+
+  select status into existing from public.patient_links
+   where patient_id = target and user_id = auth.uid();
+
+  if existing = 'active' then
+    return 'already_active';
+  elsif existing is not null then
+    -- A revoked or still-pending link is re-raised rather than duplicated:
+    -- the table is unique on (patient_id, user_id).
+    update public.patient_links set status = 'pending'
+     where patient_id = target and user_id = auth.uid();
+    return 'pending';
+  end if;
+
+  insert into public.patient_links (patient_id, user_id, role, status)
+  values (target, auth.uid(), 'caregiver', 'pending');
+  return 'pending';
+end;
+$$;
+
+revoke all on function public.request_family_access(text) from public;
+grant execute on function public.request_family_access(text) to authenticated;
+
+-- Who has asked for, or holds, access to the caller's own record.
+--
+-- Definer so the list can name people: profiles is readable only by its owner,
+-- and a list of anonymous user ids is not something a patient can act on.
+create or replace function public.family_members()
+returns table (
+  user_id uuid,
+  name text,
+  email text,
+  status text,
+  requested_at timestamptz
+)
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select l.user_id,
+         coalesce(pr.name, 'ผู้ใช้'),
+         pr.email,
+         l.status,
+         l.created_at
+  from public.patient_links l
+  join public.patients p on p.id = l.patient_id
+  left join public.profiles pr on pr.id = l.user_id
+  where p.owner_user_id = auth.uid()
+    and l.role = 'caregiver'
+    and l.status <> 'revoked'
+  order by
+    case l.status when 'pending' then 0 else 1 end,
+    l.created_at desc;
+$$;
+
+revoke all on function public.family_members() from public;
+grant execute on function public.family_members() to authenticated;
+
+-- Approve or remove someone. Only the record's owner gets anywhere: the
+-- update is scoped by owner_user_id, so a caller who is not the owner changes
+-- no rows and is told so.
+create or replace function public.set_family_member_status(
+  member uuid,
+  new_status text
+)
+returns boolean
+language plpgsql
+volatile
+security definer
+set search_path = ''
+as $$
+declare
+  touched int;
+begin
+  if new_status not in ('active', 'revoked') then
+    raise exception 'สถานะไม่ถูกต้อง';
+  end if;
+
+  update public.patient_links l
+     set status = new_status
+    from public.patients p
+   where l.patient_id = p.id
+     and p.owner_user_id = auth.uid()
+     and l.user_id = member
+     and l.role = 'caregiver';
+
+  get diagnostics touched = row_count;
+  return touched > 0;
+end;
+$$;
+
+revoke all on function public.set_family_member_status(uuid, text) from public;
+grant execute on function public.set_family_member_status(uuid, text) to authenticated;
+
+-- The records the caller may look after, for the "ฉันดูแล" list.
+create or replace function public.my_family_patients()
+returns table (
+  patient_id uuid,
+  name text,
+  status text
+)
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select p.id, p.name, l.status
+  from public.patient_links l
+  join public.patients p on p.id = l.patient_id
+  where l.user_id = auth.uid()
+    and l.role = 'caregiver'
+    and l.status <> 'revoked'
+  order by p.name;
+$$;
+
+revoke all on function public.my_family_patients() from public;
+grant execute on function public.my_family_patients() to authenticated;
+
+-- Lets a family member step away without needing the patient to do it.
+create or replace function public.leave_family(target_patient uuid)
+returns boolean
+language plpgsql
+volatile
+security definer
+set search_path = ''
+as $$
+declare
+  touched int;
+begin
+  delete from public.patient_links
+   where patient_id = target_patient
+     and user_id = auth.uid()
+     and role = 'caregiver';
+  get diagnostics touched = row_count;
+  return touched > 0;
+end;
+$$;
+
+revoke all on function public.leave_family(uuid) from public;
+grant execute on function public.leave_family(uuid) to authenticated;

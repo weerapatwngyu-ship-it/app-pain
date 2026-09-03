@@ -7,6 +7,8 @@ import '../../auth/domain/entities/user.dart';
 import '../../alerts/data/alerts_repository.dart';
 import '../../auth/presentation/onboarding/onboarding_theme.dart';
 import '../../doctors/data/doctor_repository.dart';
+import '../../family/data/family_repository.dart';
+import '../../family/presentation/family_screen.dart';
 import '../../admin/data/admin_repository.dart';
 import '../../admin/data/caseload_repository.dart';
 import '../../chat/data/chat_repository.dart';
@@ -70,10 +72,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
   /// a separate short code today.
   String get _userCode => user.id.replaceAll('-', '').substring(0, 6).toUpperCase();
 
-  void _comingSoon(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(t('ฟีเจอร์นี้อยู่ระหว่างการพัฒนา', 'This feature is still being built'))),
-    );
+  /// Built here rather than threaded down from app.dart. It holds no state
+  /// and every call is a Supabase RPC, so nothing is gained by passing one
+  /// instance through five widgets to reach the one screen that uses it.
+  final FamilyRepository _familyRepository = FamilyRepository();
+
+  void _openFamily() {
+    Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => FamilyScreen(
+        repository: _familyRepository,
+        caseloadRepository: widget.caseloadRepository,
+      ),
+    ));
   }
 
   Future<void> _changeAvatar() async {
@@ -188,8 +198,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   OnboardingPrimaryButton(
-                    label: t('+  เพิ่มสิทธิพิเศษ/กรมธรรม์', '+  Add benefits / insurance'),
-                    onPressed: () => _comingSoon(context),
+                    label: t('ครอบครัวของฉัน', 'My family'),
+                    onPressed: _openFamily,
                   ),
                   const SizedBox(height: 24),
                   _SectionLabel(t('บัญชีผู้ใช้', 'Account')),
